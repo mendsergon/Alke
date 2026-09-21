@@ -1,0 +1,9 @@
+{
+  "name": "@alke/theme",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./src/theme.ts",
+  "types": "./src/theme.ts"
+}
