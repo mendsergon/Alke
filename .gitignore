@@ -1,0 +1,39 @@
+# Dependencies & builds
+node_modules/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+.turbo/
+
+# Expo / React Native
+.expo/
+web-build/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# PocketBase local data
+pb_data/
+pb_migrations_local/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Local tooling (never committed)
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+.mcp.json
+.worktreeinclude
