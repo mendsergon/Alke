@@ -1,7 +1,7 @@
 import { Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Screen } from '../../components/screen';
-import { HomeTopBar, HomeTitle, WeekStats } from '../../components/home-parts';
+import { HomeHeader, WeekStats } from '../../components/home-parts';
 import { Card, Chip, PrimaryButton, SecondaryButton, Row } from '../../components/surfaces';
 import { Icon } from '../../components/icon';
 import { MicroCaps, Txt } from '../../theme/text';
@@ -49,7 +49,7 @@ function TrainingDay() {
   const session = useSession();
   return (
     <>
-      <HomeTitle title="Today" subtitle={MOCK_TODAY} />
+      <HomeHeader gym={MOCK_GYM.shortName} title="Today" subtitle={MOCK_TODAY} />
       <Card>
         <MicroCaps color={c.accent}>Next session</MicroCaps>
         <Txt variant="section" family="serif" weight={500} tracking={-0.005} style={{ marginTop: 8 }}>
@@ -90,7 +90,7 @@ function RestDay() {
   const { c } = useTheme();
   return (
     <>
-      <HomeTitle title="Rest day" subtitle={MOCK_REST_DAY} />
+      <HomeHeader gym={MOCK_GYM.shortName} title="Rest day" subtitle={MOCK_REST_DAY} />
       <Card tone="accentSoft">
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <View style={{ flexShrink: 1 }}>
@@ -121,7 +121,7 @@ function RestDay() {
           {MOCK_CHECK_IN.map((slider) => (
             <View key={slider} style={{ alignItems: 'center', gap: 6 }}>
               <View style={{ width: 34, height: 34, borderRadius: 999, backgroundColor: c.bg }} />
-              <Txt variant="microCaps" caps={false} weight={400} tracking={0} color={c.textSecondary}>
+              <Txt variant="tiny" weight={400} color={c.textSecondary}>
                 {slider}
               </Txt>
             </View>
@@ -147,7 +147,7 @@ function NoProgram() {
   const { c } = useTheme();
   return (
     <>
-      <HomeTitle title="Welcome" subtitle="No program yet" />
+      <HomeHeader gym={MOCK_GYM.shortName} title="Welcome" subtitle="No program yet" />
       <Card tone="accentSoft">
         <Txt variant="serifCardTitle" family="serif" weight={500}>
           Let’s build something to train.
@@ -192,7 +192,6 @@ function NoProgram() {
 export default function Home() {
   return (
     <Screen>
-      <HomeTopBar gym={MOCK_GYM.shortName} />
       {MOCK_HOME_STATE === 'training' ? <TrainingDay /> : null}
       {MOCK_HOME_STATE === 'rest' ? <RestDay /> : null}
       {MOCK_HOME_STATE === 'no-program' ? <NoProgram /> : null}

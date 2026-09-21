@@ -80,7 +80,7 @@ function ExerciseDetail() {
             <Txt variant="numeralXL" weight={600} tnum tracking={-0.015}>
               {d.e1rm}
             </Txt>
-            <Txt variant="serifProseSmall" family="sans" weight={500} color={c.textSecondary} tracking={0.01} style={{ marginLeft: 3 }}>
+            <Txt variant="unitLarge" color={c.textSecondary} style={{ marginLeft: 3 }}>
               {d.unit}
             </Txt>
           </View>
@@ -123,7 +123,7 @@ function ExerciseDetail() {
               <Txt variant="numeralS" weight={600} tnum>
                 {r.weight}
               </Txt>
-              <Txt variant="microCaps" caps={false} weight={500} color={c.textSecondary} tracking={0.01} style={{ marginLeft: 3 }}>
+              <Txt variant="unitSmall" color={c.textSecondary} style={{ marginLeft: 3 }}>
                 kg
               </Txt>
               <Txt variant="label" weight={400} color={c.textSecondary} style={{ marginHorizontal: 4 }}>

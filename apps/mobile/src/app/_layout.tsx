@@ -5,8 +5,12 @@ import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useFonts } from 'expo-font';
-import { Newsreader_500Medium } from '@expo-google-fonts/newsreader';
-import { Geist_400Regular, Geist_500Medium, Geist_600SemiBold } from '@expo-google-fonts/geist';
+// Deep imports, one file each: importing the package index would pull every
+// weight and italic of both families into the bundle.
+import Newsreader_500Medium from '@expo-google-fonts/newsreader/500Medium/Newsreader_500Medium.ttf';
+import Geist_400Regular from '@expo-google-fonts/geist/400Regular/Geist_400Regular.ttf';
+import Geist_500Medium from '@expo-google-fonts/geist/500Medium/Geist_500Medium.ttf';
+import Geist_600SemiBold from '@expo-google-fonts/geist/600SemiBold/Geist_600SemiBold.ttf';
 import { ThemeProvider, useTheme } from '../theme/theme';
 import { SessionProvider } from '../session/session';
 

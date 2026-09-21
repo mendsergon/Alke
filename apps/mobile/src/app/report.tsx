@@ -1,5 +1,4 @@
 import { Pressable, ScrollView, View } from 'react-native';
-import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Card, ProPill } from '../components/surfaces';
 import { Icon, type IconName } from '../components/icon';
@@ -64,7 +63,6 @@ function Change({ item, first }: { item: Recommendation; first: boolean }) {
 export default function Report() {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const r = MOCK_WEEKLY_REPORT;
 
   return (
@@ -78,6 +76,7 @@ export default function Report() {
       }}
       showsVerticalScrollIndicator={false}
     >
+      {/* The export draws no back control here; the stack's swipe-back is it. */}
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <View style={{ flexShrink: 1 }}>
           <Txt variant="screenTitle" family="serif" weight={500}>
@@ -87,14 +86,6 @@ export default function Report() {
             {r.dates}
           </Txt>
         </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Back"
-          onPress={() => router.back()}
-          style={{ width: 44, height: 44, alignItems: 'flex-end', justifyContent: 'center' }}
-        >
-          <Icon name="chevronLeft" size={24} color={c.textSecondary} width={1.5} />
-        </Pressable>
       </View>
 
       <Card>

@@ -99,7 +99,7 @@ export const MOCK_GYM_CODE = 'NGH7';
  * Which of the three Home states (PLAN.md §2) the app shows. The design
  * exports draw all three; flip this to look at the other two.
  */
-export const MOCK_HOME_STATE: 'training' | 'rest' | 'no-program' = 'training';
+export const MOCK_HOME_STATE: 'training' | 'rest' | 'no-program' = 'rest';
 
 export const MOCK_TODAY = 'Saturday 19 September';
 export const MOCK_REST_DAY = 'Sunday 20 September';

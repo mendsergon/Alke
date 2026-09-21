@@ -31,7 +31,7 @@ function CodeBoxes() {
               justifyContent: 'center',
             }}
           >
-            <Txt variant="heading" weight={600} tracking={0} tnum style={{ lineHeight: 30 }}>
+            <Txt variant="codeChar" tnum>
               {chars[i] ?? ''}
             </Txt>
           </View>

@@ -28,14 +28,12 @@ export default function Profile() {
               justifyContent: 'center',
             }}
           >
-            <Txt variant="serifRowTitle" family="sans" weight={600} color={c.accent} tracking={0}>
+            <Txt variant="avatarInitials" color={c.accent}>
               {p.initials}
             </Txt>
           </View>
           <View style={{ flexGrow: 1, flexShrink: 1 }}>
-            <Txt variant="serifProseSmall" family="sans" weight={600} tracking={-0.01} style={{ lineHeight: 24 }}>
-              {p.name}
-            </Txt>
+            <Txt variant="nameTitle">{p.name}</Txt>
             <Txt variant="captionTight" color={c.textSecondary} tnum style={{ marginTop: 1 }}>
               {p.detail}
             </Txt>

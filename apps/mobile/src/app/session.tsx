@@ -69,24 +69,11 @@ function SetCard({ set }: { set: SessionSet }) {
             {set.weight}
           </Txt>
           {set.state === 'empty' ? null : (
-            <Txt
-              variant="microCaps"
-              caps={false}
-              weight={500}
-              color={c.textSecondary}
-              tracking={0.01}
-              style={{ marginLeft: 3 }}
-            >
+            <Txt variant="unitSmall" color={c.textSecondary} style={{ marginLeft: 3 }}>
               kg
             </Txt>
           )}
-          <Txt
-            variant="serifProseSmall"
-            family="sans"
-            weight={400}
-            color={c.textSecondary}
-            style={{ marginHorizontal: 8, lineHeight: 22 }}
-          >
+          <Txt variant="times" color={c.textSecondary} style={{ marginHorizontal: 8 }}>
             ×
           </Txt>
           <Txt variant="numeralL" weight={600} color={fg} tnum tracking={-0.015}>
@@ -95,14 +82,7 @@ function SetCard({ set }: { set: SessionSet }) {
         </View>
         <View style={{ minWidth: 52, alignItems: 'flex-end' }}>
           <MicroCaps>RIR</MicroCaps>
-          <Txt
-            variant="serifProseSmall"
-            family="sans"
-            weight={600}
-            color={fg}
-            tnum
-            style={{ lineHeight: 22 }}
-          >
+          <Txt variant="dataValue" color={fg} tnum>
             {set.rir}
           </Txt>
         </View>
@@ -190,7 +170,7 @@ export default function Session() {
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 }}>
           <Icon name="timer" size={20} color={c.accent} />
-          <Txt variant="serifRowTitle" family="sans" weight={600} tracking={-0.01} tnum style={{ lineHeight: 24 }}>
+          <Txt variant="timerValue" tnum>
             {s.restLeft}
           </Txt>
           <Txt variant="captionTight" color={c.textSecondary} style={{ flexGrow: 1 }}>

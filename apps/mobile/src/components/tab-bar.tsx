@@ -64,14 +64,7 @@ export function TabBar({ state, navigation }: TabBarProps) {
                 color={on ? c.accent : c.textSecondary}
                 width={on ? 1.6 : 1.4}
               />
-              <Txt
-                variant="microCaps"
-                caps={false}
-                tracking={0}
-                weight={on ? 600 : 500}
-                color={on ? c.accent : c.textSecondary}
-                style={{ lineHeight: 12 }}
-              >
+              <Txt variant="tabLabel" weight={on ? 600 : 500} color={on ? c.accent : c.textSecondary}>
                 {t.label}
               </Txt>
             </Pressable>

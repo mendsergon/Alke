@@ -40,10 +40,20 @@ export function HomeTopBar({ gym }: { gym: string }) {
   );
 }
 
-export function HomeTitle({ title, subtitle }: { title: string; subtitle: string }) {
+/** Gym chip, screen title and date — one block, as the export draws it. */
+export function HomeHeader({
+  gym,
+  title,
+  subtitle,
+}: {
+  gym: string;
+  title: string;
+  subtitle: string;
+}) {
   const { c } = useTheme();
   return (
     <View>
+      <HomeTopBar gym={gym} />
       <Txt variant="screenTitle" family="serif" weight={500} style={{ marginTop: 14 }}>
         {title}
       </Txt>
@@ -70,7 +80,7 @@ export function WeekStats({ stats }: { stats: WeekStat[] }) {
               <Txt variant="numeralM" weight={600} tnum>
                 {s.value}
               </Txt>
-              <Txt variant="microCaps" caps={false} weight={500} color={c.textSecondary} tracking={0.01} style={{ marginLeft: 3 }}>
+              <Txt variant="unitSmall" color={c.textSecondary} style={{ marginLeft: 3 }}>
                 {s.suffix}
               </Txt>
             </View>
