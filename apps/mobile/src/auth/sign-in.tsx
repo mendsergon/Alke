@@ -1,32 +1,13 @@
 import { useState, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, TextInput, View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AlkeMark } from '../components/alke-mark';
 import { Card, PrimaryButton, Row } from '../components/surfaces';
 import { Icon } from '../components/icon';
 import { MicroCaps, Txt } from '../theme/text';
 import { tokens, useTheme } from '../theme/theme';
 import { useAuth } from './auth';
 import { AppleMark, GoogleMark } from './brand-marks';
-
-/**
- * The mark: the rung's own language — a 6px fully-rounded stroke — bent once.
- * There is no logo file in the repo (assets/images/icon.png is still Expo's
- * stock placeholder), so this stands in until Stavros supplies one.
- */
-function AlkeMark({ size, color }: { size: number; color: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 48 48" fill="none">
-      <Path
-        d="M10 36 24 14l14 22"
-        stroke={color}
-        strokeWidth={tokens.rung.trackHeight}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
-}
 
 /**
  * Not in the design exports — PLAN.md §3 lists onboarding as not yet designed.
@@ -58,14 +39,20 @@ export function SignIn() {
           paddingBottom: Math.max(tokens.space[24], insets.bottom),
         }}
       >
-        <AlkeMark size={44} color={c.accent} />
-
-        <Txt variant="screenTitle" family="serif" weight={500} style={{ marginTop: tokens.space[20] }}>
-          Alke
-        </Txt>
-        <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: tokens.space[4] }}>
-          Log your sets. See what to change.
-        </Txt>
+        <View style={{ alignItems: 'center' }}>
+          <AlkeMark size={64} />
+          <Txt
+            variant="screenTitle"
+            family="serif"
+            weight={500}
+            style={{ marginTop: tokens.space[16] }}
+          >
+            Alke
+          </Txt>
+          <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: tokens.space[4] }}>
+            Log your sets. See what to change.
+          </Txt>
+        </View>
 
         {/* The one flexible gap. The header holds the top, the controls sit in
             the thumb zone, and the space between them is deliberate. */}
@@ -132,7 +119,11 @@ export function SignIn() {
           </Txt>
         ) : null}
 
-        <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: tokens.space[16] }}>
+        <Txt
+          variant="captionTight"
+          color={c.textSecondary}
+          style={{ marginTop: tokens.space[16], textAlign: 'center' }}
+        >
           Alke is for people aged 15 and over.
         </Txt>
       </View>
