@@ -14,14 +14,27 @@ import Geist_600SemiBold from '@expo-google-fonts/geist/600SemiBold/Geist_600Sem
 import { ThemeProvider, useTheme } from '../theme/theme';
 import { SessionProvider } from '../session/session';
 import { GymProvider } from '../gym/gym';
+import { AuthProvider, useAuth } from '../auth/auth';
+import { SignIn } from '../auth/sign-in';
 
 SplashScreen.preventAutoHideAsync();
 
-function Navigator() {
-  const { c, scheme } = useTheme();
+/** Signed out, the gate is the whole app; there is no route behind it. */
+function Gate() {
+  const { scheme } = useTheme();
+  const { user } = useAuth();
   return (
     <>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+      {user ? <Navigator /> : <SignIn />}
+    </>
+  );
+}
+
+function Navigator() {
+  const { c } = useTheme();
+  return (
+    <>
       <Stack
         screenOptions={{
           headerShown: false,
@@ -55,11 +68,13 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ThemeProvider>
-          <GymProvider>
-            <SessionProvider>
-              <Navigator />
-            </SessionProvider>
-          </GymProvider>
+          <AuthProvider>
+            <GymProvider>
+              <SessionProvider>
+                <Gate />
+              </SessionProvider>
+            </GymProvider>
+          </AuthProvider>
         </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

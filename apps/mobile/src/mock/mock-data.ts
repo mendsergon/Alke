@@ -321,6 +321,14 @@ export const MOCK_WEEKLY_REPORT = {
 };
 
 // --- profile ---------------------------------------------------------------
+// --- account ---------------------------------------------------------------
+/** The account the sign-in screen opens on. Mock only; no backend yet. */
+export const MOCK_DEFAULT_USER = {
+  name: 'Ben',
+  initials: 'B',
+  email: 'ben@alke.app',
+};
+
 export const MOCK_PROFILE = {
   initials: 'SK',
   name: 'Stavros K.',

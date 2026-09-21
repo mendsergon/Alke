@@ -7,11 +7,13 @@ import { MicroCaps, Txt } from '../../theme/text';
 import { tokens, useTheme } from '../../theme/theme';
 import { MOCK_PROFILE } from '../../mock/mock-data';
 import { useGym } from '../../gym/gym';
+import { useAuth } from '../../auth/auth';
 
 export default function Profile() {
   const { c } = useTheme();
   const { gym } = useGym();
   const router = useRouter();
+  const { user, signOut } = useAuth();
   const p = MOCK_PROFILE;
 
   return (
@@ -31,13 +33,13 @@ export default function Profile() {
             }}
           >
             <Txt variant="avatarInitials" color={c.accent}>
-              {p.initials}
+              {user?.initials ?? p.initials}
             </Txt>
           </View>
           <View style={{ flexGrow: 1, flexShrink: 1 }}>
-            <Txt variant="nameTitle">{p.name}</Txt>
-            <Txt variant="captionTight" color={c.textSecondary} tnum style={{ marginTop: 1 }}>
-              {p.detail}
+            <Txt variant="nameTitle">{user?.name ?? p.name}</Txt>
+            <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: 1 }}>
+              {user?.email ?? p.detail}
             </Txt>
           </View>
           <Icon name="chevronRight" size={20} color={c.textSecondary} />
@@ -143,6 +145,19 @@ export default function Profile() {
             <Icon name="chevronRight" size={18} color={c.textSecondary} />
           </Pressable>
         ))}
+        <Pressable
+          accessibilityRole="button"
+          onPress={signOut}
+          style={{
+            paddingVertical: 12,
+            borderTopWidth: 1,
+            borderTopColor: c.border,
+          }}
+        >
+          <Txt variant="rowLabel" weight={500} color={c.destructive}>
+            Sign out
+          </Txt>
+        </Pressable>
       </Card>
     </Screen>
   );
