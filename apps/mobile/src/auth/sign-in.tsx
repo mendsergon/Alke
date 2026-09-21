@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PrimaryButton } from '../components/surfaces';
 import { Txt } from '../theme/text';
 import { tokens, useTheme } from '../theme/theme';
 import { useAuth } from './auth';
+import { AppleMark, GoogleMark } from './brand-marks';
 
 /**
  * The gate. It is not in the design exports — PLAN.md §3 lists onboarding as
@@ -36,9 +37,6 @@ export function SignIn() {
           paddingBottom: Math.max(tokens.space[24], insets.bottom),
         }}
       >
-        {/* Placeholder: a way straight in while sign-in is not wired up. */}
-        <ProviderButton label="Enter" onPress={() => signInWithEmail(defaultEmail)} />
-
         <View style={{ flexGrow: 1, justifyContent: 'center' }}>
           <Txt variant="screenTitle" family="serif" weight={500}>
             Alke
@@ -99,8 +97,16 @@ export function SignIn() {
           </View>
 
           <View style={{ gap: 10 }}>
-            <ProviderButton label="Continue with Apple" onPress={() => setNote('Apple sign-in is not wired up yet.')} />
-            <ProviderButton label="Continue with Google" onPress={() => setNote('Google sign-in is not wired up yet.')} />
+            <ProviderButton
+              label="Continue with Apple"
+              mark={<AppleMark size={19} color={c.text} />}
+              onPress={() => setNote('Apple sign-in is not wired up yet.')}
+            />
+            <ProviderButton
+              label="Continue with Google"
+              mark={<GoogleMark size={18} />}
+              onPress={() => setNote('Google sign-in is not wired up yet.')}
+            />
           </View>
 
           {note ? (
@@ -118,8 +124,16 @@ export function SignIn() {
   );
 }
 
-/** A quiet full-width button: the export's secondary shape, no brand mark. */
-function ProviderButton({ label, onPress }: { label: string; onPress: () => void }) {
+/** The export's secondary shape, with the vendor mark set before the label. */
+function ProviderButton({
+  label,
+  mark,
+  onPress,
+}: {
+  label: string;
+  mark: ReactNode;
+  onPress: () => void;
+}) {
   const { c } = useTheme();
   return (
     <Pressable
@@ -130,10 +144,13 @@ function ProviderButton({ label, onPress }: { label: string; onPress: () => void
         borderRadius: tokens.radius.button,
         borderWidth: 1,
         borderColor: c.border,
+        flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
+        gap: 10,
       }}
     >
+      {mark}
       <Txt variant="label" weight={500}>
         {label}
       </Txt>
