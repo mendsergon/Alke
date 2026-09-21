@@ -36,6 +36,9 @@ export function SignIn() {
           paddingBottom: Math.max(tokens.space[24], insets.bottom),
         }}
       >
+        {/* Placeholder: a way straight in while sign-in is not wired up. */}
+        <ProviderButton label="Enter" onPress={() => signInWithEmail(defaultEmail)} />
+
         <View style={{ flexGrow: 1, justifyContent: 'center' }}>
           <Txt variant="screenTitle" family="serif" weight={500}>
             Alke
