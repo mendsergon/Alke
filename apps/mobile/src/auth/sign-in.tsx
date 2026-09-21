@@ -2,9 +2,8 @@ import { useState, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AlkeMark } from '../components/alke-mark';
-import { Card, PrimaryButton, Row } from '../components/surfaces';
-import { Icon } from '../components/icon';
-import { MicroCaps, Txt } from '../theme/text';
+import { PrimaryButton } from '../components/surfaces';
+import { Txt } from '../theme/text';
 import { tokens, useTheme } from '../theme/theme';
 import { useAuth } from './auth';
 import { AppleMark, GoogleMark } from './brand-marks';
@@ -52,13 +51,9 @@ export function SignIn() {
           >
             Alke
           </Txt>
-          <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: tokens.space[4] }}>
-            Log your sets. See what to change.
-          </Txt>
         </View>
 
         <View style={{ marginTop: tokens.space[32] }}>
-          <MicroCaps>Email</MicroCaps>
           <TextInput
             value={email}
             onChangeText={(next) => {
@@ -72,11 +67,10 @@ export function SignIn() {
             inputMode="email"
             returnKeyType="go"
             onSubmitEditing={submit}
-            placeholder="you@example.com"
+            placeholder="Email"
             placeholderTextColor={c.textSecondary}
             accessibilityLabel="Email address"
             style={{
-              marginTop: tokens.space[8],
               height: 52,
               paddingHorizontal: 14,
               borderRadius: tokens.radius.button,
@@ -113,19 +107,18 @@ export function SignIn() {
           <View style={{ flexGrow: 1, height: 1, backgroundColor: c.border }} />
         </View>
 
-        <Card padding={16}>
-          <ProviderRow
-            first
+        <View style={{ gap: tokens.space[12] }}>
+          <ProviderButton
             label="Continue with Apple"
             mark={<AppleMark size={19} color={c.text} />}
             onPress={() => setNote('Apple sign-in is not wired up yet.')}
           />
-          <ProviderRow
+          <ProviderButton
             label="Continue with Google"
             mark={<GoogleMark size={18} />}
             onPress={() => setNote('Google sign-in is not wired up yet.')}
           />
-        </Card>
+        </View>
 
         {note ? (
           <Txt
@@ -139,40 +132,46 @@ export function SignIn() {
 
         <View style={{ flexGrow: 2 }} />
 
-        <Txt
-          variant="captionTight"
-          color={c.textSecondary}
-          style={{ textAlign: 'center' }}
-        >
-          Alke is for people aged 15 and over.
-        </Txt>
       </View>
     </KeyboardAvoidingView>
   );
 }
 
-/** Profile's settings row, with the vendor mark where the icon tile would be. */
-function ProviderRow({
+/**
+ * A provider button: separate, full width, the primary's height and radius,
+ * with the mark and the label centred together. Apple's and Google's own
+ * guidelines both put the mark immediately before centred label text.
+ */
+function ProviderButton({
   label,
   mark,
-  first,
   onPress,
 }: {
   label: string;
   mark: ReactNode;
-  first?: boolean;
   onPress: () => void;
 }) {
   const { c } = useTheme();
   return (
-    <Pressable accessibilityRole="button" onPress={onPress}>
-      <Row first={first} paddingVertical={11}>
-        <View style={{ width: 24, alignItems: 'center' }}>{mark}</View>
-        <Txt variant="rowLabel" weight={500} style={{ flexGrow: 1, flexShrink: 1 }}>
-          {label}
-        </Txt>
-        <Icon name="chevronRight" size={18} color={c.textSecondary} />
-      </Row>
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={{
+        height: 52,
+        borderRadius: tokens.radius.button,
+        borderWidth: 1,
+        borderColor: c.border,
+        backgroundColor: c.surface,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: tokens.space[8],
+      }}
+    >
+      {mark}
+      <Txt variant="label" weight={500}>
+        {label}
+      </Txt>
     </Pressable>
   );
 }
