@@ -14,19 +14,21 @@ import Geist_600SemiBold from '@expo-google-fonts/geist/600SemiBold/Geist_600Sem
 import { ThemeProvider, useTheme } from '../theme/theme';
 import { SessionProvider } from '../session/session';
 import { GymProvider } from '../gym/gym';
-import { AuthProvider, useAuth } from '../auth/auth';
-import { SignIn } from '../auth/sign-in';
+import { AuthProvider } from '../auth/auth';
+import { LibraryProvider } from '../library/library';
 
 SplashScreen.preventAutoHideAsync();
 
-/** Signed out, the gate is the whole app; there is no route behind it. */
+/**
+ * The app opens on the tabs. Signing in is reached from Profile, because
+ * Profile has a not-signed-in state to show and a gate would hide it.
+ */
 function Gate() {
   const { scheme } = useTheme();
-  const { user } = useAuth();
   return (
     <>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-      {user ? <Navigator /> : <SignIn />}
+      <Navigator />
     </>
   );
 }
@@ -45,6 +47,7 @@ function Navigator() {
         <Stack.Screen name="session" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="join-gym" />
         <Stack.Screen name="report" />
+        <Stack.Screen name="sign-in" options={{ presentation: 'modal' }} />
       </Stack>
     </>
   );
@@ -70,9 +73,11 @@ export default function RootLayout() {
         <ThemeProvider>
           <AuthProvider>
             <GymProvider>
-              <SessionProvider>
-                <Gate />
-              </SessionProvider>
+              <LibraryProvider>
+                <SessionProvider>
+                  <Gate />
+                </SessionProvider>
+              </LibraryProvider>
             </GymProvider>
           </AuthProvider>
         </ThemeProvider>

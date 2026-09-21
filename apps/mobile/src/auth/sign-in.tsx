@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { useRouter } from 'expo-router';
 import { KeyboardAvoidingView, Platform, Pressable, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AlkeMark } from '../components/alke-mark';
@@ -17,12 +18,15 @@ import { AppleMark, GoogleMark } from './brand-marks';
 export function SignIn() {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { defaultEmail, signInWithEmail } = useAuth();
   const [email, setEmail] = useState(defaultEmail);
   const [note, setNote] = useState<string | null>(null);
 
   const submit = () => {
-    if (email.trim().length > 0) signInWithEmail(email);
+    if (email.trim().length === 0) return;
+    signInWithEmail(email);
+    router.back();
   };
 
   return (

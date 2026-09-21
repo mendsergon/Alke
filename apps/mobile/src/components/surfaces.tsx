@@ -154,6 +154,7 @@ export function SecondaryButton({
   icon,
   height = 48,
   dashed = false,
+  disabled = false,
   onPress,
   style,
 }: {
@@ -161,13 +162,18 @@ export function SecondaryButton({
   icon?: IconName;
   height?: number;
   dashed?: boolean;
+  /** Drawn, but not yet available. Reads as quiet, never as an error. */
+  disabled?: boolean;
   onPress?: () => void;
   style?: ViewStyle;
 }) {
   const { c } = useTheme();
+  const quiet = dashed || disabled;
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={onPress}
       style={[
         {
@@ -181,12 +187,13 @@ export function SecondaryButton({
           alignItems: 'center',
           justifyContent: 'center',
           gap: 8,
+          opacity: disabled ? 0.45 : 1,
         },
         style,
       ]}
     >
-      {icon ? <Icon name={icon} size={dashed ? 18 : 20} color={dashed ? c.textSecondary : c.text} /> : null}
-      <Txt variant="rowLabel" weight={500} color={dashed ? c.textSecondary : c.text}>
+      {icon ? <Icon name={icon} size={dashed ? 18 : 20} color={quiet ? c.textSecondary : c.text} /> : null}
+      <Txt variant="rowLabel" weight={500} color={quiet ? c.textSecondary : c.text}>
         {label}
       </Txt>
     </Pressable>
@@ -298,5 +305,36 @@ export function Row({
     >
       {children}
     </View>
+  );
+}
+
+/**
+ * An empty state: one short line saying what is not there yet, and the action
+ * that fills it where one exists. Same card, same tones — nothing announces
+ * itself as a placeholder, and no number is ever invented to fill the space.
+ */
+export function EmptyState({
+  line,
+  action,
+  onAction,
+  icon,
+}: {
+  line: string;
+  action?: string;
+  onAction?: () => void;
+  icon?: IconName;
+}) {
+  const { c } = useTheme();
+  return (
+    <Card>
+      <Txt variant="bodySmall" color={c.textSecondary}>
+        {line}
+      </Txt>
+      {action ? (
+        <View style={{ marginTop: tokens.space[16] }}>
+          <SecondaryButton label={action} icon={icon} height={44} onPress={onAction} />
+        </View>
+      ) : null}
+    </Card>
   );
 }

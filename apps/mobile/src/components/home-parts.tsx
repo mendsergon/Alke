@@ -14,7 +14,7 @@ export function HomeTopBar() {
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Active gym: ${gym.name}. Switch gym.`}
+        accessibilityLabel={gym ? `Active gym: ${gym.name}. Switch gym.` : 'No gym joined'}
         onPress={gyms.length > 1 ? switchGym : undefined}
         style={{
           height: 32,
@@ -27,11 +27,13 @@ export function HomeTopBar() {
           gap: 7,
         }}
       >
-        <Icon name="gym" size={15} color={c.accent} />
-        <Txt variant="captionTight" weight={500}>
-          {gym.shortName}
+        <Icon name="gym" size={15} color={gym ? c.accent : c.textSecondary} />
+        <Txt variant="captionTight" weight={500} color={gym ? c.text : c.textSecondary}>
+          {gym ? gym.shortName : 'No gym'}
         </Txt>
-        <Icon name="chevronDown" size={14} color={c.textSecondary} width={1.7} />
+        {gyms.length > 1 ? (
+          <Icon name="chevronDown" size={14} color={c.textSecondary} width={1.7} />
+        ) : null}
       </Pressable>
       <Pressable
         accessibilityRole="button"

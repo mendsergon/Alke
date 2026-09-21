@@ -1,10 +1,11 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
-import { MOCK_GYMS, type Gym } from '../mock/mock-data';
+import { ACTIVE_GYM, GYM_MEMBERSHIPS, type Gym } from '../mock/mock-data';
 
 type GymState = {
-  gym: Gym;
+  /** The gym in use, or null when the person has not joined one. */
+  gym: Gym | null;
   gyms: Gym[];
-  /** PLAN.md §2: the chip switches gym in one tap. */
+  /** PLAN.md §2: the chip switches gym in one tap, once there are two. */
   switchGym: () => void;
 };
 
@@ -12,12 +13,15 @@ const Ctx = createContext<GymState | null>(null);
 
 export function GymProvider({ children }: { children: ReactNode }) {
   const [index, setIndex] = useState(0);
+  const gyms = GYM_MEMBERSHIPS;
   const switchGym = useCallback(() => {
-    setIndex((i) => (i + 1) % MOCK_GYMS.length);
-  }, []);
+    if (gyms.length < 2) return;
+    setIndex((i) => (i + 1) % gyms.length);
+  }, [gyms.length]);
+
   const value = useMemo<GymState>(
-    () => ({ gym: MOCK_GYMS[index] ?? MOCK_GYMS[0]!, gyms: MOCK_GYMS, switchGym }),
-    [index, switchGym],
+    () => ({ gym: gyms[index] ?? ACTIVE_GYM, gyms, switchGym }),
+    [index, gyms, switchGym],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

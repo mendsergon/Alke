@@ -1,18 +1,23 @@
 import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Screen, ScreenHeader } from '../../components/screen';
-import { Card, Chip } from '../../components/surfaces';
+import { Card, Chip, EmptyState } from '../../components/surfaces';
 import { Icon } from '../../components/icon';
 import { Figure } from '../../figure/figure';
 import { FIGURE_STRIPS } from '../../figure/figure.generated';
 import { MicroCaps, Txt } from '../../theme/text';
 import { tokens, useTheme } from '../../theme/theme';
 import { useGym } from '../../gym/gym';
+import { useLibrary } from '../../library/library';
 import {
-  MOCK_EXPLORE_FILTERS,
-  MOCK_SHARED_PROGRAMS,
-  type SharedProgram,
+  FEATURED_TEMPLATES,
+  GYM_PROGRAMS,
+  SHARED_PROGRAMS,
+  type Template,
 } from '../../mock/mock-data';
+
+const FILTERS = ['All', '3 day', '4 day', '6 day'] as const;
 
 function SearchBar() {
   const { c } = useTheme();
@@ -29,23 +34,16 @@ function SearchBar() {
       }}
     >
       <Icon name="search" size={18} color={c.textSecondary} />
-      <Txt color={c.textSecondary}>Search programs and templates</Txt>
+      <Txt color={c.textSecondary}>Search templates</Txt>
     </View>
   );
 }
 
-/**
- * The export draws the first chip filled and the rest quiet, so the chips are
- * a filter, not a caption. 'Featured' is the whole curated page.
- *
- * OPEN: the tag taxonomy behind Strength / Hypertrophy / 3 day is not fixed by
- * PLAN.md. These predicates read the mock chips and are placeholders.
- */
 function Filters({ value, onChange }: { value: string; onChange: (next: string) => void }) {
   const { c } = useTheme();
   return (
     <View style={{ flexDirection: 'row', gap: 8 }}>
-      {MOCK_EXPLORE_FILTERS.map((f) => {
+      {FILTERS.map((f) => {
         const on = f === value;
         return (
           <Pressable
@@ -70,13 +68,7 @@ function Filters({ value, onChange }: { value: string; onChange: (next: string) 
   );
 }
 
-function matches(program: SharedProgram, filter: string): boolean {
-  if (filter === 'Featured') return true;
-  if (filter === '3 day') return program.daysPerWeek === 3;
-  return program.chips.some((chip) => chip.toLowerCase() === filter.toLowerCase());
-}
-
-/** Seven squares, one per weekday, filled for the days the program trains. */
+/** Seven squares, one per weekday, filled for the days the template trains. */
 function DayDots({ days, of }: { days: number; of: number }) {
   const { c } = useTheme();
   return (
@@ -96,9 +88,12 @@ function DayDots({ days, of }: { days: number; of: number }) {
   );
 }
 
-function ProgramCard({ program }: { program: SharedProgram }) {
+function TemplateCard({ template }: { template: Template }) {
   const { c } = useTheme();
-  const strip = FIGURE_STRIPS[program.strip];
+  const { has, addTemplate } = useLibrary();
+  const strip = FIGURE_STRIPS[template.strip];
+  const added = has(template.id);
+
   return (
     <Card padding={16}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
@@ -124,46 +119,26 @@ function ProgramCard({ program }: { program: SharedProgram }) {
           />
         </View>
         <View style={{ flexGrow: 1, flexShrink: 1 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
-            <View style={{ flexShrink: 1 }}>
-              <Txt variant="serifListTitle" family="serif" weight={500}>
-                {program.name}
-              </Txt>
-              <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: 1 }}>
-                {program.by}
-              </Txt>
-            </View>
-            {program.featured ? (
-              <View
-                style={{
-                  paddingVertical: 3,
-                  paddingHorizontal: 8,
-                  borderRadius: tokens.radius.rung,
-                  backgroundColor: c.accentSoft,
-                }}
-              >
-                <MicroCaps color={c.accent}>Featured</MicroCaps>
-              </View>
-            ) : null}
-          </View>
+          <Txt variant="serifListTitle" family="serif" weight={500}>
+            {template.name}
+          </Txt>
+          <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: 1 }}>
+            {template.focus}
+          </Txt>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 9 }}>
-            <DayDots days={program.daysPerWeek} of={program.weekLength} />
+            <DayDots days={template.daysPerWeek} of={template.weekLength} />
             <Txt variant="micro" color={c.textSecondary} tnum>
-              {program.daysPerWeek} days a week
+              {template.daysPerWeek} days a week
             </Txt>
           </View>
         </View>
       </View>
       <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginTop: 12 }}>
-        {program.chips.map((chip) => (
+        {template.chips.map((chip) => (
           <Chip key={chip}>{chip}</Chip>
         ))}
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 }}>
-        <Icon name="users" size={15} color={c.textSecondary} width={1.5} />
-        <Txt variant="micro" color={c.textSecondary} tnum style={{ flexGrow: 1 }}>
-          {program.saves}
-        </Txt>
         <Pressable
           accessibilityRole="button"
           style={{
@@ -177,7 +152,26 @@ function ProgramCard({ program }: { program: SharedProgram }) {
           }}
         >
           <Txt variant="captionTight" weight={600}>
-            Save
+            Preview
+          </Txt>
+        </Pressable>
+        <View style={{ flexGrow: 1 }} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ disabled: added }}
+          disabled={added}
+          onPress={() => addTemplate(template)}
+          style={{
+            height: 34,
+            paddingHorizontal: 14,
+            borderRadius: tokens.radius.rung,
+            backgroundColor: added ? c.surfaceRaised : c.accent,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Txt variant="captionTight" weight={600} color={added ? c.textSecondary : c.onAccent}>
+            {added ? 'In Library' : 'Add to Library'}
           </Txt>
         </Pressable>
       </View>
@@ -187,51 +181,54 @@ function ProgramCard({ program }: { program: SharedProgram }) {
 
 export default function Explore() {
   const { c } = useTheme();
+  const router = useRouter();
   const { gym } = useGym();
-  const [filter, setFilter] = useState(MOCK_EXPLORE_FILTERS[0]!);
-  const [featured, fromGym, other] = MOCK_SHARED_PROGRAMS;
+  const [filter, setFilter] = useState<string>(FILTERS[0]);
 
-  const shown = useMemo(
-    () => ({
-      featured: featured && matches(featured, filter) ? featured : null,
-      fromGym: fromGym && matches(fromGym, filter) ? fromGym : null,
-      other: other && matches(other, filter) ? other : null,
-    }),
-    [filter, featured, fromGym, other],
-  );
-  const empty = !shown.featured && !shown.fromGym && !shown.other;
+  const templates = useMemo(() => {
+    if (filter === 'All') return FEATURED_TEMPLATES;
+    const days = Number.parseInt(filter, 10);
+    return FEATURED_TEMPLATES.filter((t) => t.daysPerWeek === days);
+  }, [filter]);
 
   return (
     <Screen gap={14}>
-      <ScreenHeader title="Explore" subtitle="Programs from other lifters" />
+      <ScreenHeader title="Explore" subtitle="Templates to start from" />
       <SearchBar />
       <Filters value={filter} onChange={setFilter} />
-      {shown.featured ? <ProgramCard program={shown.featured} /> : null}
-      {shown.fromGym ? (
-        <>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Icon name="gym" size={16} color={c.accent} />
-            <MicroCaps color={c.accent}>From {gym.name}</MicroCaps>
-          </View>
-          <ProgramCard program={shown.fromGym} />
-        </>
-      ) : null}
-      {shown.other ? (
-        <>
-          <View style={{ height: 12 }} />
-          <ProgramCard program={shown.other} />
-        </>
-      ) : null}
-      {empty ? (
-        <Card>
-          <Txt variant="rowLabel" weight={500}>
-            Nothing under {filter} yet.
-          </Txt>
-          <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: 4 }}>
-            Pick another filter, or search for a program by name.
-          </Txt>
-        </Card>
-      ) : null}
+
+      <MicroCaps>Featured templates</MicroCaps>
+      {templates.length > 0 ? (
+        templates.map((t) => <TemplateCard key={t.id} template={t} />)
+      ) : (
+        <EmptyState line={`No template runs ${filter.toLowerCase()} a week.`} />
+      )}
+
+      <View style={{ height: 4 }} />
+      <MicroCaps>Shared by other lifters</MicroCaps>
+      {SHARED_PROGRAMS.length > 0 ? null : (
+        <EmptyState line="Nobody has shared a program yet. Shared programs arrive with the social layer." />
+      )}
+
+      <View style={{ height: 4 }} />
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Icon name="gym" size={16} color={gym ? c.accent : c.textSecondary} />
+        <MicroCaps color={gym ? c.accent : c.textSecondary}>
+          {gym ? `From ${gym.name}` : 'From your gym'}
+        </MicroCaps>
+      </View>
+      {GYM_PROGRAMS.length > 0 ? null : (
+        <EmptyState
+          line={
+            gym
+              ? 'Your gym has not published a program yet.'
+              : 'Join a gym and its programs show up here.'
+          }
+          action={gym ? undefined : 'Join with a code'}
+          icon="qr"
+          onAction={() => router.push('/join-gym')}
+        />
+      )}
     </Screen>
   );
 }

@@ -1,5 +1,4 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
-import { MOCK_DEFAULT_USER } from '../mock/mock-data';
 
 export type User = { name: string; initials: string; email: string };
 
@@ -8,7 +7,7 @@ export type Provider = 'apple' | 'google';
 
 type AuthState = {
   user: User | null;
-  /** The address the screen opens on, so one tap gets you in. */
+  /** The screen opens on an empty field; there is no account to prefill. */
   defaultEmail: string;
   signInWithEmail: (email: string) => void;
   signOut: () => void;
@@ -16,16 +15,17 @@ type AuthState = {
 
 const Ctx = createContext<AuthState | null>(null);
 
-/** "ben@alke.app" → Ben / B. Real names come from the account in Phase 2. */
-function userFromEmail(email: string): User {
+/**
+ * The name comes from the address the person typed, not from a stored account
+ * — there is no backend yet. Nothing is invented: an empty address signs
+ * nobody in.
+ */
+function userFromEmail(email: string): User | null {
   const trimmed = email.trim();
+  if (trimmed.length === 0) return null;
   const local = trimmed.split('@')[0] ?? trimmed;
   const name = local.charAt(0).toUpperCase() + local.slice(1);
-  return {
-    name: name || MOCK_DEFAULT_USER.name,
-    initials: (name.charAt(0) || MOCK_DEFAULT_USER.initials).toUpperCase(),
-    email: trimmed || MOCK_DEFAULT_USER.email,
-  };
+  return { name, initials: name.charAt(0).toUpperCase(), email: trimmed };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthState>(
     () => ({
       user,
-      defaultEmail: MOCK_DEFAULT_USER.email,
+      defaultEmail: '',
       signInWithEmail,
       signOut: () => setUser(null),
     }),

@@ -1,18 +1,15 @@
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Screen, ScreenHeader } from '../../components/screen';
-import { Card, Pill, Row, Segmented } from '../../components/surfaces';
+import { Card, EmptyState, Pill, Row, Segmented } from '../../components/surfaces';
 import { Icon } from '../../components/icon';
 import { Rung } from '../../components/rung';
 import { ExerciseIcon } from '../../figure/figure';
 import { MicroCaps, Txt } from '../../theme/text';
 import { tokens, useTheme } from '../../theme/theme';
-import {
-  MOCK_EXERCISES,
-  MOCK_EXERCISE_COUNT,
-  MOCK_PROGRAMS,
-  type ProgramRow,
-} from '../../mock/mock-data';
+import { useLibrary } from '../../library/library';
+import { EXERCISE_CATALOG, USER_CUSTOM_EXERCISES, type ProgramRow } from '../../mock/mock-data';
 
 const TABS = ['Programs', 'Exercises'] as const;
 
@@ -38,9 +35,32 @@ function ProgramListRow({ program, first }: { program: ProgramRow; first: boolea
   );
 }
 
+function SearchBar() {
+  const { c } = useTheme();
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        height: 46,
+        paddingHorizontal: 14,
+        borderRadius: tokens.radius.button,
+        backgroundColor: c.surface,
+      }}
+    >
+      <Icon name="search" size={18} color={c.textSecondary} />
+      <Txt color={c.textSecondary}>Search exercises</Txt>
+    </View>
+  );
+}
+
 export default function Library() {
   const { c } = useTheme();
+  const router = useRouter();
   const [tab, setTab] = useState<(typeof TABS)[number]>('Programs');
+  const { programs } = useLibrary();
+  const exercises = [...EXERCISE_CATALOG, ...USER_CUSTOM_EXERCISES];
 
   return (
     <Screen gap={14}>
@@ -58,33 +78,51 @@ export default function Library() {
         }
       />
       <Segmented options={TABS} value={tab} onChange={setTab} />
-      <Card>
-        {MOCK_PROGRAMS.map((p, i) => (
-          <ProgramListRow key={p.name} program={p} first={i === 0} />
-        ))}
-      </Card>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <MicroCaps>Exercises</MicroCaps>
-        <Txt variant="captionTight" weight={500} color={c.accent}>
-          {MOCK_EXERCISE_COUNT}
-        </Txt>
-      </View>
-      <Card>
-        {MOCK_EXERCISES.map((e, i) => (
-          <Row key={e.name} first={i === 0}>
-            <ExerciseIcon icon={e.icon} size={tokens.iconTile.size.listRow} />
-            <View style={{ flexGrow: 1, flexShrink: 1 }}>
-              <Txt variant="rowLabel" weight={500}>
-                {e.name}
-              </Txt>
-              <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: 1 }}>
-                {e.detail}
-              </Txt>
-            </View>
-            <Icon name="chevronRight" size={18} color={c.textSecondary} />
-          </Row>
-        ))}
-      </Card>
+
+      {tab === 'Programs' ? (
+        programs.length > 0 ? (
+          <Card>
+            {programs.map((p, i) => (
+              <ProgramListRow key={p.name} program={p} first={i === 0} />
+            ))}
+          </Card>
+        ) : (
+          <EmptyState
+            line="No programs yet. Add a template from Explore and it lands here."
+            action="Browse templates"
+            icon="compass"
+            onAction={() => router.push('/explore')}
+          />
+        )
+      ) : null}
+
+      {tab === 'Exercises' ? (
+        <>
+          <SearchBar />
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <MicroCaps>Catalog</MicroCaps>
+            <Txt variant="captionTight" weight={500} color={c.accent} tnum>
+              {exercises.length}
+            </Txt>
+          </View>
+          <Card>
+            {exercises.map((e, i) => (
+              <Row key={e.name} first={i === 0}>
+                <ExerciseIcon icon={e.icon} size={tokens.iconTile.size.listRow} />
+                <View style={{ flexGrow: 1, flexShrink: 1 }}>
+                  <Txt variant="rowLabel" weight={500}>
+                    {e.name}
+                  </Txt>
+                  <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: 1 }}>
+                    {e.detail}
+                  </Txt>
+                </View>
+                <Icon name="chevronRight" size={18} color={c.textSecondary} />
+              </Row>
+            ))}
+          </Card>
+        </>
+      ) : null}
     </Screen>
   );
 }

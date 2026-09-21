@@ -1,13 +1,22 @@
 /**
- * MOCK DATA — NOT PRODUCT CONTENT, NOT SEED DATA.
+ * App data, in two halves.
  *
- * Every value here is transcribed from the design exports in `design/`, which
- * PLAN.md says still carry the placeholder name "Rungs" and placeholder copy,
- * numbers, names and volume ranges. PLAN.md §1.5 is explicit that the
- * high-volume set counts shown in the mocks contradict Alke's low-volume,
- * high-effort defaults and must never become defaults or seed data.
+ * CATALOG is real content the app ships with: the exercise table and the
+ * starter program templates. It is safe to show.
  *
- * Nothing outside src/mock may import anything but the types.
+ * USER DATA is everything a person produces by training — programs they have
+ * added, sessions, sets, records, reports, their gym. It starts EMPTY and only
+ * fills when they use the app. Nothing here is transcribed from the design
+ * exports: those exports show how the app looks, not what it contains, and
+ * PLAN.md §1 says their copy, numbers, names and volume ranges are placeholder.
+ *
+ * The screens read the empty values below and render their empty states. When
+ * a store lands, these become its initial state and nothing on the screens
+ * needs to change.
+ *
+ * Still transcribed, and still marked mock, are MOCK_SESSION, MOCK_WEEKLY_REPORT
+ * and the join-gym values: the session, report and join screens are outside
+ * this pass and are untouched.
  */
 import type { ExerciseIconKey } from '../figure/figure.generated';
 
@@ -45,6 +54,19 @@ export type SharedProgram = {
   strip: number;
 };
 
+/** A template the app ships. No author, no save count — it is not shared content. */
+export type Template = {
+  id: string;
+  name: string;
+  daysPerWeek: number;
+  weekLength: number;
+  /** What the split is, in the user's words. */
+  focus: string;
+  chips: string[];
+  /** Index into FIGURE_STRIPS. */
+  strip: number;
+};
+
 export type SessionSet = {
   index: number;
   state: 'done' | 'current' | 'empty';
@@ -74,7 +96,114 @@ export type Recommendation = {
 
 export type RecordByReps = { range: string; weight: string; reps: string; date: string };
 
-// --- the user's gym --------------------------------------------------------
+// ===========================================================================
+// CATALOG — real content, shipped with the app
+// ===========================================================================
+
+/**
+ * The exercise table: movement, the muscle it trains and the equipment it
+ * needs. PLAN.md §1.1 calls this the single most important data asset. This is
+ * the first slice of it; the full table and its boolean equipment expressions
+ * are a later job.
+ */
+export const EXERCISE_CATALOG: ExerciseRow[] = [
+  { name: 'Barbell Back Squat', detail: 'Quads · barbell', icon: 'squat' },
+  { name: 'Romanian Deadlift', detail: 'Hamstrings · barbell', icon: 'rdl' },
+  { name: 'Barbell Row', detail: 'Lats · barbell', icon: 'row' },
+  { name: 'Bench Press', detail: 'Chest · barbell', icon: 'bench' },
+  { name: 'Overhead Press', detail: 'Front delts · barbell', icon: 'ohp' },
+  { name: 'Dumbbell Lateral Raise', detail: 'Side delts · dumbbell', icon: 'lateral' },
+  { name: 'Face Pull', detail: 'Rear delts · cable', icon: 'facepull' },
+  { name: 'Barbell Curl', detail: 'Biceps · barbell', icon: 'curl' },
+  { name: 'Triceps Pushdown', detail: 'Triceps · cable', icon: 'pushdown' },
+  { name: 'Hip Thrust', detail: 'Glutes · barbell', icon: 'hipthrust' },
+  { name: 'Standing Calf Raise', detail: 'Calves · machine', icon: 'calfraise' },
+  { name: 'Back Extension', detail: 'Erectors · bodyweight', icon: 'backext' },
+];
+
+/**
+ * Starter templates. Structure only — days, split, level. No author and no
+ * save count, because nobody has shared anything.
+ *
+ * OPEN: which templates actually ship is a product decision PLAN.md does not
+ * fix. These three describe common structures and are placeholders for it.
+ */
+export const FEATURED_TEMPLATES: Template[] = [
+  {
+    id: 'full-body-3',
+    name: 'Full Body Three',
+    daysPerWeek: 3,
+    weekLength: 7,
+    focus: 'Full body, three days a week',
+    chips: ['beginner', 'barbell'],
+    strip: 1,
+  },
+  {
+    id: 'upper-lower-4',
+    name: 'Upper / Lower Four',
+    daysPerWeek: 4,
+    weekLength: 7,
+    focus: 'Upper and lower, alternating',
+    chips: ['intermediate', 'barbell'],
+    strip: 0,
+  },
+  {
+    id: 'push-pull-legs-6',
+    name: 'Push Pull Legs Six',
+    daysPerWeek: 6,
+    weekLength: 7,
+    focus: 'Push, pull, legs, twice over',
+    chips: ['advanced', 'machines'],
+    strip: 2,
+  },
+];
+
+/** The weekly targets the status block measures against. Nothing is done yet. */
+export const WEEK_TARGETS: WeekStat[] = [
+  { label: 'Sessions', value: '0', suffix: 'of 0', done: 0, target: 0 },
+  { label: 'Sets', value: '0', suffix: 'this week', done: 0, target: 0 },
+  { label: 'Muscles in range', value: '0', suffix: 'of 21', done: 0, target: 21 },
+];
+
+export const CHECK_IN_SLIDERS = ['Sleep', 'Fatigue', 'Stress', 'Sore', 'Mood'];
+
+// ===========================================================================
+// USER DATA — empty until the person trains
+// ===========================================================================
+
+/** No gym joined. The chip and the Profile card both read this. */
+export const ACTIVE_GYM: Gym | null = null;
+export const GYM_MEMBERSHIPS: Gym[] = [];
+
+/** Programs the person has added from a template. Empty until they add one. */
+export const USER_PROGRAMS: ProgramRow[] = [];
+
+/** Exercises the person created themselves, on top of the catalog. */
+export const USER_CUSTOM_EXERCISES: ExerciseRow[] = [];
+
+/** Programs other people have shared. Nothing until the social layer exists. */
+export const SHARED_PROGRAMS: SharedProgram[] = [];
+
+/** Programs published by the active gym. Nothing without a gym. */
+export const GYM_PROGRAMS: SharedProgram[] = [];
+
+/** Every session logged, newest first. */
+export const USER_HISTORY: HistoryRow[] = [];
+
+/** Fractional weekly volume per muscle, 0 to 1. Drives the body map. */
+export const USER_MUSCLE_SCORES: MuscleScore[] = [];
+
+/** Weekly reports. PLAN.md §8 #11 leaves the minimum data window open. */
+export const USER_REPORTS: { latest: { week: string; prose: string } | null; archive: HistoryRow[] } = {
+  latest: null,
+  archive: [],
+};
+
+// ===========================================================================
+// Untouched by this pass: the session, report and join-gym screens
+// ===========================================================================
+
+/** Read only by the join-gym screen, which is outside this pass. */
 export const MOCK_GYM: Gym = {
   name: 'Northgate Strength Hall',
   shortName: 'Northgate',
@@ -82,21 +211,6 @@ export const MOCK_GYM: Gym = {
   members: 142,
   machines: 34,
 };
-
-/**
- * The gyms this user belongs to. PLAN.md §2 puts one-tap switching on the
- * chip, so the chip steps through this list. MOCK_GYM stays the first one.
- */
-export const MOCK_GYMS: Gym[] = [
-  MOCK_GYM,
-  {
-    name: 'Lamia Barbell Club',
-    shortName: 'Lamia',
-    place: 'Ypsilantou 14',
-    members: 68,
-    machines: 12,
-  },
-];
 
 export const MOCK_GYM_EQUIPMENT = [
   '4 power racks',
@@ -109,110 +223,6 @@ export const MOCK_GYM_EQUIPMENT = [
 
 export const MOCK_GYM_CODE = 'NGH7';
 
-// --- home ------------------------------------------------------------------
-/**
- * Which of the three Home states (PLAN.md §2) the app shows. The design
- * exports draw all three; flip this to look at the other two.
- */
-export const MOCK_HOME_STATE: 'training' | 'rest' | 'no-program' = 'rest';
-
-export const MOCK_TODAY = 'Saturday 19 September';
-export const MOCK_REST_DAY = 'Sunday 20 September';
-
-export const MOCK_NEXT_SESSION: SessionPlan = {
-  program: 'Foundation Four',
-  where: 'Week 3 · Day 2 — Lower',
-  chips: ['5 exercises', '18 sets', '≈ 52 min'],
-};
-
-export const MOCK_WEEK: WeekStat[] = [
-  { label: 'Sessions', value: '3', suffix: 'of 4', done: 75, target: 100 },
-  { label: 'Sets', value: '47', suffix: 'this week', done: 62, target: 100 },
-  { label: 'Muscles in range', value: '11', suffix: 'of 21', done: 52, target: 100 },
-];
-
-export const MOCK_REPORT_TEASER: ReportTeaser = {
-  eyebrow: 'New report',
-  week: 'Week 38',
-  line: '79 of 84 sets · two groups under range',
-};
-
-export const MOCK_CHECK_IN = ['Sleep', 'Fatigue', 'Stress', 'Sore', 'Mood'];
-
-export const MOCK_NEXT_AFTER_REST = {
-  title: 'Monday — Upper',
-  detail: 'Foundation Four · Week 3 · Day 3',
-};
-
-export const MOCK_STARTING_POINTS = [
-  { name: 'Foundation Four', detail: '4 days · full body · beginner' },
-  { name: 'Upper / Lower Six', detail: '6 days · split · intermediate' },
-];
-
-// --- explore ---------------------------------------------------------------
-export const MOCK_EXPLORE_FILTERS = ['Featured', 'Strength', 'Hypertrophy', '3 day'];
-
-export const MOCK_SHARED_PROGRAMS: SharedProgram[] = [
-  {
-    name: 'Bridge to Five',
-    by: 'by M. Alaric',
-    featured: true,
-    daysPerWeek: 5,
-    weekLength: 7,
-    chips: ['12 weeks', 'intermediate', 'barbell'],
-    saves: '2,140 saved',
-    strip: 0,
-  },
-  {
-    name: 'Northgate Novice',
-    by: 'Coach Rey · 8 weeks',
-    daysPerWeek: 3,
-    weekLength: 7,
-    chips: ['novice', 'barbell'],
-    saves: '312 saved',
-    strip: 1,
-  },
-  {
-    name: 'Hall Hypertrophy',
-    by: 'S. Okonkwo · 12 weeks',
-    daysPerWeek: 5,
-    weekLength: 7,
-    chips: ['hypertrophy', 'machines'],
-    saves: '884 saved',
-    strip: 2,
-  },
-];
-
-// --- library ---------------------------------------------------------------
-export const MOCK_PROGRAMS: ProgramRow[] = [
-  { name: 'Foundation Four', status: 'Active', detail: 'Week 3 of 12 · 4 days', done: 25, target: 100 },
-  {
-    name: 'Bridge to Five',
-    status: 'Forked',
-    detail: 'Week 9 of 12 · forked from M. Alaric',
-    done: 75,
-    target: 100,
-  },
-  { name: 'Deload Week', status: 'Draft', detail: 'Not started · 3 days', done: 0, target: 100 },
-  {
-    name: 'Northgate Novice',
-    status: 'Saved',
-    detail: 'Week 8 of 8 · finished 4 Sep',
-    done: 100,
-    target: 100,
-  },
-];
-
-export const MOCK_EXERCISE_COUNT = '248 · 6 custom';
-
-export const MOCK_EXERCISES: ExerciseRow[] = [
-  { name: 'Barbell Back Squat', detail: 'Quads · barbell · 42 sessions', icon: 'squat' },
-  { name: 'Romanian Deadlift', detail: 'Hamstrings · barbell · 18 sessions', icon: 'rdl' },
-  { name: 'Kroc Row (custom)', detail: 'Lats · dumbbell · 9 sessions', icon: 'row' },
-  { name: 'Dumbbell Lateral Raise', detail: 'Side delts · dumbbell · 27 sessions', icon: 'lateral' },
-];
-
-// --- the live session ------------------------------------------------------
 export const MOCK_SESSION = {
   position: 'Exercise 2 of 5',
   exercise: 'Barbell Back Squat',
@@ -231,82 +241,6 @@ export const MOCK_SESSION = {
   ] satisfies SessionSet[],
 };
 
-// --- progress --------------------------------------------------------------
-/** Strength relative to the user, 0 to 1, per muscle. Drives the body map. */
-export const MOCK_MUSCLE_SCORES: MuscleScore[] = [
-  { muscle: 'Lats', score: 0.96 },
-  { muscle: 'Quads', score: 0.88 },
-  { muscle: 'Side delts', score: 0.84 },
-  { muscle: 'Chest', score: 0.77 },
-  { muscle: 'Traps', score: 0.74 },
-  { muscle: 'Hamstrings', score: 0.7 },
-  { muscle: 'Glutes', score: 0.66 },
-  { muscle: 'Erectors', score: 0.62 },
-  { muscle: 'Triceps', score: 0.58 },
-  { muscle: 'Biceps', score: 0.54 },
-  { muscle: 'Delts', score: 0.5 },
-  { muscle: 'Abs', score: 0.46 },
-  { muscle: 'Obliques', score: 0.42 },
-  { muscle: 'Rear delts', score: 0.38 },
-  { muscle: 'Calves', score: 0.34 },
-  { muscle: 'Forearms', score: 0.3 },
-  { muscle: 'Brachialis', score: 0.26 },
-  { muscle: 'Adductors', score: 0.22 },
-  { muscle: 'Neck', score: 0.18 },
-];
-
-export const MOCK_TOP_MUSCLES = [
-  { muscle: 'Lats', score: 96 },
-  { muscle: 'Quads', score: 88 },
-  { muscle: 'Side delts', score: 84 },
-  { muscle: 'Mid chest', score: 77 },
-];
-
-export const MOCK_EXERCISE_DETAIL = {
-  name: 'Back Squat',
-  subtitle: 'Estimated 1RM · Epley',
-  icon: 'squat' as ExerciseIconKey,
-  e1rm: '150.0',
-  unit: 'kg',
-  delta: '+7.5',
-  deltaWindow: 'in 8 weeks',
-  ranges: ['8 w', '6 mo', '1 y', 'All'],
-  activeRange: '6 mo',
-  chart: {
-    axis: [130, 140, 150],
-    values: [130, 132.5, 131, 135, 137.5, 136, 140, 142.5, 141, 145, 147.5, 150],
-    records: [1, 4, 7, 10, 11],
-    months: ['Apr', 'Jun', 'Sep'],
-    peak: '150 kg — PR',
-  },
-  records: [
-    { range: '1–3', weight: '150', reps: '3', date: '12 Sep' },
-    { range: '4–6', weight: '137.5', reps: '5', date: '29 Aug' },
-    { range: '7–10', weight: '122.5', reps: '9', date: '5 Sep' },
-  ] satisfies RecordByReps[],
-};
-
-export const MOCK_HISTORY: HistoryRow[] = [
-  { name: 'Foundation Four · Lower', detail: 'Thu 18 Sep · 18 of 18 sets · 7.4 t', done: 100, target: 100, record: true },
-  { name: 'Foundation Four · Upper', detail: 'Tue 16 Sep · 16 of 18 sets · 5.9 t', done: 89, target: 100 },
-  { name: 'Empty workout', detail: 'Sun 14 Sep · 9 of 9 sets · 2.8 t', done: 100, target: 100 },
-  { name: 'Foundation Four · Lower', detail: 'Fri 12 Sep · 18 of 20 sets · 7.1 t', done: 90, target: 100, record: true },
-  { name: 'Foundation Four · Upper', detail: 'Wed 10 Sep · 16 of 18 sets · 5.6 t', done: 89, target: 100 },
-];
-
-export const MOCK_REPORTS = {
-  latest: {
-    week: 'Week 38',
-    prose:
-      'Four sessions, seventy-nine of the eighty-four sets you planned. Squat and press both moved up a step.',
-  },
-  archive: [
-    { week: 'Week 37', detail: '6 – 12 September · 84 of 84 sets', done: 100, target: 100 },
-    { week: 'Week 36', detail: '30 Aug – 5 September · 71 of 84 sets', done: 85, target: 100 },
-    { week: 'Week 35', detail: '23 – 29 August · 80 of 84 sets', done: 95, target: 100 },
-  ],
-};
-
 export const MOCK_WEEKLY_REPORT = {
   week: 'Week 38',
   dates: '13 – 19 September',
@@ -318,26 +252,4 @@ export const MOCK_WEEKLY_REPORT = {
     { muscle: 'Lats', verdict: 'keep', reason: '19 sets, top of range, e1RM rising.' },
     { muscle: 'Side delts', verdict: 'less', reason: '16 direct sets plus pressing carryover.' },
   ] satisfies Recommendation[],
-};
-
-// --- profile ---------------------------------------------------------------
-// --- account ---------------------------------------------------------------
-/** The account the sign-in screen opens on. Mock only; no backend yet. */
-export const MOCK_DEFAULT_USER = {
-  name: 'Ben',
-  initials: 'B',
-  email: 'ben@alke.app',
-};
-
-export const MOCK_PROFILE = {
-  initials: 'SK',
-  name: 'Stavros K.',
-  detail: '412 sessions · since Mar 2024',
-  memberships: { count: '2 memberships', detail: 'Northgate · Lamia Barbell Club' },
-  subscription: { name: 'Alke Pro', detail: 'Per-muscle breakdown · gym owner tools' },
-  settings: [
-    { name: 'Units and plates', detail: 'Kilograms · 2.5 kg increment' },
-    { name: 'Notifications', detail: 'Rest timer, weekly report' },
-    { name: 'Export and privacy', detail: 'Download everything you have logged' },
-  ],
 };

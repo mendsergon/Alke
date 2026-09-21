@@ -1,20 +1,51 @@
+import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Screen, ScreenHeader } from '../../components/screen';
-import { Card, GhostButton, ProPill, SecondaryButton } from '../../components/surfaces';
+import { Card, Pill, SecondaryButton } from '../../components/surfaces';
 import { Icon } from '../../components/icon';
+import { Segmented } from '../../components/surfaces';
 import { MicroCaps, Txt } from '../../theme/text';
 import { tokens, useTheme } from '../../theme/theme';
-import { MOCK_PROFILE } from '../../mock/mock-data';
 import { useGym } from '../../gym/gym';
 import { useAuth } from '../../auth/auth';
 
-export default function Profile() {
+const UNITS = ['kg', 'lb'] as const;
+const THEMES = ['light', 'dark', 'system'] as const;
+
+/** A settings row whose control sits under its label, full width. */
+function SettingRow({
+  label,
+  children,
+  first,
+}: {
+  label: string;
+  children: React.ReactNode;
+  first?: boolean;
+}) {
   const { c } = useTheme();
+  return (
+    <View
+      style={{
+        paddingVertical: 12,
+        borderTopWidth: first ? 0 : 1,
+        borderTopColor: c.border,
+      }}
+    >
+      <Txt variant="rowLabel" weight={500} style={{ marginBottom: 10 }}>
+        {label}
+      </Txt>
+      {children}
+    </View>
+  );
+}
+
+export default function Profile() {
+  const { c, preference, setPreference } = useTheme();
   const { gym } = useGym();
   const router = useRouter();
   const { user, signOut } = useAuth();
-  const p = MOCK_PROFILE;
+  const [units, setUnits] = useState<(typeof UNITS)[number]>('kg');
 
   return (
     <Screen gap={12}>
@@ -27,30 +58,36 @@ export default function Profile() {
               width: 48,
               height: 48,
               borderRadius: 999,
-              backgroundColor: c.accentSoft,
+              backgroundColor: user ? c.accentSoft : c.bg,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Txt variant="avatarInitials" color={c.accent}>
-              {user?.initials ?? p.initials}
-            </Txt>
+            {user ? (
+              <Txt variant="avatarInitials" color={c.accent}>
+                {user.initials}
+              </Txt>
+            ) : (
+              <Icon name="person" size={22} color={c.textSecondary} />
+            )}
           </View>
           <View style={{ flexGrow: 1, flexShrink: 1 }}>
-            <Txt variant="nameTitle">{user?.name ?? p.name}</Txt>
+            <Txt variant="nameTitle">{user ? user.name : 'Not signed in'}</Txt>
             <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: 1 }}>
-              {user?.email ?? p.detail}
+              {user ? user.email : 'Sign in to sync your training across devices.'}
             </Txt>
           </View>
-          <Icon name="chevronRight" size={20} color={c.textSecondary} />
+          {user ? <Icon name="chevronRight" size={20} color={c.textSecondary} /> : null}
         </View>
+        {user ? null : (
+          <View style={{ marginTop: 14 }}>
+            <SecondaryButton label="Sign in" height={42} onPress={() => router.push('/sign-in')} />
+          </View>
+        )}
       </Card>
 
       <Card padding={16}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <MicroCaps color={c.accent}>Active gym</MicroCaps>
-          <GhostButton label="Switch" />
-        </View>
+        <MicroCaps color={gym ? c.accent : c.textSecondary}>Active gym</MicroCaps>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 10 }}>
           <View
             style={{
@@ -62,40 +99,22 @@ export default function Profile() {
               justifyContent: 'center',
             }}
           >
-            <Icon name="gym" size={20} color={c.accent} />
+            <Icon name="gym" size={20} color={gym ? c.accent : c.textSecondary} />
           </View>
           <View style={{ flexGrow: 1, flexShrink: 1 }}>
-            <Txt variant="rowTitle" weight={600} tracking={0}>
-              {gym.name}
+            <Txt variant="rowTitle" weight={600} tracking={0} color={gym ? c.text : c.textSecondary}>
+              {gym ? gym.name : 'No gym'}
             </Txt>
             <Txt variant="captionTight" color={c.textSecondary}>
-              {gym.place} · {gym.machines} machines on file
+              {gym
+                ? `${gym.place} · ${gym.machines} machines on file`
+                : 'Your gym’s equipment shapes every program the app builds.'}
             </Txt>
           </View>
         </View>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 12,
-            paddingVertical: 10,
-            borderTopWidth: 1,
-            borderTopColor: c.border,
-          }}
-        >
-          <View style={{ flexGrow: 1, flexShrink: 1 }}>
-            <Txt variant="rowLabel" weight={500}>
-              {p.memberships.count}
-            </Txt>
-            <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: 1 }}>
-              {p.memberships.detail}
-            </Txt>
-          </View>
-          <Icon name="chevronRight" size={18} color={c.textSecondary} />
-        </View>
-        <View style={{ marginTop: 2 }}>
+        <View style={{ marginTop: 14 }}>
           <SecondaryButton
-            label="Join a gym with a code or QR"
+            label="Join with a code or QR"
             icon="qr"
             height={42}
             onPress={() => router.push('/join-gym')}
@@ -103,62 +122,41 @@ export default function Profile() {
         </View>
       </Card>
 
-      <Card tone="accentSoft">
+      <Card>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <View style={{ flexGrow: 1, flexShrink: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Txt variant="rowTitle" weight={600} tracking={0}>
-                {p.subscription.name}
+                Free
               </Txt>
-              <ProPill />
+              <Pill label="Current" tone="neutral" />
             </View>
             <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: 2 }}>
-              {p.subscription.detail}
+              Logging is never paywalled. Premium adds the all-time dashboard and the per-muscle
+              report.
             </Txt>
           </View>
-          <Icon name="chevronRight" size={20} color={c.textSecondary} />
         </View>
       </Card>
 
       <Card padding={16}>
-        {p.settings.map((s, i) => (
-          <Pressable
-            key={s.name}
-            accessibilityRole="button"
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 12,
-              paddingVertical: i === 2 ? 11 : 10,
-              borderTopWidth: i === 0 ? 0 : 1,
-              borderTopColor: c.border,
-            }}
-          >
-            <View style={{ flexGrow: 1, flexShrink: 1 }}>
-              <Txt variant="rowLabel" weight={500}>
-                {s.name}
-              </Txt>
-              <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: 1 }}>
-                {s.detail}
-              </Txt>
-            </View>
-            <Icon name="chevronRight" size={18} color={c.textSecondary} />
-          </Pressable>
-        ))}
-        <Pressable
-          accessibilityRole="button"
-          onPress={signOut}
-          style={{
-            paddingVertical: 12,
-            borderTopWidth: 1,
-            borderTopColor: c.border,
-          }}
-        >
-          <Txt variant="rowLabel" weight={500} color={c.destructive}>
-            Sign out
-          </Txt>
-        </Pressable>
+        <SettingRow label="Units" first>
+          <Segmented options={UNITS} value={units} onChange={setUnits} />
+        </SettingRow>
+        <SettingRow label="Theme">
+          <Segmented options={THEMES} value={preference} onChange={setPreference} />
+        </SettingRow>
       </Card>
+
+      {user ? (
+        <Card padding={16}>
+          <Pressable accessibilityRole="button" onPress={signOut} style={{ paddingVertical: 6 }}>
+            <Txt variant="rowLabel" weight={500} color={c.destructive}>
+              Sign out
+            </Txt>
+          </Pressable>
+        </Card>
+      ) : null}
     </Screen>
   );
 }
