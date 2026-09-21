@@ -143,6 +143,7 @@ export function PrimaryButton({
         alignItems: 'center',
         justifyContent: 'center',
         gap: 10,
+        opacity: disabled ? 0.45 : 1,
       }}
     >
       {icon ? <Icon name={icon} size={20} color={c.onAccent} width={1.8} /> : null}
