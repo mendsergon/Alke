@@ -187,9 +187,20 @@ const typeExtra = {
   micro: { size: 12, lineHeight: 17, weight: 400 },
   microTight: { size: 12, lineHeight: 16, weight: 400 },
   tiny: { size: 11, lineHeight: 14, weight: 500 },
+  tabLabel: { size: 11, lineHeight: 12, weight: 500 },
+  // 11px unit or qualifier set beside a numeral ("kg", "of 4", "this week").
+  unitSmall: { size: 11, lineHeight: 14, weight: 500, tracking: 0.01 },
+  unitLarge: { size: 18, lineHeight: 22, weight: 500, tracking: 0.01 },
+  // The multiplication sign between weight and reps.
+  times: { size: 18, lineHeight: 22, weight: 400 },
   // Numerals (always tabular)
   numeralM: { size: 24, lineHeight: 25, weight: 600, tracking: -0.015 },
   numeralS: { size: 19, lineHeight: 20, weight: 600, tracking: -0.015 },
+  dataValue: { size: 18, lineHeight: 22, weight: 600 },
+  timerValue: { size: 20, lineHeight: 24, weight: 600, tracking: -0.01 },
+  nameTitle: { size: 18, lineHeight: 24, weight: 600, tracking: -0.01 },
+  avatarInitials: { size: 20, lineHeight: 24, weight: 600 },
+  codeChar: { size: 26, lineHeight: 30, weight: 600 },
 } as const;
 
 // Font families as @expo-google-fonts exports them.
