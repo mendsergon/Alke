@@ -1,3 +1,8 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+
+# Skia ships prebuilt native binaries and needs its install script to run.
+# PLAN.md §4 already picks Skia for the charts and body map.
+allowBuilds:
+  '@shopify/react-native-skia': true
