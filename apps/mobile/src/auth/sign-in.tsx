@@ -1,19 +1,34 @@
 import { useState, type ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, TextInput, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  TextInput,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PrimaryButton } from '../components/surfaces';
-import { Txt } from '../theme/text';
+import { Card, PrimaryButton, Row } from '../components/surfaces';
+import { Icon } from '../components/icon';
+import { Figure } from '../figure/figure';
+import { FIGURE_STRIPS } from '../figure/figure.generated';
+import { MicroCaps, Txt } from '../theme/text';
 import { tokens, useTheme } from '../theme/theme';
 import { useAuth } from './auth';
 import { AppleMark, GoogleMark } from './brand-marks';
 
+/** The front strip: the same whole-body figure the Explore cards carry. */
+const HERO = FIGURE_STRIPS[1]!;
+/** The strip is cropped 200 wide by 717 tall; that ratio is never broken. */
+const HERO_RATIO = 200 / 717;
+
 /**
- * The gate. It is not in the design exports — PLAN.md §3 lists onboarding as
- * not yet designed — so it is drawn only from the tokens the exports use:
- * the serif wordmark, one surface field, the 56px primary, quiet secondaries.
+ * Not in the design exports — PLAN.md §3 lists onboarding as not yet designed
+ * — so it is built out of the app's own parts: the layered body figure that
+ * every exercise icon uses, the serif screen title, micro-caps labels, the
+ * list rows from Profile, and the session screen's bottom control bar.
  *
- * OPEN (PLAN.md §8 #6): Apple and Google are placeholders. Real buttons must
- * follow each vendor's branding rules and sign in with PKCE (§5).
+ * OPEN (PLAN.md §8 #6): Apple and Google are drawn but not wired.
  */
 export function SignIn() {
   const { c } = useTheme();
@@ -21,8 +36,15 @@ export function SignIn() {
   const { defaultEmail, signInWithEmail } = useAuth();
   const [email, setEmail] = useState(defaultEmail);
   const [note, setNote] = useState<string | null>(null);
+  const { height } = useWindowDimensions();
 
-  const canContinue = email.trim().length > 0;
+  // The figure takes the space the form leaves, within sane bounds on any phone.
+  const heroHeight = Math.round(Math.min(380, Math.max(200, height * 0.4)));
+  const heroWidth = Math.round(heroHeight * HERO_RATIO);
+
+  const submit = () => {
+    if (email.trim().length > 0) signInWithEmail(email);
+  };
 
   return (
     <KeyboardAvoidingView
@@ -31,129 +53,131 @@ export function SignIn() {
     >
       <View
         style={{
-          flex: 1,
-          paddingTop: insets.top + tokens.space[40],
+          flexGrow: 1,
+          flexShrink: 1,
+          justifyContent: 'center',
+          paddingTop: insets.top + tokens.space[24],
           paddingHorizontal: tokens.space[24],
-          paddingBottom: Math.max(tokens.space[24], insets.bottom),
+          paddingBottom: tokens.space[24],
         }}
       >
-        <View style={{ flexGrow: 1, justifyContent: 'center' }}>
-          <Txt variant="screenTitle" family="serif" weight={500}>
-            Alke
-          </Txt>
-          <Txt variant="body" color={c.textSecondary} style={{ marginTop: 6 }}>
-            Sign in to pick up your log where you left it.
-          </Txt>
-
-          <View style={{ marginTop: tokens.space[32] }}>
-            <Txt variant="captionTight" weight={500} color={c.textSecondary}>
-              Email
+        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: tokens.space[16] }}>
+          <View style={{ flexGrow: 1, flexShrink: 1, paddingBottom: tokens.space[8] }}>
+            <Txt variant="screenTitle" family="serif" weight={500}>
+              Alke
             </Txt>
-            <TextInput
-              value={email}
-              onChangeText={(next) => {
-                setEmail(next);
-                setNote(null);
-              }}
-              autoCapitalize="none"
-              autoComplete="email"
-              autoCorrect={false}
-              keyboardType="email-address"
-              inputMode="email"
-              returnKeyType="go"
-              onSubmitEditing={() => canContinue && signInWithEmail(email)}
-              placeholder="you@example.com"
-              placeholderTextColor={c.textSecondary}
-              accessibilityLabel="Email address"
-              style={{
-                marginTop: 8,
-                height: 52,
-                paddingHorizontal: 14,
-                borderRadius: tokens.radius.button,
-                backgroundColor: c.surface,
-                borderWidth: 1,
-                borderColor: c.border,
-                color: c.text,
-                fontFamily: tokens.fontFamily.sansRegular,
-                fontSize: tokens.type.body.size,
-              }}
-            />
-          </View>
-
-          <View style={{ marginTop: tokens.space[16] }}>
-            <PrimaryButton
-              label="Continue"
-              height={tokens.sizing.primaryButtonHeight.min}
-              onPress={() => canContinue && signInWithEmail(email)}
-            />
-          </View>
-
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: tokens.space[24] }}>
-            <View style={{ flexGrow: 1, height: 1, backgroundColor: c.border }} />
-            <Txt variant="captionTight" color={c.textSecondary}>
-              or
+            <Txt variant="reportProse" family="serif" weight={400} style={{ marginTop: tokens.space[8] }}>
+              Log your sets. See what to change.
             </Txt>
-            <View style={{ flexGrow: 1, height: 1, backgroundColor: c.border }} />
           </View>
+          <Figure
+            view={HERO.view}
+            viewBox={HERO.viewBox}
+            paint={HERO.paint}
+            accent={HERO.accent}
+            width={heroWidth}
+            height={heroHeight}
+            strokeWidth={HERO.strokeWidth}
+          />
+        </View>
+      </View>
 
-          <View style={{ gap: 10 }}>
-            <ProviderButton
-              label="Continue with Apple"
-              mark={<AppleMark size={19} color={c.text} />}
-              onPress={() => setNote('Apple sign-in is not wired up yet.')}
-            />
-            <ProviderButton
-              label="Continue with Google"
-              mark={<GoogleMark size={18} />}
-              onPress={() => setNote('Google sign-in is not wired up yet.')}
-            />
-          </View>
-
-          {note ? (
-            <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: 12 }}>
-              {note}
-            </Txt>
-          ) : null}
+      {/* The session screen's bottom bar: a border-top and the controls under it. */}
+      <View
+        style={{
+          flexShrink: 0,
+          paddingTop: tokens.space[20],
+          paddingHorizontal: tokens.space[24],
+          paddingBottom: Math.max(tokens.space[24], insets.bottom),
+          backgroundColor: c.bg,
+          borderTopWidth: 1,
+          borderTopColor: c.border,
+          gap: tokens.space[12],
+        }}
+      >
+        <View>
+          <MicroCaps>Email</MicroCaps>
+          <TextInput
+            value={email}
+            onChangeText={(next) => {
+              setEmail(next);
+              setNote(null);
+            }}
+            autoCapitalize="none"
+            autoComplete="email"
+            autoCorrect={false}
+            keyboardType="email-address"
+            inputMode="email"
+            returnKeyType="go"
+            onSubmitEditing={submit}
+            placeholder="you@example.com"
+            placeholderTextColor={c.textSecondary}
+            accessibilityLabel="Email address"
+            style={{
+              marginTop: tokens.space[8],
+              height: 52,
+              paddingHorizontal: 14,
+              borderRadius: tokens.radius.button,
+              backgroundColor: c.surface,
+              borderWidth: 1,
+              borderColor: c.border,
+              color: c.text,
+              fontFamily: tokens.fontFamily.sansRegular,
+              fontSize: tokens.type.body.size,
+            }}
+          />
         </View>
 
-        <Txt variant="captionTight" color={c.textSecondary} style={{ textAlign: 'center' }}>
-          Alke is for people aged 15 and over.
+        <PrimaryButton
+          label="Continue"
+          height={tokens.sizing.primaryButtonHeight.min}
+          onPress={submit}
+        />
+
+        <Card padding={16}>
+          <ProviderRow
+            first
+            label="Continue with Apple"
+            mark={<AppleMark size={19} color={c.text} />}
+            onPress={() => setNote('Apple sign-in is not wired up yet.')}
+          />
+          <ProviderRow
+            label="Continue with Google"
+            mark={<GoogleMark size={18} />}
+            onPress={() => setNote('Google sign-in is not wired up yet.')}
+          />
+        </Card>
+
+        <Txt variant="captionTight" color={c.textSecondary}>
+          {note ?? 'Alke is for people aged 15 and over.'}
         </Txt>
       </View>
     </KeyboardAvoidingView>
   );
 }
 
-/** The export's secondary shape, with the vendor mark set before the label. */
-function ProviderButton({
+/** Profile's settings row, with the vendor mark where the icon tile would be. */
+function ProviderRow({
   label,
   mark,
+  first,
   onPress,
 }: {
   label: string;
   mark: ReactNode;
+  first?: boolean;
   onPress: () => void;
 }) {
   const { c } = useTheme();
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={{
-        height: 52,
-        borderRadius: tokens.radius.button,
-        borderWidth: 1,
-        borderColor: c.border,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 10,
-      }}
-    >
-      {mark}
-      <Txt variant="label" weight={500}>
-        {label}
-      </Txt>
+    <Pressable accessibilityRole="button" onPress={onPress}>
+      <Row first={first} paddingVertical={11}>
+        <View style={{ width: 24, alignItems: 'center' }}>{mark}</View>
+        <Txt variant="rowLabel" weight={500} style={{ flexGrow: 1, flexShrink: 1 }}>
+          {label}
+        </Txt>
+        <Icon name="chevronRight" size={18} color={c.textSecondary} />
+      </Row>
     </Pressable>
   );
 }
