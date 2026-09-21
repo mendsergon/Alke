@@ -53,7 +53,6 @@ export function SignIn() {
       <View
         style={{
           flex: 1,
-          justifyContent: 'center',
           paddingTop: insets.top + tokens.space[24],
           paddingHorizontal: tokens.space[24],
           paddingBottom: Math.max(tokens.space[24], insets.bottom),
@@ -64,8 +63,15 @@ export function SignIn() {
         <Txt variant="screenTitle" family="serif" weight={500} style={{ marginTop: tokens.space[20] }}>
           Alke
         </Txt>
+        <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: tokens.space[4] }}>
+          Log your sets. See what to change.
+        </Txt>
 
-        <View style={{ marginTop: tokens.space[32] }}>
+        {/* The one flexible gap. The header holds the top, the controls sit in
+            the thumb zone, and the space between them is deliberate. */}
+        <View style={{ flexGrow: 1, minHeight: tokens.space[32] }} />
+
+        <View>
           <MicroCaps>Email</MicroCaps>
           <TextInput
             value={email}
@@ -120,8 +126,14 @@ export function SignIn() {
           />
         </Card>
 
+        {note ? (
+          <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: tokens.space[12] }}>
+            {note}
+          </Txt>
+        ) : null}
+
         <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: tokens.space[16] }}>
-          {note ?? 'Alke is for people aged 15 and over.'}
+          Alke is for people aged 15 and over.
         </Txt>
       </View>
     </KeyboardAvoidingView>
