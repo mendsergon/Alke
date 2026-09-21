@@ -51,14 +51,14 @@ export function SignIn() {
           >
             Alke
           </Txt>
-          {/* PLAN.md §1.5 — low volume, high effort — and §3, every rung has
-              a target. The line states the product's position, not a slogan. */}
+          {/* The export's own cover line, under the Rungs heading in
+              design/rungs-ui.html. Not written here. */}
           <Txt
             variant="captionTight"
             color={c.textSecondary}
             style={{ marginTop: tokens.space[4] }}
           >
-            Low volume. High effort. Every set measured.
+            A strength-training logger.
           </Txt>
         </View>
 
