@@ -133,13 +133,81 @@ const iconTile = {
   radiusAbove56: 16,
 } as const;
 
+
+// ---------------------------------------------------------------------------
+// Tokens the design exports need and PLAN.md §3 does not define.
+//
+// Every value below was read out of `design/rungs-ui.html` (the authoritative
+// export) by diffing each light screen against its dark twin. They are listed
+// here because PLAN.md §3 has no token for them, NOT because they override it.
+// They are OPEN and need Stavros's ruling before they become plan values.
+// ---------------------------------------------------------------------------
+
+const lightExtra = {
+  // Foreground on an accent-filled surface (primary button, checked set mark).
+  onAccent: '#FFFFFF',
+  // The rung's unfilled track. Distinct from `border` and `surfaceRaised`.
+  rungTrack: '#DCD8C9',
+  // Background of the gold "PR" chip. Gold's equivalent of `accentSoft`.
+  recordSoft: '#F3ECD6',
+} as const;
+
+const darkExtra = {
+  onAccent: '#10201F',
+  rungTrack: '#3E3D38',
+  recordSoft: '#3A331F',
+  // PLAN.md §3 gives the dark theme one `record` token where light has two.
+  // These two names exist so a component can read the same key in both
+  // themes; both resolve to dark's single `record` value. No new colour.
+  recordText: dark.record,
+  recordFill: dark.record,
+} as const;
+
+// Body-map heat ramp, weakest to strongest. Five steps, accent-hued only —
+// no second hue, per PLAN.md §3 ("Color semantics").
+const heatLight = ['#8EA9A5', '#809F9B', '#70938F', '#5D8682', '#427773'] as const;
+const heatDark = ['#57605B', '#5F7B74', '#679088', '#6EA298', '#75B1A7'] as const;
+
+// Type styles used by the design exports that PLAN.md §3's table does not
+// name. Sizes are in px; `tracking` is in em, as PLAN.md writes it.
+const typeExtra = {
+  // Serif
+  serifCardTitle: { size: 22, lineHeight: 30, weight: 500, tracking: -0.005 },
+  serifPanelTitle: { size: 22, lineHeight: 28, weight: 500 },
+  serifRowTitle: { size: 20, lineHeight: 26, weight: 500 },
+  serifListTitle: { size: 19, lineHeight: 25, weight: 500 },
+  serifProseSmall: { size: 17, lineHeight: 26, weight: 400 },
+  // Sans
+  buttonLabel: { size: 17, lineHeight: 22, weight: 600, tracking: -0.01 },
+  rowTitle: { size: 16, lineHeight: 22, weight: 600, tracking: -0.01 },
+  rowLabel: { size: 15, lineHeight: 22, weight: 500, tracking: -0.005 },
+  bodySmall: { size: 14, lineHeight: 21, weight: 400 },
+  label: { size: 14, lineHeight: 20, weight: 500 },
+  captionTight: { size: 13, lineHeight: 18, weight: 400 },
+  micro: { size: 12, lineHeight: 17, weight: 400 },
+  microTight: { size: 12, lineHeight: 16, weight: 400 },
+  tiny: { size: 11, lineHeight: 14, weight: 500 },
+  // Numerals (always tabular)
+  numeralM: { size: 24, lineHeight: 25, weight: 600, tracking: -0.015 },
+  numeralS: { size: 19, lineHeight: 20, weight: 600, tracking: -0.015 },
+} as const;
+
+// Font families as @expo-google-fonts exports them.
+const fontFamily = {
+  serifMedium: 'Newsreader_500Medium',
+  sansRegular: 'Geist_400Regular',
+  sansMedium: 'Geist_500Medium',
+  sansSemiBold: 'Geist_600SemiBold',
+} as const;
+
 // ---------------------------------------------------------------------------
 
 export const theme = {
-  light,
-  dark,
+  light: { ...light, ...lightExtra, heat: heatLight },
+  dark: { ...dark, ...darkExtra, heat: heatDark },
   typeface,
-  type,
+  fontFamily,
+  type: { ...type, ...typeExtra },
   space,
   radius,
   sizing,
@@ -148,6 +216,6 @@ export const theme = {
 } as const;
 
 export type Theme = typeof theme;
-export type LightTheme = typeof light;
-export type DarkTheme = typeof dark;
-export type TypeStyle = typeof type[keyof typeof type];
+export type LightTheme = typeof theme.light;
+export type DarkTheme = typeof theme.dark;
+export type TypeStyle = (typeof theme.type)[keyof typeof theme.type];

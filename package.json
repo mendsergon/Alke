@@ -1,0 +1,11 @@
+{
+  "name": "alke",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@12.5.1",
+  "scripts": {
+    "run-ios": "pnpm --filter @alke/mobile run ios",
+    "typecheck": "pnpm --filter @alke/mobile run typecheck"
+  }
+}
