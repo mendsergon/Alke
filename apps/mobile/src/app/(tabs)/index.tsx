@@ -31,10 +31,19 @@ export default function Home() {
           Let’s build something to train.
         </Txt>
         <Txt variant="bodySmall" color={c.textSecondary} style={{ marginTop: 10, marginBottom: 18 }}>
-          Add a template from Explore and it lands in your Library. Your gym’s equipment decides
-          the exercises.
+          Six questions — days a week, experience, what you want to bring up. Your gym’s
+          equipment decides the exercises. Or start from a template instead.
         </Txt>
-        <PrimaryButton label="Browse templates" icon="compass" onPress={() => router.push('/explore')} />
+        <PrimaryButton label="Build my program" icon="sparkle" disabled />
+        <View style={{ height: 10 }} />
+        <SecondaryButton
+          label="Browse templates"
+          icon="compass"
+          onPress={() => router.push('/explore')}
+        />
+        <Txt variant="caption" color={c.textSecondary} style={{ marginTop: 12 }}>
+          The generator opens once its questionnaire is designed.
+        </Txt>
       </Card>
 
       <WeekStats stats={WEEK_TARGETS} />

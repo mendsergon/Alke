@@ -23,10 +23,10 @@ export function SignIn() {
   const [email, setEmail] = useState(defaultEmail);
   const [note, setNote] = useState<string | null>(null);
 
+  // Works with or without an address until there is a backend to check one.
   const submit = () => {
-    if (email.trim().length === 0) return;
     signInWithEmail(email);
-    router.back();
+    if (router.canGoBack()) router.back();
   };
 
   return (

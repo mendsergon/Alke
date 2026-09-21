@@ -7,6 +7,13 @@ export type Provider = 'apple' | 'google';
 
 type AuthState = {
   user: User | null;
+  /**
+   * Continue has been pressed. Until there is a backend it is the only thing
+   * standing between the gate and the app, so it lets you through with or
+   * without an address. With no address there is no account, and Profile says
+   * so rather than inventing one.
+   */
+  entered: boolean;
   /** The screen opens on an empty field; there is no account to prefill. */
   defaultEmail: string;
   signInWithEmail: (email: string) => void;
@@ -30,19 +37,25 @@ function userFromEmail(email: string): User | null {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [entered, setEntered] = useState(false);
 
   const signInWithEmail = useCallback((email: string) => {
     setUser(userFromEmail(email));
+    setEntered(true);
   }, []);
 
   const value = useMemo<AuthState>(
     () => ({
       user,
+      entered,
       defaultEmail: '',
       signInWithEmail,
-      signOut: () => setUser(null),
+      signOut: () => {
+        setUser(null);
+        setEntered(false);
+      },
     }),
-    [user, signInWithEmail],
+    [user, entered, signInWithEmail],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

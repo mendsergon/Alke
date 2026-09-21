@@ -117,17 +117,22 @@ export function PrimaryButton({
   label,
   icon,
   height = tokens.sizing.primaryButtonHeight.min,
+  disabled = false,
   onPress,
 }: {
   label: string;
   icon?: IconName;
   height?: number;
+  /** Drawn, but not yet available. */
+  disabled?: boolean;
   onPress?: () => void;
 }) {
   const { c } = useTheme();
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={onPress}
       style={{
         width: '100%',
@@ -318,11 +323,22 @@ export function EmptyState({
   action,
   onAction,
   icon,
+  actionDisabled,
+  secondary,
+  onSecondary,
+  secondaryIcon,
+  secondaryDisabled,
 }: {
   line: string;
   action?: string;
   onAction?: () => void;
   icon?: IconName;
+  actionDisabled?: boolean;
+  /** A second way out of the empty state, drawn under the first. */
+  secondary?: string;
+  onSecondary?: () => void;
+  secondaryIcon?: IconName;
+  secondaryDisabled?: boolean;
 }) {
   const { c } = useTheme();
   return (
@@ -332,7 +348,24 @@ export function EmptyState({
       </Txt>
       {action ? (
         <View style={{ marginTop: tokens.space[16] }}>
-          <SecondaryButton label={action} icon={icon} height={44} onPress={onAction} />
+          <SecondaryButton
+            label={action}
+            icon={icon}
+            height={44}
+            disabled={actionDisabled}
+            onPress={onAction}
+          />
+        </View>
+      ) : null}
+      {secondary ? (
+        <View style={{ marginTop: tokens.space[8] }}>
+          <SecondaryButton
+            label={secondary}
+            icon={secondaryIcon}
+            height={44}
+            disabled={secondaryDisabled}
+            onPress={onSecondary}
+          />
         </View>
       ) : null}
     </Card>

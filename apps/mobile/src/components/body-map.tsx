@@ -32,6 +32,7 @@ function Side({ view, label, scores }: { view: FigureView; label: string; scores
         height={248}
         strokeWidth={BODY_STROKE}
         fillFor={fillsFor(view, scores, c.heat)}
+        outline={c.surface}
       />
       <Txt variant="micro" weight={500} color={c.textSecondary} tracking={0.04}>
         {label}

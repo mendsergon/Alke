@@ -88,10 +88,13 @@ export default function Library() {
           </Card>
         ) : (
           <EmptyState
-            line="No programs yet. Add a template from Explore and it lands here."
-            action="Browse templates"
-            icon="compass"
-            onAction={() => router.push('/explore')}
+            line="No programs yet. Build one from your own answers, or start from a template."
+            action="Build my program"
+            icon="sparkle"
+            actionDisabled
+            secondary="Browse templates"
+            secondaryIcon="compass"
+            onSecondary={() => router.push('/explore')}
           />
         )
       ) : null}

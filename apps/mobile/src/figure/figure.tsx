@@ -26,6 +26,7 @@ export function Figure({
   height,
   strokeWidth,
   fillFor,
+  outline,
 }: {
   view: FigureView;
   viewBox: string;
@@ -37,6 +38,12 @@ export function Figure({
   strokeWidth: number;
   /** Overrides the fill of a region — used by the body map. */
   fillFor?: (region: number) => string | undefined;
+  /**
+   * The line between regions. It defaults to the body tone, which hides the
+   * separations — the exercise icons want that. The body map passes a
+   * contrasting tone so every muscle stays outlined even with no volume.
+   */
+  outline?: string;
 }) {
   const { c } = useTheme();
   const id = useRef(`fig${++seq}`).current;
@@ -60,7 +67,7 @@ export function Figure({
             translateX={tx}
             translateY={ty}
             fill={fillFor?.(r) ?? (accentSet.has(r) ? c.accent : c.iconBody)}
-            stroke={c.iconBody}
+            stroke={outline ?? c.iconBody}
             strokeWidth={strokeWidth}
           />
         ))}

@@ -27,9 +27,17 @@ export default function Progress() {
   const { programs } = useLibrary();
   const hasProgram = programs.length > 0;
 
+  // With no program, both ways of getting one are offered, not just browsing.
   const start = hasProgram
     ? undefined
-    : { action: 'Browse templates', icon: 'compass' as const, go: () => router.push('/explore') };
+    : {
+        action: 'Build my program',
+        icon: 'sparkle' as const,
+        disabled: true,
+        secondary: 'Browse templates',
+        secondaryIcon: 'compass' as const,
+        go: () => router.push('/explore'),
+      };
 
   return (
     <Screen gap={14}>
@@ -45,7 +53,10 @@ export default function Progress() {
             line="No volume yet. Log a session and the map fills in muscle by muscle."
             action={start?.action}
             icon={start?.icon}
-            onAction={start?.go}
+            actionDisabled={start?.disabled}
+            secondary={start?.secondary}
+            secondaryIcon={start?.secondaryIcon}
+            onSecondary={start?.go}
           />
         </>
       ) : null}
@@ -55,7 +66,10 @@ export default function Progress() {
           line="No exercise history yet. Log a set and its estimated 1RM, records and trend appear here."
           action={start?.action}
           icon={start?.icon}
-          onAction={start?.go}
+          actionDisabled={start?.disabled}
+          secondary={start?.secondary}
+          secondaryIcon={start?.secondaryIcon}
+          onSecondary={start?.go}
         />
       ) : null}
 
@@ -65,7 +79,10 @@ export default function Progress() {
             line="No sessions logged yet."
             action={start?.action}
             icon={start?.icon}
-            onAction={start?.go}
+            actionDisabled={start?.disabled}
+            secondary={start?.secondary}
+            secondaryIcon={start?.secondaryIcon}
+            onSecondary={start?.go}
           />
         )
       ) : null}

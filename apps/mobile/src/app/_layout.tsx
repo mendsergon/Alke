@@ -14,21 +14,20 @@ import Geist_600SemiBold from '@expo-google-fonts/geist/600SemiBold/Geist_600Sem
 import { ThemeProvider, useTheme } from '../theme/theme';
 import { SessionProvider } from '../session/session';
 import { GymProvider } from '../gym/gym';
-import { AuthProvider } from '../auth/auth';
+import { AuthProvider, useAuth } from '../auth/auth';
+import { SignIn } from '../auth/sign-in';
 import { LibraryProvider } from '../library/library';
 
 SplashScreen.preventAutoHideAsync();
 
-/**
- * The app opens on the tabs. Signing in is reached from Profile, because
- * Profile has a not-signed-in state to show and a gate would hide it.
- */
+/** The app opens on sign-in; Continue is what gets you past it. */
 function Gate() {
   const { scheme } = useTheme();
+  const { entered } = useAuth();
   return (
     <>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-      <Navigator />
+      {entered ? <Navigator /> : <SignIn />}
     </>
   );
 }
