@@ -5,10 +5,12 @@ import { Card, GhostButton, ProPill, SecondaryButton } from '../../components/su
 import { Icon } from '../../components/icon';
 import { MicroCaps, Txt } from '../../theme/text';
 import { tokens, useTheme } from '../../theme/theme';
-import { MOCK_GYM, MOCK_PROFILE } from '../../mock/mock-data';
+import { MOCK_PROFILE } from '../../mock/mock-data';
+import { useGym } from '../../gym/gym';
 
 export default function Profile() {
   const { c } = useTheme();
+  const { gym } = useGym();
   const router = useRouter();
   const p = MOCK_PROFILE;
 
@@ -62,10 +64,10 @@ export default function Profile() {
           </View>
           <View style={{ flexGrow: 1, flexShrink: 1 }}>
             <Txt variant="rowTitle" weight={600} tracking={0}>
-              {MOCK_GYM.name}
+              {gym.name}
             </Txt>
             <Txt variant="captionTight" color={c.textSecondary}>
-              {MOCK_GYM.place} · {MOCK_GYM.machines} machines on file
+              {gym.place} · {gym.machines} machines on file
             </Txt>
           </View>
         </View>

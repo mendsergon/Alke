@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Screen, ScreenHeader } from '../../components/screen';
 import { Card, Chip } from '../../components/surfaces';
@@ -6,9 +7,9 @@ import { Figure } from '../../figure/figure';
 import { FIGURE_STRIPS } from '../../figure/figure.generated';
 import { MicroCaps, Txt } from '../../theme/text';
 import { tokens, useTheme } from '../../theme/theme';
+import { useGym } from '../../gym/gym';
 import {
   MOCK_EXPLORE_FILTERS,
-  MOCK_GYM,
   MOCK_SHARED_PROGRAMS,
   type SharedProgram,
 } from '../../mock/mock-data';
@@ -33,15 +34,25 @@ function SearchBar() {
   );
 }
 
-function Filters() {
+/**
+ * The export draws the first chip filled and the rest quiet, so the chips are
+ * a filter, not a caption. 'Featured' is the whole curated page.
+ *
+ * OPEN: the tag taxonomy behind Strength / Hypertrophy / 3 day is not fixed by
+ * PLAN.md. These predicates read the mock chips and are placeholders.
+ */
+function Filters({ value, onChange }: { value: string; onChange: (next: string) => void }) {
   const { c } = useTheme();
   return (
     <View style={{ flexDirection: 'row', gap: 8 }}>
-      {MOCK_EXPLORE_FILTERS.map((f, i) => {
-        const on = i === 0;
+      {MOCK_EXPLORE_FILTERS.map((f) => {
+        const on = f === value;
         return (
-          <View
+          <Pressable
             key={f}
+            accessibilityRole="button"
+            accessibilityState={{ selected: on }}
+            onPress={() => onChange(f)}
             style={{
               paddingVertical: 7,
               paddingHorizontal: 13,
@@ -52,11 +63,17 @@ function Filters() {
             <Txt variant="captionTight" weight={on ? 600 : 500} color={on ? c.onAccent : c.textSecondary}>
               {f}
             </Txt>
-          </View>
+          </Pressable>
         );
       })}
     </View>
   );
+}
+
+function matches(program: SharedProgram, filter: string): boolean {
+  if (filter === 'Featured') return true;
+  if (filter === '3 day') return program.daysPerWeek === 3;
+  return program.chips.some((chip) => chip.toLowerCase() === filter.toLowerCase());
 }
 
 /** Seven squares, one per weekday, filled for the days the program trains. */
@@ -170,20 +187,51 @@ function ProgramCard({ program }: { program: SharedProgram }) {
 
 export default function Explore() {
   const { c } = useTheme();
+  const { gym } = useGym();
+  const [filter, setFilter] = useState(MOCK_EXPLORE_FILTERS[0]!);
   const [featured, fromGym, other] = MOCK_SHARED_PROGRAMS;
+
+  const shown = useMemo(
+    () => ({
+      featured: featured && matches(featured, filter) ? featured : null,
+      fromGym: fromGym && matches(fromGym, filter) ? fromGym : null,
+      other: other && matches(other, filter) ? other : null,
+    }),
+    [filter, featured, fromGym, other],
+  );
+  const empty = !shown.featured && !shown.fromGym && !shown.other;
+
   return (
     <Screen gap={14}>
       <ScreenHeader title="Explore" subtitle="Programs from other lifters" />
       <SearchBar />
-      <Filters />
-      <ProgramCard program={featured} />
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <Icon name="gym" size={16} color={c.accent} />
-        <MicroCaps color={c.accent}>From {MOCK_GYM.name}</MicroCaps>
-      </View>
-      <ProgramCard program={fromGym} />
-      <View style={{ height: 12 }} />
-      <ProgramCard program={other} />
+      <Filters value={filter} onChange={setFilter} />
+      {shown.featured ? <ProgramCard program={shown.featured} /> : null}
+      {shown.fromGym ? (
+        <>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Icon name="gym" size={16} color={c.accent} />
+            <MicroCaps color={c.accent}>From {gym.name}</MicroCaps>
+          </View>
+          <ProgramCard program={shown.fromGym} />
+        </>
+      ) : null}
+      {shown.other ? (
+        <>
+          <View style={{ height: 12 }} />
+          <ProgramCard program={shown.other} />
+        </>
+      ) : null}
+      {empty ? (
+        <Card>
+          <Txt variant="rowLabel" weight={500}>
+            Nothing under {filter} yet.
+          </Txt>
+          <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: 4 }}>
+            Pick another filter, or search for a program by name.
+          </Txt>
+        </Card>
+      ) : null}
     </Screen>
   );
 }

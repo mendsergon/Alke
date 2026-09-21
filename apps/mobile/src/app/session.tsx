@@ -7,7 +7,7 @@ import { Rung } from '../components/rung';
 import { ExerciseIcon } from '../figure/figure';
 import { MicroCaps, Txt } from '../theme/text';
 import { tokens, useTheme } from '../theme/theme';
-import { useSession } from '../session/session';
+import { formatRest, useSession } from '../session/session';
 import { MOCK_SESSION, type SessionSet } from '../mock/mock-data';
 
 function SetMarker({ set }: { set: SessionSet }) {
@@ -150,11 +150,11 @@ export default function Session() {
         contentContainerStyle={{ paddingTop: 20, paddingHorizontal: 20, gap: 8 }}
         showsVerticalScrollIndicator={false}
       >
-        {s.sets.map((set) => (
+        {session.sets.map((set) => (
           <SetCard key={set.index} set={set} />
         ))}
         <View style={{ marginTop: 4 }}>
-          <SecondaryButton label="Add set" icon="plus" dashed />
+          <SecondaryButton label="Add set" icon="plus" dashed onPress={session.addSet} />
         </View>
       </ScrollView>
 
@@ -171,13 +171,15 @@ export default function Session() {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 }}>
           <Icon name="timer" size={20} color={c.accent} />
           <Txt variant="timerValue" tnum>
-            {s.restLeft}
+            {formatRest(session.restLeft)}
           </Txt>
           <Txt variant="captionTight" color={c.textSecondary} style={{ flexGrow: 1 }}>
-            {s.restOf}
+            rest of {formatRest(session.restTotal)}
           </Txt>
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel="Skip rest"
+            onPress={session.skipRest}
             style={{
               height: 36,
               paddingHorizontal: 14,
@@ -193,12 +195,20 @@ export default function Session() {
             </Txt>
           </Pressable>
         </View>
-        <Rung value={s.restDone} target={s.restTarget} />
+        <Rung value={session.restTotal - session.restLeft} target={session.restTotal} />
         <View style={{ height: 16 }} />
         <PrimaryButton
-          label="Complete set 3"
+          label={session.currentSet ? `Complete set ${session.currentSet}` : 'Finish session'}
           icon="check"
           height={tokens.sizing.primaryButtonHeight.max}
+          onPress={() => {
+            if (session.currentSet) {
+              session.completeSet();
+              return;
+            }
+            session.end();
+            router.back();
+          }}
         />
       </View>
     </View>

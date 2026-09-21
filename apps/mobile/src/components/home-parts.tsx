@@ -4,14 +4,18 @@ import { MicroCaps, Txt } from '../theme/text';
 import { Icon } from './icon';
 import { Rung } from './rung';
 import type { WeekStat } from '../mock/mock-data';
+import { useGym } from '../gym/gym';
 
 /** Gym chip + calendar, the header every Home state starts with. */
-export function HomeTopBar({ gym }: { gym: string }) {
+export function HomeTopBar() {
   const { c } = useTheme();
+  const { gym, gyms, switchGym } = useGym();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
       <Pressable
         accessibilityRole="button"
+        accessibilityLabel={`Active gym: ${gym.name}. Switch gym.`}
+        onPress={gyms.length > 1 ? switchGym : undefined}
         style={{
           height: 32,
           paddingLeft: 8,
@@ -25,7 +29,7 @@ export function HomeTopBar({ gym }: { gym: string }) {
       >
         <Icon name="gym" size={15} color={c.accent} />
         <Txt variant="captionTight" weight={500}>
-          {gym}
+          {gym.shortName}
         </Txt>
         <Icon name="chevronDown" size={14} color={c.textSecondary} width={1.7} />
       </Pressable>
@@ -41,19 +45,11 @@ export function HomeTopBar({ gym }: { gym: string }) {
 }
 
 /** Gym chip, screen title and date — one block, as the export draws it. */
-export function HomeHeader({
-  gym,
-  title,
-  subtitle,
-}: {
-  gym: string;
-  title: string;
-  subtitle: string;
-}) {
+export function HomeHeader({ title, subtitle }: { title: string; subtitle: string }) {
   const { c } = useTheme();
   return (
     <View>
-      <HomeTopBar gym={gym} />
+      <HomeTopBar />
       <Txt variant="screenTitle" family="serif" weight={500} style={{ marginTop: 14 }}>
         {title}
       </Txt>

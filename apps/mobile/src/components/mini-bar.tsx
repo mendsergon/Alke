@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { useTheme } from '../theme/theme';
 import { Txt } from '../theme/text';
 import { Icon } from './icon';
-import { useSession } from '../session/session';
+import { formatRest, useSession } from '../session/session';
 import { MOCK_SESSION } from '../mock/mock-data';
 
 /** The session, minimised: a persistent bar that sits over the tab bar. */
@@ -13,7 +13,11 @@ export function MiniBar() {
   const session = useSession();
 
   if (!session.active || !session.minimised) return null;
-  const { exercise, detail, timer } = MOCK_SESSION.miniBar;
+  const exercise = MOCK_SESSION.exercise;
+  const detail = session.currentSet
+    ? `Set ${session.currentSet} of ${session.sets.length} · ${MOCK_SESSION.position.toLowerCase()}`
+    : `All sets done · ${MOCK_SESSION.position.toLowerCase()}`;
+  const timer = formatRest(session.restLeft);
 
   return (
     <Pressable

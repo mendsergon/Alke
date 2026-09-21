@@ -83,6 +83,21 @@ export const MOCK_GYM: Gym = {
   machines: 34,
 };
 
+/**
+ * The gyms this user belongs to. PLAN.md §2 puts one-tap switching on the
+ * chip, so the chip steps through this list. MOCK_GYM stays the first one.
+ */
+export const MOCK_GYMS: Gym[] = [
+  MOCK_GYM,
+  {
+    name: 'Lamia Barbell Club',
+    shortName: 'Lamia',
+    place: 'Ypsilantou 14',
+    members: 68,
+    machines: 12,
+  },
+];
+
 export const MOCK_GYM_EQUIPMENT = [
   '4 power racks',
   'Deadlift platform',

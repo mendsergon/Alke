@@ -9,7 +9,6 @@ import { tokens, useTheme } from '../../theme/theme';
 import { useSession } from '../../session/session';
 import {
   MOCK_CHECK_IN,
-  MOCK_GYM,
   MOCK_HOME_STATE,
   MOCK_NEXT_AFTER_REST,
   MOCK_NEXT_SESSION,
@@ -49,7 +48,7 @@ function TrainingDay() {
   const session = useSession();
   return (
     <>
-      <HomeHeader gym={MOCK_GYM.shortName} title="Today" subtitle={MOCK_TODAY} />
+      <HomeHeader title="Today" subtitle={MOCK_TODAY} />
       <Card>
         <MicroCaps color={c.accent}>Next session</MicroCaps>
         <Txt variant="section" family="serif" weight={500} tracking={-0.005} style={{ marginTop: 8 }}>
@@ -90,7 +89,7 @@ function RestDay() {
   const { c } = useTheme();
   return (
     <>
-      <HomeHeader gym={MOCK_GYM.shortName} title="Rest day" subtitle={MOCK_REST_DAY} />
+      <HomeHeader title="Rest day" subtitle={MOCK_REST_DAY} />
       <Card tone="accentSoft">
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <View style={{ flexShrink: 1 }}>
@@ -147,7 +146,7 @@ function NoProgram() {
   const { c } = useTheme();
   return (
     <>
-      <HomeHeader gym={MOCK_GYM.shortName} title="Welcome" subtitle="No program yet" />
+      <HomeHeader title="Welcome" subtitle="No program yet" />
       <Card tone="accentSoft">
         <Txt variant="serifCardTitle" family="serif" weight={500}>
           Let’s build something to train.

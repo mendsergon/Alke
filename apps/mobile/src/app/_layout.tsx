@@ -13,6 +13,7 @@ import Geist_500Medium from '@expo-google-fonts/geist/500Medium/Geist_500Medium.
 import Geist_600SemiBold from '@expo-google-fonts/geist/600SemiBold/Geist_600SemiBold.ttf';
 import { ThemeProvider, useTheme } from '../theme/theme';
 import { SessionProvider } from '../session/session';
+import { GymProvider } from '../gym/gym';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -54,9 +55,11 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ThemeProvider>
-          <SessionProvider>
-            <Navigator />
-          </SessionProvider>
+          <GymProvider>
+            <SessionProvider>
+              <Navigator />
+            </SessionProvider>
+          </GymProvider>
         </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
