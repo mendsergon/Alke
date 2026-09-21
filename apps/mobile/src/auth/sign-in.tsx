@@ -1,32 +1,36 @@
 import { useState, type ReactNode } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  TextInput,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, TextInput, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Card, PrimaryButton, Row } from '../components/surfaces';
 import { Icon } from '../components/icon';
-import { Figure } from '../figure/figure';
-import { FIGURE_STRIPS } from '../figure/figure.generated';
 import { MicroCaps, Txt } from '../theme/text';
 import { tokens, useTheme } from '../theme/theme';
 import { useAuth } from './auth';
 import { AppleMark, GoogleMark } from './brand-marks';
 
-/** The front strip: the same whole-body figure the Explore cards carry. */
-const HERO = FIGURE_STRIPS[1]!;
-/** The strip is cropped 200 wide by 717 tall; that ratio is never broken. */
-const HERO_RATIO = 200 / 717;
+/**
+ * The mark: the rung's own language — a 6px fully-rounded stroke — bent once.
+ * There is no logo file in the repo (assets/images/icon.png is still Expo's
+ * stock placeholder), so this stands in until Stavros supplies one.
+ */
+function AlkeMark({ size, color }: { size: number; color: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 48 48" fill="none">
+      <Path
+        d="M10 36 24 14l14 22"
+        stroke={color}
+        strokeWidth={tokens.rung.trackHeight}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
 
 /**
- * Not in the design exports — PLAN.md §3 lists onboarding as not yet designed
- * — so it is built out of the app's own parts: the layered body figure that
- * every exercise icon uses, the serif screen title, micro-caps labels, the
- * list rows from Profile, and the session screen's bottom control bar.
+ * Not in the design exports — PLAN.md §3 lists onboarding as not yet designed.
+ * Kept minimal: the mark, the wordmark, one field, one button, two rows.
  *
  * OPEN (PLAN.md §8 #6): Apple and Google are drawn but not wired.
  */
@@ -36,11 +40,6 @@ export function SignIn() {
   const { defaultEmail, signInWithEmail } = useAuth();
   const [email, setEmail] = useState(defaultEmail);
   const [note, setNote] = useState<string | null>(null);
-  const { height } = useWindowDimensions();
-
-  // The figure takes the space the form leaves, within sane bounds on any phone.
-  const heroHeight = Math.round(Math.min(380, Math.max(200, height * 0.4)));
-  const heroWidth = Math.round(heroHeight * HERO_RATIO);
 
   const submit = () => {
     if (email.trim().length > 0) signInWithEmail(email);
@@ -53,49 +52,20 @@ export function SignIn() {
     >
       <View
         style={{
-          flexGrow: 1,
-          flexShrink: 1,
+          flex: 1,
           justifyContent: 'center',
           paddingTop: insets.top + tokens.space[24],
           paddingHorizontal: tokens.space[24],
-          paddingBottom: tokens.space[24],
-        }}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: tokens.space[16] }}>
-          <View style={{ flexGrow: 1, flexShrink: 1, paddingBottom: tokens.space[8] }}>
-            <Txt variant="screenTitle" family="serif" weight={500}>
-              Alke
-            </Txt>
-            <Txt variant="reportProse" family="serif" weight={400} style={{ marginTop: tokens.space[8] }}>
-              Log your sets. See what to change.
-            </Txt>
-          </View>
-          <Figure
-            view={HERO.view}
-            viewBox={HERO.viewBox}
-            paint={HERO.paint}
-            accent={HERO.accent}
-            width={heroWidth}
-            height={heroHeight}
-            strokeWidth={HERO.strokeWidth}
-          />
-        </View>
-      </View>
-
-      {/* The session screen's bottom bar: a border-top and the controls under it. */}
-      <View
-        style={{
-          flexShrink: 0,
-          paddingTop: tokens.space[20],
-          paddingHorizontal: tokens.space[24],
           paddingBottom: Math.max(tokens.space[24], insets.bottom),
-          backgroundColor: c.bg,
-          borderTopWidth: 1,
-          borderTopColor: c.border,
-          gap: tokens.space[12],
         }}
       >
-        <View>
+        <AlkeMark size={44} color={c.accent} />
+
+        <Txt variant="screenTitle" family="serif" weight={500} style={{ marginTop: tokens.space[20] }}>
+          Alke
+        </Txt>
+
+        <View style={{ marginTop: tokens.space[32] }}>
           <MicroCaps>Email</MicroCaps>
           <TextInput
             value={email}
@@ -128,13 +98,15 @@ export function SignIn() {
           />
         </View>
 
-        <PrimaryButton
-          label="Continue"
-          height={tokens.sizing.primaryButtonHeight.min}
-          onPress={submit}
-        />
+        <View style={{ marginTop: tokens.space[12] }}>
+          <PrimaryButton
+            label="Continue"
+            height={tokens.sizing.primaryButtonHeight.min}
+            onPress={submit}
+          />
+        </View>
 
-        <Card padding={16}>
+        <Card padding={16} style={{ marginTop: tokens.space[12] }}>
           <ProviderRow
             first
             label="Continue with Apple"
@@ -148,7 +120,7 @@ export function SignIn() {
           />
         </Card>
 
-        <Txt variant="captionTight" color={c.textSecondary}>
+        <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: tokens.space[16] }}>
           {note ?? 'Alke is for people aged 15 and over.'}
         </Txt>
       </View>
