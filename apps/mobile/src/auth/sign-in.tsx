@@ -39,8 +39,11 @@ export function SignIn() {
           paddingBottom: Math.max(tokens.space[24], insets.bottom),
         }}
       >
+        {/* Weighted so the whole group sits below centre, not against the top. */}
+        <View style={{ flexGrow: 3 }} />
+
         <View style={{ alignItems: 'center' }}>
-          <AlkeMark size={64} />
+          <AlkeMark size={104} />
           <Txt
             variant="screenTitle"
             family="serif"
@@ -54,11 +57,7 @@ export function SignIn() {
           </Txt>
         </View>
 
-        {/* The one flexible gap. The header holds the top, the controls sit in
-            the thumb zone, and the space between them is deliberate. */}
-        <View style={{ flexGrow: 1, minHeight: tokens.space[32] }} />
-
-        <View>
+        <View style={{ marginTop: tokens.space[32] }}>
           <MicroCaps>Email</MicroCaps>
           <TextInput
             value={email}
@@ -99,7 +98,22 @@ export function SignIn() {
           />
         </View>
 
-        <Card padding={16} style={{ marginTop: tokens.space[12] }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: tokens.space[12],
+            marginVertical: tokens.space[20],
+          }}
+        >
+          <View style={{ flexGrow: 1, height: 1, backgroundColor: c.border }} />
+          <Txt variant="captionTight" color={c.textSecondary}>
+            or
+          </Txt>
+          <View style={{ flexGrow: 1, height: 1, backgroundColor: c.border }} />
+        </View>
+
+        <Card padding={16}>
           <ProviderRow
             first
             label="Continue with Apple"
@@ -114,15 +128,21 @@ export function SignIn() {
         </Card>
 
         {note ? (
-          <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: tokens.space[12] }}>
+          <Txt
+            variant="captionTight"
+            color={c.textSecondary}
+            style={{ marginTop: tokens.space[12], textAlign: 'center' }}
+          >
             {note}
           </Txt>
         ) : null}
 
+        <View style={{ flexGrow: 2 }} />
+
         <Txt
           variant="captionTight"
           color={c.textSecondary}
-          style={{ marginTop: tokens.space[16], textAlign: 'center' }}
+          style={{ textAlign: 'center' }}
         >
           Alke is for people aged 15 and over.
         </Txt>
