@@ -16,14 +16,20 @@ web-build/
 *.mobileprovision
 *.orig.*
 
+# iOS native build output
+ios/build/
+**/ios/build/
+Pods/
+**/ios/Pods/
+DerivedData/
+**/DerivedData/
+*.xcuserstate
+xcuserdata/
+
 # Env & secrets
 .env
 .env.*
 !.env.example
-
-# PocketBase local data
-pb_data/
-pb_migrations_local/
 
 # OS / editors
 .DS_Store
