@@ -1,71 +1,58 @@
-import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PrimaryButton } from '../components/surfaces';
-import { SelectField } from '../components/select-field';
-import { DateOfBirthField, type DatePart } from '../components/date-of-birth-field';
+import { Card } from '../components/surfaces';
 import { Icon } from '../components/icon';
-import { MicroCaps, Txt } from '../theme/text';
+import { Txt } from '../theme/text';
 import { tokens, useTheme } from '../theme/theme';
 import { useAuth } from '../auth/auth';
-import {
-  EMPTY_ACCOUNT,
-  GENDER_OPTIONS,
-  checkAccount,
-  type Account,
-  type AccountErrors,
-} from '../account/account-fields';
+import { readableDate } from '../account/account-fields';
 
 /**
- * The account, after it exists. It is the same fields the register page asks
- * for, in the same shape — the design gives the account one entry, the
- * identity card at the top of Profile (`design/rungs-ui.pdf`, Profile), and
- * this is what that chevron opens.
+ * The account, after it exists: every column of the person's row in `users`,
+ * shown exactly as the server holds it. The design gives the account one
+ * entry, the identity card at the top of Profile (`design/rungs-ui.pdf`,
+ * Profile), and this is what that chevron opens.
+ *
+ * It reads and never writes. Name, surname, username, address, date of birth
+ * and gender are settled at registration, where every one of them is checked
+ * against the rules `users` enforces; a second place to change them would be
+ * a second place for the app and the collection to disagree. Units and theme
+ * are not identity and stay editable, on Profile.
  */
 export default function AccountScreen() {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { user } = useAuth();
+  const { account } = useAuth();
 
-  const [account, setAccount] = useState<Account>({
-    ...EMPTY_ACCOUNT,
-    name: user?.name ?? '',
-    username: user?.email ?? '',
-  });
-  const [errors, setErrors] = useState<AccountErrors>({});
-  const [openList, setOpenList] = useState<DatePart | 'gender' | null>(null);
-  const [focused, setFocused] = useState<keyof Account | null>(null);
-
-  const set = <K extends keyof Account>(key: K, value: Account[K]) => {
-    setAccount((prev) => ({ ...prev, [key]: value }));
-    setErrors((prev) => {
-      if (!prev[key]) return prev;
-      const next = { ...prev };
-      delete next[key];
-      return next;
-    });
-  };
-
-  const save = () => {
-    const found = checkAccount(account);
-    setErrors(found);
-    if (Object.keys(found).length > 0) return;
-    router.back();
-  };
+  // Straight off the row, in the order the row was written. Nothing is
+  // derived, defaulted or parsed — a column that is empty reads as empty
+  // rather than as something invented to fill the line.
+  const fields: { label: string; value: string }[] = account
+    ? [
+        { label: 'Name', value: account.name },
+        { label: 'Surname', value: account.surname },
+        { label: 'Username', value: account.username },
+        { label: 'Email', value: account.email },
+        { label: 'Date of birth', value: readableDate(account.date_of_birth) ?? '' },
+        { label: 'Gender', value: account.gender },
+        { label: 'Subscription', value: capitalise(account.subscription_status) },
+      ]
+    : [];
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: c.bg }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <View style={{ paddingTop: insets.top + 20, paddingHorizontal: 20 }}>
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
+      <View style={{ paddingTop: insets.top + tokens.space[20], paddingHorizontal: tokens.space[20] }}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Back"
           onPress={() => router.back()}
-          style={{ width: 44, height: 44, justifyContent: 'center' }}
+          style={{
+            width: tokens.sizing.tapTarget.ios,
+            height: tokens.sizing.tapTarget.ios,
+            justifyContent: 'center',
+          }}
         >
           <Icon name="chevronLeft" size={24} color={c.textSecondary} width={1.5} />
         </Pressable>
@@ -74,195 +61,85 @@ export default function AccountScreen() {
       <ScrollView
         style={{ flexGrow: 1 }}
         contentContainerStyle={{
-          paddingTop: 12,
-          paddingHorizontal: 24,
-          paddingBottom: tokens.space[24],
-          gap: 22,
+          paddingTop: tokens.space[12],
+          paddingHorizontal: tokens.space[24],
+          paddingBottom: Math.max(tokens.space[24], insets.bottom),
+          gap: tokens.space[20],
         }}
-        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         <View>
           <Txt variant="screenTitle" family="serif" weight={500} style={{ lineHeight: 36 }}>
             Account
           </Txt>
-          <Txt variant="bodySmall" color={c.textSecondary} style={{ marginTop: 8 }}>
+          <Txt variant="bodySmall" color={c.textSecondary} style={{ marginTop: tokens.space[8] }}>
             What Alke knows about you. A gym never sees any of it.
           </Txt>
         </View>
 
-        <Labelled label="Name" error={errors.name}>
-          <Entry
-            label="Name"
-            value={account.name}
-            invalid={errors.name !== undefined}
-            onChangeText={(v) => set('name', v)}
-            placeholder="Ελένη"
-            focused={focused === 'name'}
-            onFocus={() => setFocused('name')}
-            onBlur={() => setFocused(null)}
-          />
-        </Labelled>
-
-        <Labelled label="Surname" error={errors.surname}>
-          <Entry
-            label="Surname"
-            value={account.surname}
-            invalid={errors.surname !== undefined}
-            onChangeText={(v) => set('surname', v)}
-            placeholder="Papadopoulou"
-            focused={focused === 'surname'}
-            onFocus={() => setFocused('surname')}
-            onBlur={() => setFocused(null)}
-          />
-        </Labelled>
-
-        <Labelled label="Username" error={errors.username}>
-          <Entry
-            label="Username"
-            value={account.username}
-            invalid={errors.username !== undefined}
-            onChangeText={(v) => set('username', v)}
-            placeholder="eleni"
-            autoCapitalize="none"
-            focused={focused === 'username'}
-            onFocus={() => setFocused('username')}
-            onBlur={() => setFocused(null)}
-          />
-        </Labelled>
-
-        {/* Four boxes on one line: the date's three, then gender. */}
-        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: tokens.space[12] }}>
-          <View style={{ flexGrow: 3, flexBasis: 0 }}>
-            <Labelled label="Date of birth" error={errors.dateOfBirth}>
-              <DateOfBirthField
-                invalid={errors.dateOfBirth !== undefined}
-                value={account.dateOfBirth}
-                open={openList === 'gender' ? null : openList}
-                onToggle={(part) => setOpenList((p) => (p === part ? null : part))}
-                onChange={(next) => set('dateOfBirth', next)}
-              />
-            </Labelled>
+        {account ? (
+          <View style={{ gap: tokens.space[12] }}>
+            <Card padding={tokens.space[16]}>
+              {fields.map((field, index) => (
+                <Stored
+                  key={field.label}
+                  label={field.label}
+                  value={field.value}
+                  first={index === 0}
+                />
+              ))}
+            </Card>
+            <Txt variant="captionTight" color={c.textSecondary}>
+              Set when you registered. They cannot be changed here.
+            </Txt>
           </View>
-          <View style={{ flexGrow: 1.3, flexBasis: 0 }}>
-            <Labelled label="Gender" error={errors.gender}>
-              <SelectField
-                align="center"
-                invalid={errors.gender !== undefined}
-                accessibilityLabel="Gender"
-                placeholder="Gender"
-                value={account.gender}
-                options={GENDER_OPTIONS}
-                open={openList === 'gender'}
-                onToggle={() => setOpenList((p) => (p === 'gender' ? null : 'gender'))}
-                onSelect={(v) => set('gender', v as Account['gender'])}
-              />
-            </Labelled>
-          </View>
-        </View>
+        ) : (
+          <Card padding={tokens.space[16]}>
+            <Txt variant="bodySmall" color={c.textSecondary}>
+              This device is not signed in to an account.
+            </Txt>
+          </Card>
+        )}
       </ScrollView>
-
-      <View
-        style={{
-          paddingHorizontal: tokens.space[24],
-          paddingTop: tokens.space[12],
-          paddingBottom: Math.max(tokens.space[24], insets.bottom),
-        }}
-      >
-        <PrimaryButton
-          label="Save"
-          height={tokens.sizing.primaryButtonHeight.min}
-          onPress={save}
-        />
-      </View>
-    </KeyboardAvoidingView>
-  );
-}
-
-/** A micro-caps eyebrow, the field, and one reserved line for the rule it broke. */
-function Labelled({
-  label,
-  error,
-  children,
-}: {
-  label: string;
-  error?: string;
-  children: React.ReactNode;
-}) {
-  const { c } = useTheme();
-  return (
-    <View>
-      <View style={{ marginBottom: 10 }}>
-        <MicroCaps>{label}</MicroCaps>
-      </View>
-      {children}
-      <View
-        style={{
-          height: tokens.type.captionTight.lineHeight,
-          marginTop: tokens.space[4],
-          justifyContent: 'center',
-        }}
-      >
-        {error ? (
-          <Txt
-            variant="captionTight"
-            color={c.destructive}
-            numberOfLines={1}
-            accessibilityLiveRegion="polite"
-          >
-            {error}
-          </Txt>
-        ) : null}
-      </View>
     </View>
   );
 }
 
-/** The design's input: `surfaceRaised`, 12px radius, 2px accent border focused. */
-function Entry({
-  value,
-  invalid = false,
-  onChangeText,
-  placeholder,
-  label,
-  focused,
-  onFocus,
-  onBlur,
-  autoCapitalize = 'words',
-}: {
-  value: string;
-  invalid?: boolean;
-  onChangeText: (v: string) => void;
-  placeholder: string;
-  label: string;
-  focused: boolean;
-  onFocus: () => void;
-  onBlur: () => void;
-  autoCapitalize?: 'none' | 'words';
-}) {
+/** `free` as the row keeps it, `Free` as a person reads it. */
+function capitalise(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+/**
+ * One column: what it is on the left, what is in it on the right. An empty
+ * column keeps its line and says nothing, so a gap in the row is visible as a
+ * gap rather than hidden.
+ */
+function Stored({ label, value, first }: { label: string; value: string; first: boolean }) {
   const { c } = useTheme();
   return (
-    <TextInput
-      value={value}
-      onChangeText={onChangeText}
-      onFocus={onFocus}
-      onBlur={onBlur}
-      placeholder={placeholder}
-      placeholderTextColor={c.textSecondary}
-      autoCapitalize={autoCapitalize}
-      autoCorrect={false}
-      accessibilityLabel={label}
+    <View
       style={{
-        height: 52,
-        paddingHorizontal: 14,
-        borderRadius: tokens.radius.button,
-        backgroundColor: focused ? c.surfaceRaised : c.surface,
-        borderWidth: focused ? 2 : 1,
-        borderColor: focused ? c.accent : invalid ? c.destructive : c.border,
-        color: c.text,
-        fontFamily: tokens.fontFamily.sansRegular,
-        fontSize: tokens.type.body.size,
+        flexDirection: 'row',
+        alignItems: 'baseline',
+        gap: tokens.space[16],
+        paddingVertical: tokens.space[12],
+        borderTopWidth: first ? 0 : 1,
+        borderTopColor: c.border,
       }}
-    />
+    >
+      <Txt variant="bodySmall" color={c.textSecondary}>
+        {label}
+      </Txt>
+      <Txt
+        variant="rowLabel"
+        weight={500}
+        numberOfLines={1}
+        ellipsizeMode="tail"
+        style={{ flexGrow: 1, flexShrink: 1, textAlign: 'right' }}
+      >
+        {value}
+      </Txt>
+    </View>
   );
 }

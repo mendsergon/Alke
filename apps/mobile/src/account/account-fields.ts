@@ -184,6 +184,26 @@ export function toIsoDate(dob: DateOfBirth): string {
   return `${dob.year}-${month}-${day}`;
 }
 
+/**
+ * The other direction. A PocketBase date column comes back as
+ * `2010-02-03 00:00:00.000Z`, so the calendar date is the first ten
+ * characters — read as characters, never through `new Date()`, because UTC
+ * midnight parsed into a zone west of Greenwich lands on the day before.
+ */
+export function fromIsoDate(stored: string): DateOfBirth | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(stored);
+  if (!match) return null;
+  const month = MONTH_OPTIONS[Number(match[2]) - 1];
+  if (!month) return null;
+  return { day: String(Number(match[3])), month, year: match[1] ?? '' };
+}
+
+/** The stored date the way a person reads it: `3 February 2010`. */
+export function readableDate(stored: string): string | null {
+  const dob = fromIsoDate(stored);
+  return dob ? `${dob.day} ${dob.month} ${dob.year}` : null;
+}
+
 export function checkGender(value: string): string | null {
   if (value.length === 0) return MISSING;
   if (!(GENDER_OPTIONS as readonly string[]).includes(value)) {
