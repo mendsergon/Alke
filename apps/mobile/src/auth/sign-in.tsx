@@ -242,8 +242,12 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
             active={step === 'verify'}
             email={email.trim()}
             onConfirmed={() => {
-              enter(email);
+              // The register goes up first, behind the glass, and only then
+              // does the glass lift. The other order releases the gate onto
+              // Home and the register lands on top of it a beat later — which
+              // reads as a blink with Home showing through the gap.
               router.push('/register');
+              enter(email);
             }}
             onResend={() => setNote('The link is on its way again.')}
           />
