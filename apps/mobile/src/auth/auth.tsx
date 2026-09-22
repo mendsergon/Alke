@@ -15,9 +15,16 @@ type AuthState = {
    * so rather than inventing one.
    */
   entered: boolean;
+  /**
+   * Past the gate but not finished: the glass has lifted so the register page
+   * can be on top of the app, and the app behind it is still suspended. It
+   * arrives when the account is made, not before.
+   */
+  registering: boolean;
   /** The screen opens on an empty field; there is no account to prefill. */
   defaultEmail: string;
-  signInWithEmail: (email: string) => void;
+  signInWithEmail: (email: string, opts?: { registering?: boolean }) => void;
+  finishRegistering: () => void;
   signOut: () => void;
 };
 
@@ -40,24 +47,34 @@ function userFromEmail(email: string): User {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [entered, setEntered] = useState(false);
+  const [registering, setRegistering] = useState(false);
 
-  const signInWithEmail = useCallback((email: string) => {
-    setUser(userFromEmail(email));
-    setEntered(true);
-  }, []);
+  const signInWithEmail = useCallback(
+    (email: string, opts?: { registering?: boolean }) => {
+      setUser(userFromEmail(email));
+      setRegistering(opts?.registering ?? false);
+      setEntered(true);
+    },
+    [],
+  );
+
+  const finishRegistering = useCallback(() => setRegistering(false), []);
 
   const value = useMemo<AuthState>(
     () => ({
       user,
       entered,
+      registering,
       defaultEmail: '',
       signInWithEmail,
+      finishRegistering,
       signOut: () => {
         setUser(null);
         setEntered(false);
+        setRegistering(false);
       },
     }),
-    [user, entered, signInWithEmail],
+    [user, entered, registering, signInWithEmail, finishRegistering],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

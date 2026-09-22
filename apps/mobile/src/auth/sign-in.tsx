@@ -247,7 +247,9 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
               // Home and the register lands on top of it a beat later — which
               // reads as a blink with Home showing through the gap.
               router.push('/register');
-              enter(email);
+              // Not `enter`: that would pop the page just pushed. The glass
+              // lifts, the app stays suspended until the account is made.
+              signInWithEmail(email, { registering: true });
             }}
             onResend={() => setNote('The link is on its way again.')}
           />

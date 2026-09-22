@@ -131,7 +131,7 @@ const SCRIM = 0.4;
 
 function Gate() {
   const { c, scheme } = useTheme();
-  const { entered } = useAuth();
+  const { entered, registering } = useAuth();
   const reduced = useReducedMotion();
 
   // 1 = the glass is formed over the app. 0 = it is gone.
@@ -173,8 +173,11 @@ function Gate() {
     glass.set(reduced ? withTiming(0, REDUCED, done) : withSpring(0, RELEASE, done));
     // No hold. A pause between the glass leaving and the app arriving reads
     // as the transition stopping dead; the two overlap instead.
-    arrival.set(withTiming(1, reduced ? REDUCED : ARRIVE));
-  }, [entered, glass, arrival, reduced]);
+    // The glass can be gone while the register page is still up. The app
+    // behind it stays suspended until the account is made, so its arrival is
+    // something the person sees rather than something that already happened.
+    arrival.set(withTiming(registering ? 0 : 1, reduced ? REDUCED : ARRIVE));
+  }, [entered, registering, glass, arrival, reduced]);
 
   // The app comes out of its recess as the glass loses its hold on it.
   const appStyle = useAnimatedStyle(() => ({

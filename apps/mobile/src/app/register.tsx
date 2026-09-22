@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { GlassView, isGlassEffectAPIAvailable } from 'expo-glass-effect';
 import { Register } from '../auth/register';
+import { useAuth } from '../auth/auth';
 import { useTheme } from '../theme/theme';
 
 /**
@@ -16,6 +17,7 @@ import { useTheme } from '../theme/theme';
  */
 export default function RegisterScreen() {
   const router = useRouter();
+  const { finishRegistering } = useAuth();
   const { c, scheme } = useTheme();
   const [liquid] = useState(isGlassEffectAPIAvailable);
 
@@ -35,7 +37,13 @@ export default function RegisterScreen() {
           style={[StyleSheet.absoluteFill, { backgroundColor: `${c.bg}A6` }]}
         />
       )}
-      <Register onDone={() => router.back()} />
+      <Register
+        onDone={() => {
+          // The app arrives as this leaves.
+          finishRegistering();
+          router.back();
+        }}
+      />
     </View>
   );
 }
