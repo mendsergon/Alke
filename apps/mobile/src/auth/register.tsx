@@ -14,6 +14,7 @@ import {
   type Account,
   type AccountErrors,
 } from '../account/account-fields';
+import { createAccount } from '../backend/pocketbase';
 
 /**
  * The account a `users` row is made of, asked for once, after a new address
@@ -26,13 +27,23 @@ import {
  * primary button last. The fields are that sheet's "Buttons and inputs"
  * input — `surfaceRaised`, 12px radius, 2px accent border while focused.
  */
-export function Register({ onDone }: { onDone: (account: Account) => void }) {
+export function Register({
+  email,
+  onDone,
+}: {
+  email: string;
+  onDone: (account: Account) => void;
+}) {
+  const { c } = useTheme();
   const insets = useSafeAreaInsets();
 
   const [account, setAccount] = useState<Account>(EMPTY_ACCOUNT);
   const [errors, setErrors] = useState<AccountErrors>({});
   const [openList, setOpenList] = useState<DatePart | 'gender' | null>(null);
   const [focused, setFocused] = useState<keyof Account | null>(null);
+  const [saving, setSaving] = useState(false);
+  /** What the server said, when it was not about one field. */
+  const [trouble, setTrouble] = useState<string | null>(null);
 
   const set = <K extends keyof Account>(key: K, value: Account[K]) => {
     setAccount((prev) => ({ ...prev, [key]: value }));
@@ -44,10 +55,24 @@ export function Register({ onDone }: { onDone: (account: Account) => void }) {
     });
   };
 
-  const submit = () => {
+  const submit = async () => {
+    if (saving) return;
     const found = checkAccount(account);
     setErrors(found);
     if (Object.keys(found).length > 0) return;
+
+    setSaving(true);
+    setTrouble(null);
+    // The row is written before the gate opens. A username nobody else has is
+    // something only the server knows, so the account is not real until it
+    // says so.
+    const rejected = await createAccount(account, email);
+    setSaving(false);
+    if (rejected) {
+      setErrors(rejected.fields);
+      setTrouble(rejected.message);
+      return;
+    }
     onDone(account);
   };
 
@@ -168,10 +193,30 @@ export function Register({ onDone }: { onDone: (account: Account) => void }) {
         }}
       >
         <PrimaryButton
-          label="Create account"
+          label={saving ? 'Saving' : 'Create account'}
           height={tokens.sizing.primaryButtonHeight.min}
           onPress={submit}
         />
+        {/* Reserved, so the button does not move when the server speaks. */}
+        <View
+          style={{
+            height: tokens.type.captionTight.lineHeight,
+            marginTop: tokens.space[4],
+            justifyContent: 'center',
+          }}
+        >
+          {trouble ? (
+            <Txt
+              variant="captionTight"
+              color={c.destructive}
+              numberOfLines={1}
+              accessibilityLiveRegion="polite"
+              style={{ textAlign: 'center' }}
+            >
+              {trouble}
+            </Txt>
+          ) : null}
+        </View>
       </View>
     </KeyboardAvoidingView>
   );

@@ -247,7 +247,7 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
         ) : null}
       </Face>
       <Face turn={turn} index={2} active={step === 'register'}>
-        {built.has('register') ? <Register onDone={() => enter(email)} /> : null}
+        {built.has('register') ? <Register email={email.trim()} onDone={() => enter(email)} /> : null}
       </Face>
     </View>
   );

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AccessibilityInfo, StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
@@ -79,7 +79,7 @@ SplashScreen.preventAutoHideAsync();
 
 /** A spring, not a curve: interruptible and re-targetable mid-flight (§4). */
 const RELEASE = {
-  duration: 520,
+  duration: 640,
   // Critically damped. At 0.9 the pane overshoots and settles back, and that
   // wobble is what reads as the end of the transition not being smooth.
   dampingRatio: 1,
@@ -119,6 +119,9 @@ const GLASS_GONE = 0.94;
  * without an edge ever crossing the frame.
  */
 const GLASS_BLEED = 80;
+/** How long the spent pane is left at zero before it leaves the tree. */
+const GATE_TEARDOWN = 80;
+
 /** How far back the app sits under the glass, before it comes forward. */
 const APP_RECESSED = 0.96;
 /**
@@ -157,6 +160,10 @@ function Gate() {
     };
   }, []);
 
+  const unmountGate = useCallback(() => {
+    setTimeout(() => setGateMounted(false), GATE_TEARDOWN);
+  }, []);
+
   // The glass. It answers only to the gate being up or down, so finishing the
   // register later does not set a spring going on a pane that has already left.
   useEffect(() => {
@@ -168,11 +175,14 @@ function Gate() {
     const done = (finished?: boolean) => {
       'worklet';
       // Once the glass is gone it leaves the tree, so nothing is blurring an
-      // app nobody is looking through.
-      if (finished) scheduleOnRN(setGateMounted, false);
+      // app nobody is looking through. A beat after, not on the same frame:
+      // tearing the material down the instant it reaches zero is what let the
+      // system draw one last light frame of it, and cutting the fade short to
+      // avoid that turned the release into a blink.
+      if (finished) scheduleOnRN(unmountGate);
     };
     glass.set(reduced ? withTiming(0, REDUCED, done) : withSpring(0, RELEASE, done));
-  }, [entered, glass, reduced]);
+  }, [entered, glass, reduced, unmountGate]);
 
   // The arrival. No hold — a pause between the glass leaving and the app
   // arriving reads as the transition stopping dead, so the two overlap. But
@@ -202,10 +212,7 @@ function Gate() {
 
   // Size and radius together — the pane's own de-materializing (§12).
   const paneStyle = useAnimatedStyle(() => ({
-    // Fully invisible at 0.1, not at 0: the material has to be gone before the
-    // spring finishes and the pane leaves the tree, or the system draws one
-    // last light frame of it on the way out.
-    opacity: interpolate(glass.get(), [0.1, 0.5, 1], [0, 0.94, 1], Extrapolation.CLAMP),
+    opacity: interpolate(glass.get(), [0, 0.5, 1], [0, 0.94, 1], Extrapolation.CLAMP),
     transform: [
       {
         scale: reduced
