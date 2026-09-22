@@ -53,3 +53,44 @@ Notes.
   confirmed by rendering both paths and diffing the frames.
 - It is a native module, so the iOS project needs a rebuild. A clean
   checkout cannot run this on Expo Go.
+
+## Reanimated is not broken
+
+An earlier session recorded that `react-native-reanimated` 4.5.1 and
+`react-native-worklets` 0.10.1 were installed but dead, because the repository
+has no `babel.config.js`. That is wrong and nothing should be built around it.
+
+- `@expo/metro-config/build/loadBabelConfig.js` falls back to
+  `expo/internal/babel-preset` when the project root has no Babel config file.
+- `babel-preset-expo/build/configs/expo.js` adds `react-native-worklets/plugin`
+  automatically whenever that package resolves, which it does here.
+- Transforming a `useAnimatedStyle` file through that exact configuration
+  emits `__workletHash` and `initData`. The worklets are real.
+
+## The orbs, vendored and seen running
+
+`thinking-orbs-native` 0.1.0 (MIT, upstream `ports/react-native/thinking-orbs-native`,
+not published to npm) is now copied into
+`apps/mobile/src/vendor/thinking-orbs-native` — four files and the MIT notice.
+It draws with `@shopify/react-native-skia` and takes its geometry from
+`thinking-orbs/engine`, the same compiled frame maths the web component runs.
+
+- **Upstream's "not yet runtime-verified on a device or simulator" no longer
+  holds for iOS.** All nine states at both sizes were rendered on the iOS 26.5
+  simulator and confirmed animating across successive frames. Android and a
+  physical device are still unseen.
+- **Theme:** the port's `auto` reads `useColorScheme()`, which is the OS
+  appearance, not Alke's. PLAN.md §3 makes dark the app's default and follows
+  the OS only when the user picks "system", so every orb must be passed
+  `theme` from `useTheme().scheme` explicitly. `auto` is wrong here.
+- **Cost:** the port calls `setState` once per frame to hand a new `SkPicture`
+  to the canvas, which is a React render at 60fps. Rasterisation is still on
+  the UI thread, and one orb on an otherwise idle loading screen is within
+  budget, but this is not something to put in a list or behind a busy screen.
+
+> **OPEN — the vendored port is invisible to git.** `.gitignore` line 41 is
+> `vendor/`, unanchored, so it matches `apps/mobile/src/vendor/` as well as the
+> repository-root reference clones. The port is therefore untracked and would
+> not survive a clean checkout. Two ways out — anchor the rule to `/vendor/`,
+> or move the port to a directory not called `vendor`. Stavros decides; nothing
+> has been changed.
