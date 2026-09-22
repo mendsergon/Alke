@@ -149,21 +149,6 @@ export function Register({
         </Labelled>
 
         {/* Four boxes on one line: the date's three, then gender. */}
-        <Labelled label="Password" error={errors.password}>
-          <Entry
-            label="Password"
-            value={account.password}
-            invalid={errors.password !== undefined}
-            onChangeText={(v) => set('password', v)}
-            placeholder="At least 8 characters"
-            secure
-            autoCapitalize="none"
-            focused={focused === 'password'}
-            onFocus={() => setFocused('password')}
-            onBlur={() => setFocused(null)}
-          />
-        </Labelled>
-
         <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: tokens.space[12] }}>
           <View style={{ flexGrow: 3, flexBasis: 0 }}>
             <Labelled label="Date of birth" error={errors.dateOfBirth}>
@@ -286,7 +271,6 @@ function Entry({
   focused,
   onFocus,
   onBlur,
-  secure = false,
   autoCapitalize = 'words',
 }: {
   value: string;
@@ -297,7 +281,6 @@ function Entry({
   focused: boolean;
   onFocus: () => void;
   onBlur: () => void;
-  secure?: boolean;
   autoCapitalize?: 'none' | 'words';
 }) {
   const { c } = useTheme();
@@ -311,7 +294,6 @@ function Entry({
       placeholderTextColor={c.textSecondary}
       autoCapitalize={autoCapitalize}
       autoCorrect={false}
-      secureTextEntry={secure}
       accessibilityLabel={label}
       style={{
         height: 52,
