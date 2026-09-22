@@ -1,4 +1,4 @@
-import { Children, isValidElement, type ReactNode } from 'react';
+import { Children, Fragment, isValidElement, type ReactElement, type ReactNode } from 'react';
 import { ScrollView, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens, useTheme } from '../theme/theme';
@@ -25,7 +25,7 @@ export function Screen({
 }) {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
-  const blocks = Children.toArray(children).filter(isValidElement);
+  const blocks = flatten(children);
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: c.bg }}
@@ -49,6 +49,28 @@ export function Screen({
   );
 }
 
+/**
+ * A screen's blocks, with fragments opened out.
+ *
+ * `Children.toArray` counts a fragment as one child, so a branch that returns
+ * `<>…</>` — which every conditional section here does — arrived as a single
+ * block: no gap between the things inside it, and the whole branch arriving as
+ * one lump. Opening fragments makes the gap and the stagger apply to what is
+ * actually on the screen.
+ */
+function flatten(children: ReactNode): ReactElement[] {
+  const out: ReactElement[] = [];
+  for (const child of Children.toArray(children)) {
+    if (!isValidElement(child)) continue;
+    if (child.type === Fragment) {
+      out.push(...flatten((child.props as { children?: ReactNode }).children));
+    } else {
+      out.push(child);
+    }
+  }
+  return out;
+}
+
 /** Screen title and its one-line subtitle, with an optional trailing action. */
 export function ScreenHeader({
   title,
@@ -62,7 +84,7 @@ export function ScreenHeader({
   const { c } = useTheme();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-      <View style={{ flexShrink: 1 }}>
+      <View style={{ flexShrink: 1, flexGrow: 1 }}>
         <Txt variant="screenTitle" family="serif" weight={500}>
           {title}
         </Txt>
