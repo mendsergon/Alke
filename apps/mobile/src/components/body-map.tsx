@@ -3,7 +3,7 @@ import { Figure } from '../figure/figure';
 import { FIGURE, MUSCLE_REGIONS, type FigureView } from '../figure/figure.generated';
 import { useTheme } from '../theme/theme';
 import { Txt } from '../theme/text';
-import { heatColor, mix } from './heat';
+import { heatColor } from './heat';
 import type { MuscleScore } from '../mock/mock-data';
 
 const BODY_VIEW_BOX = '-5.0 -5.0 393.5 727.8';
@@ -22,9 +22,6 @@ function fillsFor(view: FigureView, scores: MuscleScore[], stops: readonly strin
 
 function Side({ view, label, scores }: { view: FigureView; label: string; scores: MuscleScore[] }) {
   const { c } = useTheme();
-  // The body sits a shade behind its muscles, and the seams between them are
-  // drawn in that same shade, so an unlit body still reads as a body.
-  const recess = mix(c.iconBody, c.bg, 0.45);
   return (
     <View style={{ flexGrow: 1, alignItems: 'center', gap: 8 }}>
       <Figure
@@ -35,8 +32,6 @@ function Side({ view, label, scores }: { view: FigureView; label: string; scores
         height={248}
         strokeWidth={BODY_STROKE}
         fillFor={fillsFor(view, scores, c.heat)}
-        outline={recess}
-        base={recess}
       />
       <Txt variant="micro" weight={500} color={c.textSecondary} tracking={0.04}>
         {label}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, useWindowDimensions, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Screen, ScreenHeader } from '../../components/screen';
 import { Card, EmptyState, Pill, Row, Segmented } from '../../components/surfaces';
@@ -10,31 +10,96 @@ import { MicroCaps, Txt } from '../../theme/text';
 import { tokens, useTheme } from '../../theme/theme';
 import { useLibrary } from '../../library/library';
 import { EXERCISE_CATALOG, USER_CUSTOM_EXERCISES, type ProgramRow } from '../../mock/mock-data';
-import type { ExerciseIconKey } from '../../figure/figure.generated';
+import {
+  EXERCISE_ICONS,
+  MUSCLE_REGIONS,
+  type ExerciseIconKey,
+} from '../../figure/figure.generated';
+import { Figure } from '../../figure/figure';
 
 const TABS = ['Programs', 'Exercises'] as const;
 
 /**
  * The muscle groups, in Stavros's order. Several are whole regions rather
- * than the single muscles the body map draws: Back covers lats, traps and
- * erectors, Shoulders covers all three heads, Biceps carries brachialis and
- * Abs carries obliques. The icon on each is the generated crop for that
- * region.
+ * than the single muscles the body map draws, so each one lights every muscle
+ * it covers: Back is lats, traps and erectors together, Shoulders is all
+ * three delt heads, Forearms carries brachialis and Abs carries obliques.
+ *
+ * `base` only supplies the crop and the paint order from the generated icon
+ * set; the accent is rebuilt from MUSCLE_REGIONS below.
  */
-const MUSCLE_GROUPS: { name: string; icon: ExerciseIconKey }[] = [
-  { name: 'Chest', icon: 'bench' },
-  { name: 'Back', icon: 'row' },
-  { name: 'Biceps', icon: 'curl' },
-  { name: 'Triceps', icon: 'pushdown' },
-  { name: 'Shoulders', icon: 'ohp' },
-  { name: 'Quads', icon: 'squat' },
-  { name: 'Hamstrings', icon: 'rdl' },
-  { name: 'Adductors', icon: 'adduction' },
-  { name: 'Glutes', icon: 'hipthrust' },
-  { name: 'Abs', icon: 'crunch' },
-  { name: 'Forearms', icon: 'wristcurl' },
-  { name: 'Neck', icon: 'neckcurl' },
+const MUSCLE_GROUPS: {
+  name: string;
+  base: ExerciseIconKey;
+  muscles: string[];
+  /** Overrides the base icon's crop when it frames the wrong thing. */
+  viewBox?: string;
+}[] = [
+  { name: 'Chest', base: 'bench', muscles: ['Chest'] },
+  { name: 'Back', base: 'row', muscles: ['Lats', 'Traps', 'Erectors'] },
+  { name: 'Biceps', base: 'curl', muscles: ['Biceps'] },
+  { name: 'Triceps', base: 'pushdown', muscles: ['Triceps'] },
+  { name: 'Shoulders', base: 'ohp', muscles: ['Delts', 'Side delts'] },
+  { name: 'Quads', base: 'squat', muscles: ['Quads'] },
+  { name: 'Hamstrings', base: 'rdl', muscles: ['Hamstrings'] },
+  { name: 'Adductors', base: 'adduction', muscles: ['Adductors'] },
+  { name: 'Glutes', base: 'hipthrust', muscles: ['Glutes'], viewBox: '116.0 286.0 160.0 160.0' },
+  { name: 'Calves', base: 'calfraise', muscles: ['Calves'] },
+  // MUSCLE_REGIONS['Obliques'] runs 19 to 28, but 19 and 20 are lats and
+  // 27 and 28 are hip flexors, so the obliques are named by region here
+  // rather than by that entry.
+  { name: 'Abs', base: 'crunch', muscles: ['Abs', '#21', '#22', '#23', '#24', '#25', '#26'] },
+  { name: 'Forearms', base: 'wristcurl', muscles: ['Forearms', 'Brachialis'] },
+  // Back view. Region 14 is the neck there; MUSCLE_REGIONS only maps the
+  // front one, so it is named by region.
+  { name: 'Neck', base: 'row', muscles: ['#14'], viewBox: '131.5 0.0 120.0 120.0' },
 ];
+
+/** An icon tile that lights every muscle in the group, not just one of them. */
+function GroupIcon({
+  base,
+  muscles,
+  size,
+  viewBox,
+}: {
+  base: ExerciseIconKey;
+  muscles: string[];
+  size: number;
+  viewBox?: string;
+}) {
+  const { c } = useTheme();
+  const def = EXERCISE_ICONS[base];
+  const accent = muscles.flatMap((m) => {
+    // '#n' names a single figure region, for groups the muscle map splits oddly.
+    if (m.startsWith('#')) return [Number(m.slice(1))];
+    const region = MUSCLE_REGIONS[m];
+    return region && region.view === def.view ? [...region.regions] : [];
+  });
+  const inner = size - 4;
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: tokens.iconTile.radiusAbove56,
+        backgroundColor: c.surfaceRaised,
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+      }}
+    >
+      <Figure
+        view={def.view}
+        viewBox={viewBox ?? def.viewBox}
+        paint={def.paint}
+        accent={accent}
+        width={inner}
+        height={inner}
+        strokeWidth={def.strokeWidth}
+      />
+    </View>
+  );
+}
 
 function ProgramListRow({ program, first }: { program: ProgramRow; first: boolean }) {
   const { c } = useTheme();
@@ -82,6 +147,9 @@ export default function Library() {
   const { c } = useTheme();
   const router = useRouter();
   const [tab, setTab] = useState<(typeof TABS)[number]>('Programs');
+  const { width } = useWindowDimensions();
+  // Three across, and small enough that all twelve fit without scrolling.
+  const tile = Math.min(82, Math.floor((width - tokens.space[24] * 2 - tokens.space[12] * 2) / 3));
   const { programs } = useLibrary();
   const exercises = [...EXERCISE_CATALOG, ...USER_CUSTOM_EXERCISES];
   // The exercises inside a group are served, so a group stays empty until the
@@ -133,7 +201,8 @@ export default function Library() {
               style={{
                 flexDirection: 'row',
                 flexWrap: 'wrap',
-                gap: tokens.space[12],
+                justifyContent: 'space-between',
+                rowGap: tokens.space[16],
               }}
             >
               {MUSCLE_GROUPS.map((g) => (
@@ -141,9 +210,9 @@ export default function Library() {
                   key={g.name}
                   accessibilityRole="button"
                   onPress={() => setGroup(g.name)}
-                  style={{ width: '31%', alignItems: 'center', gap: 6 }}
+                  style={{ width: tile, alignItems: 'center', gap: 8 }}
                 >
-                  <ExerciseIcon icon={g.icon} size={tokens.iconTile.size.exerciseDetail} />
+                  <GroupIcon base={g.base} muscles={g.muscles} size={tile} viewBox={g.viewBox} />
                   <Txt variant="captionTight" weight={500} numberOfLines={1}>
                     {g.name}
                   </Txt>
