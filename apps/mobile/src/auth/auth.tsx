@@ -157,7 +157,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         void clearToken();
       },
     }),
-    [user, entered, registering, restoring, signInWithEmail, signInWithSession, finishRegistering],
+    // `account` and `saveAccount` belong here. Without them this memo handed
+    // every consumer the row as it was before the last save, so a control
+    // reading its own column — Units, Theme — moved and then snapped back to
+    // the stale value while the app was already in the new one.
+    [
+      user,
+      account,
+      saveAccount,
+      entered,
+      registering,
+      restoring,
+      signInWithEmail,
+      signInWithSession,
+      finishRegistering,
+    ],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
