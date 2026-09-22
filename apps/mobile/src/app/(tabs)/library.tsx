@@ -10,7 +10,7 @@ import { MicroCaps, Txt } from '../../theme/text';
 import { tokens, useTheme } from '../../theme/theme';
 import { useLibrary } from '../../library/library';
 import { EXERCISE_CATALOG, USER_CUSTOM_EXERCISES, type ProgramRow } from '../../mock/mock-data';
-import { MUSCLE_REGIONS } from '../../figure/figure.generated';
+import { EXERCISE_ICONS, type ExerciseIconKey } from '../../figure/figure.generated';
 
 const TABS = ['Programs', 'Exercises'] as const;
 
@@ -62,10 +62,13 @@ export default function Library() {
   const [tab, setTab] = useState<(typeof TABS)[number]>('Programs');
   const { programs } = useLibrary();
   const exercises = [...EXERCISE_CATALOG, ...USER_CUSTOM_EXERCISES];
-  // The muscle groups are the body map's own regions. The exercises inside
-  // them are served, so a group is empty until the backend fills it.
+  // One icon per muscle, straight out of the design export's generated icon
+  // set. The exercises inside a group are served, so a group stays empty
+  // until the backend fills it.
   const [group, setGroup] = useState<string | null>(null);
-  const groups = Object.keys(MUSCLE_REGIONS);
+  const groups = (Object.entries(EXERCISE_ICONS) as [ExerciseIconKey, { muscle: string }][])
+    .map(([icon, def]) => ({ muscle: def.muscle, icon }))
+    .sort((a, b) => a.muscle.localeCompare(b.muscle));
   const inGroup = group ? exercises.filter((e) => e.muscle === group) : [];
 
   return (
@@ -111,12 +114,17 @@ export default function Library() {
             <>
               <MicroCaps>Muscle groups</MicroCaps>
               <Card>
-                {groups.map((m, i) => (
-                  <Pressable key={m} accessibilityRole="button" onPress={() => setGroup(m)}>
+                {groups.map((g, i) => (
+                  <Pressable
+                    key={g.muscle}
+                    accessibilityRole="button"
+                    onPress={() => setGroup(g.muscle)}
+                  >
                     <Row first={i === 0}>
+                      <ExerciseIcon icon={g.icon} size={tokens.iconTile.size.listRow} />
                       <View style={{ flexGrow: 1, flexShrink: 1 }}>
                         <Txt variant="rowLabel" weight={500}>
-                          {m}
+                          {g.muscle}
                         </Txt>
                       </View>
                       <Icon name="chevronRight" size={18} color={c.textSecondary} />
