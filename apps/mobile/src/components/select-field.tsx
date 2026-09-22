@@ -21,6 +21,7 @@ export function SelectField({
   onToggle,
   onSelect,
   accessibilityLabel,
+  align = 'left',
 }: {
   value: string;
   placeholder: string;
@@ -29,6 +30,11 @@ export function SelectField({
   onToggle: () => void;
   onSelect: (next: string) => void;
   accessibilityLabel: string;
+  /**
+   * Centred is the design's code box (`design/rungs-ui.pdf`, "Join a gym"):
+   * equal boxes on one line, the value in the middle of each.
+   */
+  align?: 'left' | 'center';
 }) {
   const { c } = useTheme();
   const scroller = useRef<ScrollView>(null);
@@ -66,21 +72,22 @@ export function SelectField({
         onPress={onToggle}
         style={{
           height: FIELD_HEIGHT,
-          paddingHorizontal: 14,
+          paddingHorizontal: align === 'center' ? tokens.space[8] : 14,
           borderRadius: tokens.radius.button,
           backgroundColor: open ? c.surfaceRaised : c.surface,
           borderWidth: open ? 2 : 1,
           borderColor: open ? c.accent : c.border,
           flexDirection: 'row',
           alignItems: 'center',
-          gap: tokens.space[8],
+          justifyContent: align === 'center' ? 'center' : 'flex-start',
+          gap: align === 'center' ? tokens.space[4] : tokens.space[8],
         }}
       >
         <Txt
           variant="body"
           color={value ? c.text : c.textSecondary}
           numberOfLines={1}
-          style={{ flexGrow: 1, flexShrink: 1 }}
+          style={align === 'center' ? { flexShrink: 1 } : { flexGrow: 1, flexShrink: 1 }}
         >
           {value || placeholder}
         </Txt>
@@ -96,7 +103,12 @@ export function SelectField({
             ],
           }}
         >
-          <Icon name="chevronDown" size={18} color={open ? c.accent : c.textSecondary} width={1.7} />
+          <Icon
+            name="chevronDown"
+            size={align === 'center' ? 14 : 18}
+            color={open ? c.accent : c.textSecondary}
+            width={1.7}
+          />
         </Animated.View>
       </Pressable>
 

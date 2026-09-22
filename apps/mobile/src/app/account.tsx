@@ -4,12 +4,12 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PrimaryButton } from '../components/surfaces';
 import { SelectField } from '../components/select-field';
+import { DateOfBirthField, type DatePart } from '../components/date-of-birth-field';
 import { Icon } from '../components/icon';
 import { MicroCaps, Txt } from '../theme/text';
 import { tokens, useTheme } from '../theme/theme';
 import { useAuth } from '../auth/auth';
 import {
-  AGE_OPTIONS,
   EMPTY_ACCOUNT,
   GENDER_OPTIONS,
   checkAccount,
@@ -35,7 +35,7 @@ export default function AccountScreen() {
     username: user?.email ?? '',
   });
   const [errors, setErrors] = useState<AccountErrors>({});
-  const [openList, setOpenList] = useState<'age' | 'gender' | null>(null);
+  const [openList, setOpenList] = useState<DatePart | 'gender' | null>(null);
   const [focused, setFocused] = useState<keyof Account | null>(null);
 
   const set = <K extends keyof Account>(key: K, value: Account[K]) => {
@@ -128,34 +128,26 @@ export default function AccountScreen() {
           />
         </Labelled>
 
-        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: tokens.space[12] }}>
-          <View style={{ flexGrow: 1, flexBasis: 0 }}>
-            <Labelled label="Age" error={errors.age}>
-              <SelectField
-                accessibilityLabel="Age"
-                placeholder="Choose"
-                value={account.age}
-                options={AGE_OPTIONS}
-                open={openList === 'age'}
-                onToggle={() => setOpenList((p) => (p === 'age' ? null : 'age'))}
-                onSelect={(v) => set('age', v)}
-              />
-            </Labelled>
-          </View>
-          <View style={{ flexGrow: 1, flexBasis: 0 }}>
-            <Labelled label="Gender" error={errors.gender}>
-              <SelectField
-                accessibilityLabel="Gender"
-                placeholder="Choose"
-                value={account.gender}
-                options={GENDER_OPTIONS}
-                open={openList === 'gender'}
-                onToggle={() => setOpenList((p) => (p === 'gender' ? null : 'gender'))}
-                onSelect={(v) => set('gender', v as Account['gender'])}
-              />
-            </Labelled>
-          </View>
-        </View>
+        <Labelled label="Date of birth" error={errors.dateOfBirth}>
+          <DateOfBirthField
+            value={account.dateOfBirth}
+            open={openList === 'gender' ? null : openList}
+            onToggle={(part) => setOpenList((p) => (p === part ? null : part))}
+            onChange={(next) => set('dateOfBirth', next)}
+          />
+        </Labelled>
+
+        <Labelled label="Gender" error={errors.gender}>
+          <SelectField
+            accessibilityLabel="Gender"
+            placeholder="Choose"
+            value={account.gender}
+            options={GENDER_OPTIONS}
+            open={openList === 'gender'}
+            onToggle={() => setOpenList((p) => (p === 'gender' ? null : 'gender'))}
+            onSelect={(v) => set('gender', v as Account['gender'])}
+          />
+        </Labelled>
       </ScrollView>
 
       <View
