@@ -157,11 +157,12 @@ function Gate() {
     };
   }, []);
 
+  // The glass. It answers only to the gate being up or down, so finishing the
+  // register later does not set a spring going on a pane that has already left.
   useEffect(() => {
     if (!entered) {
       setGateMounted(true);
       glass.set(reduced ? withTiming(1, REDUCED) : withSpring(1, RELEASE));
-      arrival.set(withTiming(0, reduced ? REDUCED : ARRIVE));
       return;
     }
     const done = (finished?: boolean) => {
@@ -171,13 +172,17 @@ function Gate() {
       if (finished) scheduleOnRN(setGateMounted, false);
     };
     glass.set(reduced ? withTiming(0, REDUCED, done) : withSpring(0, RELEASE, done));
-    // No hold. A pause between the glass leaving and the app arriving reads
-    // as the transition stopping dead; the two overlap instead.
-    // The glass can be gone while the register page is still up. The app
-    // behind it stays suspended until the account is made, so its arrival is
-    // something the person sees rather than something that already happened.
-    arrival.set(withTiming(registering ? 0 : 1, reduced ? REDUCED : ARRIVE));
-  }, [entered, registering, glass, arrival, reduced]);
+  }, [entered, glass, reduced]);
+
+  // The arrival. No hold — a pause between the glass leaving and the app
+  // arriving reads as the transition stopping dead, so the two overlap. But
+  // the glass can be gone while the register page is still up, and the app
+  // behind it stays suspended until the account is made: its arrival is
+  // something the person sees rather than something that already happened.
+  useEffect(() => {
+    const arrived = entered && !registering;
+    arrival.set(withTiming(arrived ? 1 : 0, reduced ? REDUCED : ARRIVE));
+  }, [entered, registering, arrival, reduced]);
 
   // The app comes out of its recess as the glass loses its hold on it.
   const appStyle = useAnimatedStyle(() => ({

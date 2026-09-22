@@ -51,8 +51,7 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
     }
     setError(null);
     // Ben's account already exists and goes straight in. A new address turns
-    // the same sheet of glass over to the account, with no screen pushed and
-    // nothing to swipe: the gate keeps its own fade.
+    // the glass over to the wait, and the wait hands off to the register.
     if (email.toLowerCase().includes('ben')) {
       enter(email);
       return;
