@@ -1,24 +1,23 @@
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Card } from '../components/surfaces';
+import { SelectField } from '../components/select-field';
+import { DateOfBirthField } from '../components/date-of-birth-field';
 import { Icon } from '../components/icon';
-import { Txt } from '../theme/text';
+import { MicroCaps, Txt } from '../theme/text';
 import { tokens, useTheme } from '../theme/theme';
 import { useAuth } from '../auth/auth';
-import { readableDate } from '../account/account-fields';
+import { EMPTY_ACCOUNT, GENDER_OPTIONS, fromIsoDate } from '../account/account-fields';
 
 /**
- * The account, after it exists: every column of the person's row in `users`,
- * shown exactly as the server holds it. The design gives the account one
- * entry, the identity card at the top of Profile (`design/rungs-ui.pdf`,
- * Profile), and this is what that chevron opens.
+ * The account, after it exists. It is the same fields the register page asks
+ * for, in the same shape — the design gives the account one entry, the
+ * identity card at the top of Profile (`design/rungs-ui.pdf`, Profile), and
+ * this is what that chevron opens.
  *
- * It reads and never writes. Name, surname, username, address, date of birth
- * and gender are settled at registration, where every one of them is checked
- * against the rules `users` enforces; a second place to change them would be
- * a second place for the app and the collection to disagree. Units and theme
- * are not identity and stay editable, on Profile.
+ * Every box shows its column from the row, and nothing here writes: the
+ * fields are settled at registration, where the rules `users` enforces are
+ * checked, so the boxes are filled and inert.
  */
 export default function AccountScreen() {
   const { c } = useTheme();
@@ -26,33 +25,21 @@ export default function AccountScreen() {
   const router = useRouter();
   const { account } = useAuth();
 
-  // Straight off the row, in the order the row was written. Nothing is
-  // derived, defaulted or parsed — a column that is empty reads as empty
-  // rather than as something invented to fill the line.
-  const fields: { label: string; value: string }[] = account
-    ? [
-        { label: 'Name', value: account.name },
-        { label: 'Surname', value: account.surname },
-        { label: 'Username', value: account.username },
-        { label: 'Email', value: account.email },
-        { label: 'Date of birth', value: readableDate(account.date_of_birth) ?? '' },
-        { label: 'Gender', value: account.gender },
-        { label: 'Subscription', value: capitalise(account.subscription_status) },
-      ]
-    : [];
+  const name = account?.name ?? '';
+  const surname = account?.surname ?? '';
+  const username = account?.username ?? '';
+  const gender = account?.gender ?? '';
+  const dateOfBirth =
+    (account ? fromIsoDate(account.date_of_birth) : null) ?? EMPTY_ACCOUNT.dateOfBirth;
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <View style={{ paddingTop: insets.top + tokens.space[20], paddingHorizontal: tokens.space[20] }}>
+      <View style={{ paddingTop: insets.top + 20, paddingHorizontal: 20 }}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Back"
           onPress={() => router.back()}
-          style={{
-            width: tokens.sizing.tapTarget.ios,
-            height: tokens.sizing.tapTarget.ios,
-            justifyContent: 'center',
-          }}
+          style={{ width: 44, height: 44, justifyContent: 'center' }}
         >
           <Icon name="chevronLeft" size={24} color={c.textSecondary} width={1.5} />
         </Pressable>
@@ -61,10 +48,10 @@ export default function AccountScreen() {
       <ScrollView
         style={{ flexGrow: 1 }}
         contentContainerStyle={{
-          paddingTop: tokens.space[12],
-          paddingHorizontal: tokens.space[24],
-          paddingBottom: Math.max(tokens.space[24], insets.bottom),
-          gap: tokens.space[20],
+          paddingTop: 12,
+          paddingHorizontal: 24,
+          paddingBottom: tokens.space[24],
+          gap: 22,
         }}
         showsVerticalScrollIndicator={false}
       >
@@ -72,74 +59,102 @@ export default function AccountScreen() {
           <Txt variant="screenTitle" family="serif" weight={500} style={{ lineHeight: 36 }}>
             Account
           </Txt>
-          <Txt variant="bodySmall" color={c.textSecondary} style={{ marginTop: tokens.space[8] }}>
+          <Txt variant="bodySmall" color={c.textSecondary} style={{ marginTop: 8 }}>
             What Alke knows about you. A gym never sees any of it.
           </Txt>
         </View>
 
-        {account ? (
-          <View style={{ gap: tokens.space[12] }}>
-            <Card padding={tokens.space[16]}>
-              {fields.map((field, index) => (
-                <Stored
-                  key={field.label}
-                  label={field.label}
-                  value={field.value}
-                  first={index === 0}
+        <Labelled label="Name">
+          <Entry label="Name" value={name} />
+        </Labelled>
+
+        <Labelled label="Surname">
+          <Entry label="Surname" value={surname} />
+        </Labelled>
+
+        <Labelled label="Username">
+          <Entry label="Username" value={username} />
+        </Labelled>
+
+        {/* Four boxes on one line: the date's three, then gender. */}
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: tokens.space[12] }}>
+          <View style={{ flexGrow: 3, flexBasis: 0 }}>
+            <Labelled label="Date of birth">
+              {/* Filled and shut. The lists are what change a value, so they
+                  never come down. */}
+              <View pointerEvents="none">
+                <DateOfBirthField
+                  value={dateOfBirth}
+                  open={null}
+                  onToggle={noop}
+                  onChange={noop}
                 />
-              ))}
-            </Card>
-            <Txt variant="captionTight" color={c.textSecondary}>
-              Set when you registered. They cannot be changed here.
-            </Txt>
+              </View>
+            </Labelled>
           </View>
-        ) : (
-          <Card padding={tokens.space[16]}>
-            <Txt variant="bodySmall" color={c.textSecondary}>
-              This device is not signed in to an account.
-            </Txt>
-          </Card>
-        )}
+          <View style={{ flexGrow: 1.3, flexBasis: 0 }}>
+            <Labelled label="Gender">
+              <View pointerEvents="none">
+                <SelectField
+                  align="center"
+                  accessibilityLabel="Gender"
+                  placeholder="Gender"
+                  value={gender}
+                  options={GENDER_OPTIONS}
+                  open={false}
+                  onToggle={noop}
+                  onSelect={noop}
+                />
+              </View>
+            </Labelled>
+          </View>
+        </View>
       </ScrollView>
     </View>
   );
 }
 
-/** `free` as the row keeps it, `Free` as a person reads it. */
-function capitalise(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1);
+/** Nothing on this screen changes anything. */
+function noop() {}
+
+/** A micro-caps eyebrow, the field, and one reserved line for the rule it broke. */
+function Labelled({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <View>
+      <View style={{ marginBottom: 10 }}>
+        <MicroCaps>{label}</MicroCaps>
+      </View>
+      {children}
+      <View
+        style={{
+          height: tokens.type.captionTight.lineHeight,
+          marginTop: tokens.space[4],
+          justifyContent: 'center',
+        }}
+      />
+    </View>
+  );
 }
 
-/**
- * One column: what it is on the left, what is in it on the right. An empty
- * column keeps its line and says nothing, so a gap in the row is visible as a
- * gap rather than hidden.
- */
-function Stored({ label, value, first }: { label: string; value: string; first: boolean }) {
+/** The design's input: `surfaceRaised`, 12px radius, 2px accent border focused. */
+function Entry({ value, label }: { value: string; label: string }) {
   const { c } = useTheme();
   return (
-    <View
+    <TextInput
+      value={value}
+      editable={false}
+      accessibilityLabel={label}
       style={{
-        flexDirection: 'row',
-        alignItems: 'baseline',
-        gap: tokens.space[16],
-        paddingVertical: tokens.space[12],
-        borderTopWidth: first ? 0 : 1,
-        borderTopColor: c.border,
+        height: 52,
+        paddingHorizontal: 14,
+        borderRadius: tokens.radius.button,
+        backgroundColor: c.surface,
+        borderWidth: 1,
+        borderColor: c.border,
+        color: c.text,
+        fontFamily: tokens.fontFamily.sansRegular,
+        fontSize: tokens.type.body.size,
       }}
-    >
-      <Txt variant="bodySmall" color={c.textSecondary}>
-        {label}
-      </Txt>
-      <Txt
-        variant="rowLabel"
-        weight={500}
-        numberOfLines={1}
-        ellipsizeMode="tail"
-        style={{ flexGrow: 1, flexShrink: 1, textAlign: 'right' }}
-      >
-        {value}
-      </Txt>
-    </View>
+    />
   );
 }
