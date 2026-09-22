@@ -52,7 +52,7 @@ const MUSCLE_GROUPS: {
   { name: 'Forearms', base: 'wristcurl', muscles: ['Forearms', 'Brachialis'] },
   // Back view. Region 14 is the neck there; MUSCLE_REGIONS only maps the
   // front one, so it is named by region.
-  { name: 'Neck', base: 'row', muscles: ['#14'], viewBox: '131.5 0.0 120.0 120.0' },
+  { name: 'Neck', base: 'row', muscles: ['#14', '#49', '#50', '#51'], viewBox: '131.5 0.0 120.0 120.0' },
 ];
 
 /** An icon tile that lights every muscle in the group, not just one of them. */
