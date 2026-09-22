@@ -9,13 +9,8 @@ import { ExerciseIcon } from '../../figure/figure';
 import { MicroCaps, Txt } from '../../theme/text';
 import { tokens, useTheme } from '../../theme/theme';
 import { useLibrary } from '../../library/library';
-import {
-  EXERCISE_CATALOG,
-  USER_CUSTOM_EXERCISES,
-  muscleGroups,
-  type ExerciseRow,
-  type ProgramRow,
-} from '../../mock/mock-data';
+import { EXERCISE_CATALOG, USER_CUSTOM_EXERCISES, type ProgramRow } from '../../mock/mock-data';
+import { MUSCLE_REGIONS } from '../../figure/figure.generated';
 
 const TABS = ['Programs', 'Exercises'] as const;
 
@@ -67,9 +62,10 @@ export default function Library() {
   const [tab, setTab] = useState<(typeof TABS)[number]>('Programs');
   const { programs } = useLibrary();
   const exercises = [...EXERCISE_CATALOG, ...USER_CUSTOM_EXERCISES];
-  // Exercises open on their muscle groups; a group opens its movements.
+  // The muscle groups are the body map's own regions. The exercises inside
+  // them are served, so a group is empty until the backend fills it.
   const [group, setGroup] = useState<string | null>(null);
-  const groups = muscleGroups(exercises);
+  const groups = Object.keys(MUSCLE_REGIONS);
   const inGroup = group ? exercises.filter((e) => e.muscle === group) : [];
 
   return (
@@ -113,25 +109,14 @@ export default function Library() {
           <SearchBar />
           {group === null ? (
             <>
-              <View
-                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
-              >
-                <MicroCaps>Muscle groups</MicroCaps>
-                <Txt variant="captionTight" weight={500} color={c.accent} tnum>
-                  {exercises.length}
-                </Txt>
-              </View>
+              <MicroCaps>Muscle groups</MicroCaps>
               <Card>
-                {groups.map((g, i) => (
-                  <Pressable key={g.muscle} accessibilityRole="button" onPress={() => setGroup(g.muscle)}>
+                {groups.map((m, i) => (
+                  <Pressable key={m} accessibilityRole="button" onPress={() => setGroup(m)}>
                     <Row first={i === 0}>
-                      <ExerciseIcon icon={g.items[0]!.icon} size={tokens.iconTile.size.listRow} />
                       <View style={{ flexGrow: 1, flexShrink: 1 }}>
                         <Txt variant="rowLabel" weight={500}>
-                          {g.muscle}
-                        </Txt>
-                        <Txt variant="captionTight" color={c.textSecondary} tnum style={{ marginTop: 1 }}>
-                          {g.items.length} {g.items.length === 1 ? 'exercise' : 'exercises'}
+                          {m}
                         </Txt>
                       </View>
                       <Icon name="chevronRight" size={18} color={c.textSecondary} />
@@ -151,22 +136,26 @@ export default function Library() {
                 <Icon name="chevronLeft" size={18} color={c.accent} width={1.7} />
                 <MicroCaps color={c.accent}>{group}</MicroCaps>
               </Pressable>
-              <Card>
-                {inGroup.map((e: ExerciseRow, i: number) => (
-                  <Row key={e.name} first={i === 0}>
-                    <ExerciseIcon icon={e.icon} size={tokens.iconTile.size.listRow} />
-                    <View style={{ flexGrow: 1, flexShrink: 1 }}>
-                      <Txt variant="rowLabel" weight={500}>
-                        {e.name}
-                      </Txt>
-                      <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: 1 }}>
-                        {e.equipment}
-                      </Txt>
-                    </View>
-                    <Icon name="chevronRight" size={18} color={c.textSecondary} />
-                  </Row>
-                ))}
-              </Card>
+              {inGroup.length > 0 ? (
+                <Card>
+                  {inGroup.map((e, i) => (
+                    <Row key={e.name} first={i === 0}>
+                      <ExerciseIcon icon={e.icon} size={tokens.iconTile.size.listRow} />
+                      <View style={{ flexGrow: 1, flexShrink: 1 }}>
+                        <Txt variant="rowLabel" weight={500}>
+                          {e.name}
+                        </Txt>
+                        <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: 1 }}>
+                          {e.equipment}
+                        </Txt>
+                      </View>
+                      <Icon name="chevronRight" size={18} color={c.textSecondary} />
+                    </Row>
+                  ))}
+                </Card>
+              ) : (
+                <EmptyState line="No exercises yet." />
+              )}
             </>
           )}
         </>

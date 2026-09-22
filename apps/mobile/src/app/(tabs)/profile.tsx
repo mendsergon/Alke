@@ -58,12 +58,12 @@ export default function Profile() {
               width: 48,
               height: 48,
               borderRadius: 999,
-              backgroundColor: user ? c.accentSoft : c.bg,
+              backgroundColor: user?.initials ? c.accentSoft : c.bg,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            {user ? (
+            {user?.initials ? (
               <Txt variant="avatarInitials" color={c.accent}>
                 {user.initials}
               </Txt>
@@ -72,18 +72,15 @@ export default function Profile() {
             )}
           </View>
           <View style={{ flexGrow: 1, flexShrink: 1 }}>
-            <Txt variant="nameTitle">{user ? user.name : 'Not signed in'}</Txt>
-            <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: 1 }}>
-              {user ? user.email : 'No account'}
-            </Txt>
+            <Txt variant="nameTitle">{user?.name ?? 'Account'}</Txt>
+            {user?.email ? (
+              <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: 1 }}>
+                {user.email}
+              </Txt>
+            ) : null}
           </View>
-          {user ? <Icon name="chevronRight" size={20} color={c.textSecondary} /> : null}
+          <Icon name="chevronRight" size={20} color={c.textSecondary} />
         </View>
-        {user ? null : (
-          <View style={{ marginTop: 14 }}>
-            <SecondaryButton label="Sign in" height={42} onPress={() => router.push('/sign-in')} />
-          </View>
-        )}
       </Card>
 
       <Card padding={16}>
@@ -143,15 +140,13 @@ export default function Profile() {
         </SettingRow>
       </Card>
 
-      {user ? (
-        <Card padding={16}>
-          <Pressable accessibilityRole="button" onPress={signOut} style={{ paddingVertical: 6 }}>
-            <Txt variant="rowLabel" weight={500} color={c.destructive}>
-              Sign out
-            </Txt>
-          </Pressable>
-        </Card>
-      ) : null}
+      <Card padding={16}>
+        <Pressable accessibilityRole="button" onPress={signOut} style={{ paddingVertical: 6 }}>
+          <Txt variant="rowLabel" weight={500} color={c.destructive}>
+            Sign out
+          </Txt>
+        </Pressable>
+      </Card>
     </Screen>
   );
 }

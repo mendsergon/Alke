@@ -60,19 +60,6 @@ export type SharedProgram = {
   strip: number;
 };
 
-/** A template the app ships. No author, no save count — it is not shared content. */
-export type Template = {
-  id: string;
-  name: string;
-  daysPerWeek: number;
-  weekLength: number;
-  /** What the split is, in the user's words. */
-  focus: string;
-  chips: string[];
-  /** Index into FIGURE_STRIPS. */
-  strip: number;
-};
-
 export type SessionSet = {
   index: number;
   state: 'done' | 'current' | 'empty';
@@ -107,111 +94,11 @@ export type RecordByReps = { range: string; weight: string; reps: string; date: 
 // ===========================================================================
 
 /**
- * The exercise table: movement, the muscle it trains and the equipment it
- * needs. PLAN.md §1.1 calls this the single most important data asset. This is
- * the first slice of it; the full table and its boolean equipment expressions
- * are a later job.
+ * The exercise table is served, not shipped. PLAN.md §1.1 calls it the single
+ * most important data asset; it lives on the backend and nothing is invented
+ * here to stand in for it.
  */
-export const EXERCISE_CATALOG: ExerciseRow[] = [
-  { name: 'Barbell Back Squat', muscle: 'Quads', equipment: 'barbell', icon: 'squat' },
-  { name: 'Front Squat', muscle: 'Quads', equipment: 'barbell', icon: 'squat' },
-  { name: 'Leg Press', muscle: 'Quads', equipment: 'machine', icon: 'squat' },
-  { name: 'Bulgarian Split Squat', muscle: 'Quads', equipment: 'dumbbell', icon: 'squat' },
-
-  { name: 'Romanian Deadlift', muscle: 'Hamstrings', equipment: 'barbell', icon: 'rdl' },
-  { name: 'Lying Leg Curl', muscle: 'Hamstrings', equipment: 'machine', icon: 'rdl' },
-  { name: 'Good Morning', muscle: 'Hamstrings', equipment: 'barbell', icon: 'rdl' },
-
-  { name: 'Hip Thrust', muscle: 'Glutes', equipment: 'barbell', icon: 'hipthrust' },
-  { name: 'Cable Kickback', muscle: 'Glutes', equipment: 'cable', icon: 'hipthrust' },
-
-  { name: 'Barbell Row', muscle: 'Lats', equipment: 'barbell', icon: 'row' },
-  { name: 'Lat Pulldown', muscle: 'Lats', equipment: 'cable', icon: 'row' },
-  { name: 'Pull-up', muscle: 'Lats', equipment: 'bodyweight', icon: 'row' },
-  { name: 'Seated Cable Row', muscle: 'Lats', equipment: 'cable', icon: 'row' },
-
-  { name: 'Bench Press', muscle: 'Chest', equipment: 'barbell', icon: 'bench' },
-  { name: 'Incline Bench Press', muscle: 'Chest', equipment: 'barbell', icon: 'bench' },
-  { name: 'Dumbbell Press', muscle: 'Chest', equipment: 'dumbbell', icon: 'bench' },
-  { name: 'Cable Fly', muscle: 'Chest', equipment: 'cable', icon: 'bench' },
-
-  { name: 'Overhead Press', muscle: 'Front delts', equipment: 'barbell', icon: 'ohp' },
-  { name: 'Seated Dumbbell Press', muscle: 'Front delts', equipment: 'dumbbell', icon: 'ohp' },
-
-  { name: 'Dumbbell Lateral Raise', muscle: 'Side delts', equipment: 'dumbbell', icon: 'lateral' },
-  { name: 'Cable Lateral Raise', muscle: 'Side delts', equipment: 'cable', icon: 'lateral' },
-
-  { name: 'Face Pull', muscle: 'Rear delts', equipment: 'cable', icon: 'facepull' },
-  { name: 'Reverse Dumbbell Fly', muscle: 'Rear delts', equipment: 'dumbbell', icon: 'facepull' },
-
-  { name: 'Barbell Curl', muscle: 'Biceps', equipment: 'barbell', icon: 'curl' },
-  { name: 'Incline Dumbbell Curl', muscle: 'Biceps', equipment: 'dumbbell', icon: 'curl' },
-  { name: 'Hammer Curl', muscle: 'Brachialis', equipment: 'dumbbell', icon: 'hammer' },
-
-  { name: 'Triceps Pushdown', muscle: 'Triceps', equipment: 'cable', icon: 'pushdown' },
-  { name: 'Overhead Triceps Extension', muscle: 'Triceps', equipment: 'cable', icon: 'pushdown' },
-
-  { name: 'Barbell Shrug', muscle: 'Traps', equipment: 'barbell', icon: 'shrug' },
-
-  { name: 'Standing Calf Raise', muscle: 'Calves', equipment: 'machine', icon: 'calfraise' },
-  { name: 'Seated Calf Raise', muscle: 'Calves', equipment: 'machine', icon: 'calfraise' },
-
-  { name: 'Cable Crunch', muscle: 'Abs', equipment: 'cable', icon: 'crunch' },
-  { name: 'Pallof Press', muscle: 'Obliques', equipment: 'cable', icon: 'pallof' },
-
-  { name: 'Back Extension', muscle: 'Erectors', equipment: 'bodyweight', icon: 'backext' },
-  { name: 'Hip Adduction', muscle: 'Adductors', equipment: 'machine', icon: 'adduction' },
-  { name: 'Wrist Curl', muscle: 'Forearms', equipment: 'dumbbell', icon: 'wristcurl' },
-  { name: 'Neck Curl', muscle: 'Neck', equipment: 'bodyweight', icon: 'neckcurl' },
-];
-
-/** The muscle groups in the catalog, in the order the list shows them. */
-export function muscleGroups(exercises: readonly ExerciseRow[]) {
-  const byMuscle = new Map<string, ExerciseRow[]>();
-  for (const e of exercises) {
-    const list = byMuscle.get(e.muscle);
-    if (list) list.push(e);
-    else byMuscle.set(e.muscle, [e]);
-  }
-  return [...byMuscle.entries()].map(([muscle, items]) => ({ muscle, items }));
-}
-
-/**
- * Starter templates. Structure only — days, split, level. No author and no
- * save count, because nobody has shared anything.
- *
- * OPEN: which templates actually ship is a product decision PLAN.md does not
- * fix. These three describe common structures and are placeholders for it.
- */
-export const FEATURED_TEMPLATES: Template[] = [
-  {
-    id: 'full-body-3',
-    name: 'Full Body Three',
-    daysPerWeek: 3,
-    weekLength: 7,
-    focus: 'Full body, three days a week',
-    chips: ['beginner', 'barbell'],
-    strip: 1,
-  },
-  {
-    id: 'upper-lower-4',
-    name: 'Upper / Lower Four',
-    daysPerWeek: 4,
-    weekLength: 7,
-    focus: 'Upper and lower, alternating',
-    chips: ['intermediate', 'barbell'],
-    strip: 0,
-  },
-  {
-    id: 'push-pull-legs-6',
-    name: 'Push Pull Legs Six',
-    daysPerWeek: 6,
-    weekLength: 7,
-    focus: 'Push, pull, legs, twice over',
-    chips: ['advanced', 'machines'],
-    strip: 2,
-  },
-];
+export const EXERCISE_CATALOG: ExerciseRow[] = [];
 
 /** The weekly targets the status block measures against. Nothing is done yet. */
 export const WEEK_TARGETS: WeekStat[] = [
@@ -235,6 +122,9 @@ export const USER_PROGRAMS: ProgramRow[] = [];
 
 /** Exercises the person created themselves, on top of the catalog. */
 export const USER_CUSTOM_EXERCISES: ExerciseRow[] = [];
+
+/** Program templates the app offers. They are served, not shipped. */
+export const FEATURED_TEMPLATES: never[] = [];
 
 /** Programs other people have shared. Nothing until the social layer exists. */
 export const SHARED_PROGRAMS: SharedProgram[] = [];

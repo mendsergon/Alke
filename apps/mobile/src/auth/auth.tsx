@@ -6,6 +6,7 @@ export type User = { name: string; initials: string; email: string };
 export type Provider = 'apple' | 'google';
 
 type AuthState = {
+  /** Always set once past the gate — there is no way in without signing in. */
   user: User | null;
   /**
    * Continue has been pressed. Until there is a backend it is the only thing
@@ -24,12 +25,13 @@ const Ctx = createContext<AuthState | null>(null);
 
 /**
  * The name comes from the address the person typed, not from a stored account
- * — there is no backend yet. Nothing is invented: an empty address signs
- * nobody in.
+ * — there is no backend yet. Continue works with an empty field so the app can
+ * be tested, and that account simply has no address on it yet. Nothing is
+ * invented either way.
  */
-function userFromEmail(email: string): User | null {
+function userFromEmail(email: string): User {
   const trimmed = email.trim();
-  if (trimmed.length === 0) return null;
+  if (trimmed.length === 0) return { name: 'Account', initials: '', email: '' };
   const local = trimmed.split('@')[0] ?? trimmed;
   const name = local.charAt(0).toUpperCase() + local.slice(1);
   return { name, initials: name.charAt(0).toUpperCase(), email: trimmed };

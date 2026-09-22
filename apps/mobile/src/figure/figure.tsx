@@ -27,6 +27,7 @@ export function Figure({
   strokeWidth,
   fillFor,
   outline,
+  base,
 }: {
   view: FigureView;
   viewBox: string;
@@ -44,6 +45,12 @@ export function Figure({
    * contrasting tone so every muscle stays outlined even with no volume.
    */
   outline?: string;
+  /**
+   * The silhouette under the muscle regions. Sitting a shade behind them is
+   * what gives the body relief when no muscle is lit; the exercise icons
+   * leave it alone and stay flat.
+   */
+  base?: string;
 }) {
   const { c } = useTheme();
   const id = useRef(`fig${++seq}`).current;
@@ -58,7 +65,7 @@ export function Figure({
           <Path d={figure.silhouette} clipRule="evenodd" />
         </ClipPath>
       </Defs>
-      <Path d={figure.silhouette} fill={c.iconBody} fillRule="evenodd" />
+      <Path d={figure.silhouette} fill={base ?? c.iconBody} fillRule="evenodd" />
       <G clipPath={`url(#${id})`}>
         {paint.map((r, i) => (
           <Path

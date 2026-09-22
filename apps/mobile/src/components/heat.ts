@@ -26,3 +26,10 @@ export function heatColor(stops: readonly string[], score: number): string {
   const b = toRgb(stops[i + 1]);
   return toHex([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]);
 }
+
+/** Blend two hex colours. `t` of 0 is all `a`, 1 is all `b`. */
+export function mix(a: string, b: string, t: number): string {
+  const [ar, ag, ab] = toRgb(a);
+  const [br, bg, bb] = toRgb(b);
+  return toHex([ar + (br - ar) * t, ag + (bg - ag) * t, ab + (bb - ab) * t]);
+}
