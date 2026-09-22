@@ -48,12 +48,19 @@ export default function Profile() {
   const { c, preference, setPreference } = useTheme();
   const { gym } = useGym();
   const router = useRouter();
-  const { user, account, saveAccount, signOut } = useAuth();
+  const { account, saveAccount, signOut } = useAuth();
 
   // What is shown is what is stored. Tapping writes the column and the row
   // that comes back is what the controls read, so nothing here is a setting
   // that only this phone knows about.
   const units = (account?.units as Units | undefined) ?? 'kg';
+
+  // Everything the card shows is a column, read straight off the row.
+  const fullName = [account?.name, account?.surname].filter(Boolean).join(' ');
+  const initials = [account?.name, account?.surname]
+    .filter(Boolean)
+    .map((part) => part!.charAt(0).toUpperCase())
+    .join('');
   const storedTheme = account?.theme as ThemePreference | undefined;
 
   // The app opens in the theme the account chose.
@@ -80,24 +87,24 @@ export default function Profile() {
               width: 48,
               height: 48,
               borderRadius: 999,
-              backgroundColor: user?.initials ? c.accentSoft : c.bg,
+              backgroundColor: initials ? c.accentSoft : c.bg,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            {user?.initials ? (
+            {initials ? (
               <Txt variant="avatarInitials" color={c.accent}>
-                {user.initials}
+                {initials}
               </Txt>
             ) : (
               <Icon name="person" size={22} color={c.textSecondary} />
             )}
           </View>
           <View style={{ flexGrow: 1, flexShrink: 1 }}>
-            <Txt variant="nameTitle">{user?.name ?? 'Account'}</Txt>
-            {user?.email ? (
+            <Txt variant="nameTitle">{fullName || 'Account'}</Txt>
+            {account ? (
               <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: 1 }}>
-                {user.email}
+                {account.username} · {account.email}
               </Txt>
             ) : null}
           </View>
