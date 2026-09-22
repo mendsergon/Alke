@@ -41,7 +41,10 @@ export function Screen({
       showsVerticalScrollIndicator={false}
     >
       {blocks.map((block, i) => (
-        <Arriving key={block.key ?? i} index={i}>
+        // Keyed by position in the flattened list, not by the child's own
+        // key: `Children.toArray` numbers keys per call, so opening two
+        // fragments produces two children both called `.0`.
+        <Arriving key={i} index={i}>
           {block}
         </Arriving>
       ))}
