@@ -274,33 +274,7 @@ function Navigator() {
     <>
       <Stack
         screenOptions={{
-          // Content blurs as it scrolls behind the top of the screen.
-          //
-          // A native navigation bar has to exist for any of this: it is what
-          // the material and the edge effect attach to. It is transparent and
-          // has no title, so each screen still draws its own heading in the
-          // content — all the bar contributes is the region.
-          headerShown: true,
-          headerTitle: '',
-          headerBackVisible: false,
-          // No large title. It reserves a deep bar region, and the system
-          // re-blurs that whole band every frame of every scroll on every
-          // screen — which is what made the app drag. The compact bar gives
-          // the same effect over a strip the hardware can actually keep up
-          // with.
-          // No `headerBlurEffect` and no `headerTransparent`: both of those
-          // paste a material of our own over the bar's region, and a pasted
-          // material has a hard bottom edge — the flat band. Left alone, the
-          // system draws its own bar and its own scroll edge effect under it,
-          // which is the progressive one.
-          // `hidden` at the bottom: that is the tab bar's buttons, and nothing
-          // is blurred over a control.
-          scrollEdgeEffects: {
-            top: 'soft',
-            bottom: 'hidden',
-            left: 'automatic',
-            right: 'automatic',
-          },
+          headerShown: false,
           contentStyle: { backgroundColor: c.bg },
         }}
       >
