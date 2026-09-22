@@ -226,6 +226,7 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
       </Face>
       <Face turn={turn} index={1} active={step === 'verify'}>
         <VerifyEmail
+          active={step === 'verify'}
           email={email.trim()}
           onConfirmed={() => setStep('register')}
           onResend={() => setNote('The link is on its way again.')}

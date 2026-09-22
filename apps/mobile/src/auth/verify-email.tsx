@@ -20,10 +20,16 @@ import { tokens, useTheme } from '../theme/theme';
  * that record, the five-second timer below stands in for the event.
  */
 export function VerifyEmail({
+  active,
   email,
   onConfirmed,
   onResend,
 }: {
+  /**
+   * All three faces of the gate stay mounted so they can cross-fade, so the
+   * wait cannot start on mount — it starts when this face is the one showing.
+   */
+  active: boolean;
   email: string;
   onConfirmed: () => void;
   onResend: () => void;
@@ -33,17 +39,21 @@ export function VerifyEmail({
   const [confirmed, setConfirmed] = useState(false);
 
   useEffect(() => {
+    if (!active) {
+      setConfirmed(false);
+      return;
+    }
     const arrives = setTimeout(() => setConfirmed(true), CONFIRM_AFTER);
     return () => clearTimeout(arrives);
-  }, []);
+  }, [active]);
 
   // The orb settles into the accent, holds it long enough to be read, and
   // only then does the glass turn over to the account.
   useEffect(() => {
-    if (!confirmed) return;
+    if (!active || !confirmed) return;
     const moveOn = setTimeout(onConfirmed, HOLD_CONFIRMED);
     return () => clearTimeout(moveOn);
-  }, [confirmed, onConfirmed]);
+  }, [active, confirmed, onConfirmed]);
 
   return (
     <View
