@@ -17,6 +17,13 @@ let seq = 0;
  * The layered body figure: one silhouette in the icon-body tone, with every
  * muscle drawn as its own region on top of it, clipped to the silhouette.
  * Changing a region's fill is all a heat map or a highlight ever does.
+ *
+ * The seams belong to the lit regions only. From the design export: the figure
+ * is "coloured in two flat tones: the body in #B3AC95 (light) / #5A574D
+ * (dark), the target muscle in the accent … each lit region is seamed in the
+ * body tone so neighbouring lit muscles stay separate masses". Seaming every
+ * muscle instead of only the lit ones turns the body into faceted plating and
+ * loses the two tones the whole mark is built on.
  */
 export function Figure({
   view,
@@ -41,17 +48,15 @@ export function Figure({
   /** Overrides the fill of a region — used by the body map. */
   fillFor?: (region: number) => string | undefined;
   /**
-   * The line between regions. It defaults to a shade behind the body tone, so
-   * every muscle stays outlined whether or not it is lit. The body is never
-   * drawn flat.
+   * The seam drawn around a lit region. Defaults to the body tone, which is
+   * what separates two lit muscles lying against each other.
    */
   outline?: string;
-  /** The silhouette under the muscle regions. Defaults to the same shade. */
+  /** The silhouette under the muscle regions. Defaults to the body tone. */
   base?: string;
 }) {
   const { c } = useTheme();
-  // The body sits a shade behind its muscles and the seams are drawn in that
-  // shade, so no figure anywhere in the app is ever a flat silhouette.
+  // Kept for callers that pass their own recessed base or outline.
   const recess = mix(c.iconBody, c.bg, 0.45);
   const id = useRef(`fig${++seq}`).current;
   const figure = FIGURE[view];
@@ -65,19 +70,26 @@ export function Figure({
           <Path d={figure.silhouette} clipRule="evenodd" />
         </ClipPath>
       </Defs>
-      <Path d={figure.silhouette} fill={base ?? recess} fillRule="evenodd" />
+      <Path d={figure.silhouette} fill={base ?? c.iconBody} fillRule="evenodd" />
       <G clipPath={`url(#${id})`}>
-        {paint.map((r, i) => (
-          <Path
-            key={`${r}-${i}`}
-            d={figure.regions[r]}
-            translateX={tx}
-            translateY={ty}
-            fill={fillFor?.(r) ?? (accentSet.has(r) ? c.accent : c.iconBody)}
-            stroke={outline ?? recess}
-            strokeWidth={strokeWidth}
-          />
-        ))}
+        {paint.map((r, i) => {
+          const custom = fillFor?.(r);
+          // Lit = carrying the accent, or given its own colour by a heat map.
+          // Only those are seamed; the rest are the body, and the body is one
+          // tone.
+          const lit = custom !== undefined || accentSet.has(r);
+          return (
+            <Path
+              key={`${r}-${i}`}
+              d={figure.regions[r]}
+              translateX={tx}
+              translateY={ty}
+              fill={custom ?? (accentSet.has(r) ? c.accent : c.iconBody)}
+              stroke={lit ? outline ?? c.iconBody : 'none'}
+              strokeWidth={lit ? strokeWidth : 0}
+            />
+          );
+        })}
       </G>
     </Svg>
   );
