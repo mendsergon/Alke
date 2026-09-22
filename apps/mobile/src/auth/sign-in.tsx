@@ -15,7 +15,7 @@ import { AppleMark, GoogleMark } from './brand-marks';
  *
  * OPEN (PLAN.md §8 #6): Apple and Google are drawn but not wired.
  */
-export function SignIn() {
+export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -31,7 +31,7 @@ export function SignIn() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: c.bg }}
+      style={{ flex: 1, backgroundColor: onGlass ? 'transparent' : c.bg }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View
