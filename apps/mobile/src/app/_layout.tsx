@@ -1,12 +1,5 @@
-import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
-import Animated, {
-  Easing,
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, StyleSheet, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -36,47 +29,48 @@ SplashScreen.preventAutoHideAsync();
  * answering the tap, and nothing animates after it.
  */
 const GATE_MS = 420;
-const GATE_EASING = Easing.bezier(0.22, 1, 0.36, 1);
 
 function Gate() {
   const { scheme } = useTheme();
   const { entered } = useAuth();
-  // 0 is the gate, 1 is the app. Kept mounted through the fade, then dropped.
-  const progress = useSharedValue(entered ? 1 : 0);
+  // 0 is the gate, 1 is the app. Core Animated, so no worklets plugin is
+  // needed for it to run.
+  const progress = useRef(new Animated.Value(entered ? 1 : 0)).current;
   const [gateMounted, setGateMounted] = useState(!entered);
 
   useEffect(() => {
-    if (entered) {
-      progress.value = withTiming(1, { duration: GATE_MS, easing: GATE_EASING }, (done) => {
-        if (done) runOnJS(setGateMounted)(false);
-      });
-    } else {
-      setGateMounted(true);
-      progress.value = withTiming(0, { duration: GATE_MS, easing: GATE_EASING });
-    }
+    if (entered) setGateMounted(true);
+    const run = Animated.timing(progress, {
+      toValue: entered ? 1 : 0,
+      duration: GATE_MS,
+      easing: Easing.bezier(0.22, 1, 0.36, 1),
+      useNativeDriver: true,
+    });
+    run.start(({ finished }) => {
+      if (finished && entered) setGateMounted(false);
+    });
+    return () => run.stop();
   }, [entered, progress]);
 
-  const gateStyle = useAnimatedStyle(() => ({
-    opacity: 1 - progress.value,
-    transform: [{ translateY: -12 * progress.value }, { scale: 1 + 0.02 * progress.value }],
-  }));
-
-  const appStyle = useAnimatedStyle(() => ({
-    opacity: progress.value,
-    transform: [{ scale: 0.98 + 0.02 * progress.value }],
-  }));
+  const gateOpacity = progress.interpolate({ inputRange: [0, 1], outputRange: [1, 0] });
+  const gateLift = progress.interpolate({ inputRange: [0, 1], outputRange: [0, -12] });
+  const gateScale = progress.interpolate({ inputRange: [0, 1], outputRange: [1, 1.02] });
+  const appScale = progress.interpolate({ inputRange: [0, 1], outputRange: [0.98, 1] });
 
   return (
     <View style={{ flex: 1 }}>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       {entered ? (
-        <Animated.View style={[{ flex: 1 }, appStyle]}>
+        <Animated.View style={{ flex: 1, opacity: progress, transform: [{ scale: appScale }] }}>
           <Navigator />
         </Animated.View>
       ) : null}
       {gateMounted ? (
         <Animated.View
-          style={[StyleSheet.absoluteFill, gateStyle]}
+          style={[
+            StyleSheet.absoluteFill,
+            { opacity: gateOpacity, transform: [{ translateY: gateLift }, { scale: gateScale }] },
+          ]}
           pointerEvents={entered ? 'none' : 'auto'}
         >
           <SignIn />
