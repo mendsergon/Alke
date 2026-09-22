@@ -40,6 +40,12 @@ export const ENGLISH_ONLY = /^[A-Za-z0-9]+$/;
  */
 export const LOOKS_LIKE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+export function checkPassword(value: string): string | null {
+  if (value.length === 0) return MISSING;
+  if (value.length < MIN_PASSWORD) return `At least ${MIN_PASSWORD} characters.`;
+  return null;
+}
+
 export function checkEmail(value: string): string | null {
   const v = value.trim();
   if (v.length === 0) return MISSING;
@@ -89,10 +95,14 @@ export type SubscriptionStatus = (typeof SUBSCRIPTION_OPTIONS)[number];
 /** The three boxes the date is given in, each empty until it is chosen. */
 export type DateOfBirth = { day: string; month: string; year: string };
 
+/** PocketBase's own floor for an auth collection's password. */
+export const MIN_PASSWORD = 8;
+
 export type Account = {
   name: string;
   surname: string;
   username: string;
+  password: string;
   dateOfBirth: DateOfBirth;
   gender: Gender | '';
   subscriptionStatus: SubscriptionStatus;
@@ -102,6 +112,7 @@ export const EMPTY_ACCOUNT: Account = {
   name: '',
   surname: '',
   username: '',
+  password: '',
   dateOfBirth: { day: '', month: '', year: '' },
   gender: '',
   subscriptionStatus: 'free',
@@ -202,6 +213,7 @@ export function checkAccount(a: Account): AccountErrors {
     ['name', checkName(a.name)],
     ['surname', checkSurname(a.surname)],
     ['username', checkUsername(a.username)],
+    ['password', checkPassword(a.password)],
     ['dateOfBirth', checkDateOfBirth(a.dateOfBirth)],
     ['gender', checkGender(a.gender)],
     ['subscriptionStatus', checkSubscriptionStatus(a.subscriptionStatus)],

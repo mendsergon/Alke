@@ -16,24 +16,6 @@ import {
  */
 export const POCKETBASE_URL = 'http://127.0.0.1:8090';
 
-/**
- * PocketBase's `users` is an auth collection, so a row cannot exist without a
- * password — but Alke's sign-in is a link sent to an address, and the person
- * never chooses one. This fills the column so the row can be written.
- *
- * It is NOT a credential and must never be treated as one: it is thrown away
- * the moment it is sent, nothing can sign in with it, and it is not from a
- * cryptographic source.
- *
- * OPEN: PocketBase v0.40.4 has an OTP flow (`otp.enabled` on the collection,
- * currently false). Turning that on is what removes this.
- */
-function unusedPasswordColumn(): string {
-  let filler = '';
-  while (filler.length < 40) filler += Math.random().toString(36).slice(2);
-  return filler.slice(0, 40);
-}
-
 /** A signed-in session: what the server gave back, and who it belongs to. */
 export type Session = {
   token: string;
@@ -104,6 +86,7 @@ export type ServerRejection = { fields: AccountErrors; message: string | null };
 
 const FIELD_NAMES: Record<string, keyof Account | 'email'> = {
   name: 'name',
+  password: 'password',
   surname: 'surname',
   username: 'username',
   date_of_birth: 'dateOfBirth',
@@ -123,8 +106,8 @@ export async function createAccount(
 ): Promise<{ rejected: ServerRejection } | { session: Session | null }> {
   const body = {
     email: email.trim(),
-    password: unusedPasswordColumn(),
-    passwordConfirm: '',
+    password: account.password,
+    passwordConfirm: account.password,
     name: account.name.trim(),
     surname: account.surname.trim(),
     username: account.username.trim(),
@@ -132,8 +115,6 @@ export async function createAccount(
     gender: account.gender,
     subscription_status: account.subscriptionStatus,
   };
-  body.passwordConfirm = body.password;
-
   let response: Response;
   try {
     response = await fetch(`${POCKETBASE_URL}/api/collections/users/records`, {
@@ -145,8 +126,8 @@ export async function createAccount(
     return { rejected: { fields: {}, message: 'Alke could not reach the server.' } };
   }
 
-  // The row exists; now hold a session for it, so a restart does not start
-  // over. The column's filler is used once, here, and never kept.
+  // Straight into a session with the password just chosen, so nobody is asked
+  // to type it again one screen later.
   if (response.ok) return { session: await authenticate(body.email, body.password) };
 
   const payload = (await response.json().catch(() => null)) as

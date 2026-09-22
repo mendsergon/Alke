@@ -19,6 +19,7 @@ import { checkEmail } from '../account/account-fields';
 import { accountExists } from '../backend/pocketbase';
 import { useAuth } from './auth';
 import { Register } from './register';
+import { Password } from './password';
 import { VerifyEmail } from './verify-email';
 import { AppleMark, GoogleMark } from './brand-marks';
 
@@ -32,14 +33,12 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { defaultEmail, signInWithEmail, signInWithSession } = useAuth();
+  const { defaultEmail, signInWithEmail, signInWithSession, signInWithPassword } = useAuth();
   const [email, setEmail] = useState(defaultEmail);
   const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   /** One sheet of glass, three faces: the address, the wait, the account. */
-  const [step, setStep] = useState<'email' | 'verify' | 'register'>('email');
-  /** Somebody coming back, not somebody new. The wait then signs them in. */
-  const [returning, setReturning] = useState(false);
+  const [step, setStep] = useState<'email' | 'password' | 'verify' | 'register'>('email');
   const [asking, setAsking] = useState(false);
   const [focused, setFocused] = useState(false);
 
@@ -67,11 +66,11 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
     }
     setError(null);
     setAsking(true);
-    // Is this somebody coming back? Only the server knows.
+    // Somebody coming back is asked for their password. Somebody new has an
+    // address to confirm first. Only the server knows which this is.
     const known = await accountExists(email.trim());
     setAsking(false);
-    setReturning(known === true);
-    setStep('verify');
+    setStep(known === true ? 'password' : 'verify');
   };
 
   // The two faces cross-fade on the same sheet of glass, in the gate's own
@@ -92,7 +91,7 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
 
   useEffect(() => {
     Animated.timing(turn, {
-      toValue: FACE_ORDER.indexOf(step),
+      toValue: FACE_INDEX[step] ?? 0,
       duration: TURN,
       easing: Easing.inOut(Easing.cubic),
       useNativeDriver: true,
@@ -250,16 +249,24 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
       <Face turn={turn} index={0} active={step === 'email'}>
         {built.has('email') ? emailFace : null}
       </Face>
+      {/* The middle face is one or the other, never both: an address Alke
+          knows asks for a password, an address it does not asks to be
+          confirmed. */}
+      <Face turn={turn} index={1} active={step === 'password'}>
+        {built.has('password') ? (
+          <Password
+            active={step === 'password'}
+            email={email.trim()}
+            onSignIn={(password) => signInWithPassword(email, password)}
+          />
+        ) : null}
+      </Face>
       <Face turn={turn} index={1} active={step === 'verify'}>
         {built.has('verify') ? (
           <VerifyEmail
             active={step === 'verify'}
             email={email.trim()}
-            onConfirmed={() => {
-              // A known address has nothing left to tell us.
-              if (returning) enter(email);
-              else setStep('register');
-            }}
+            onConfirmed={() => setStep('register')}
             onResend={() => setNote('The link is on its way again.')}
           />
         ) : null}
@@ -284,7 +291,10 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
 const TURN = 340;
 
 /** The three faces in the order the gate turns them over. */
-const FACE_ORDER = ['email', 'verify', 'register'] as const;
+const FACE_ORDER: readonly string[] = ['email', 'verify', 'register'];
+
+/** The password prompt stands where the wait does: one middle face, two uses. */
+const FACE_INDEX: Record<string, number> = { email: 0, password: 1, verify: 1, register: 2 };
 
 /**
  * One face of the glass. Only the face the gate is on is opaque and takes

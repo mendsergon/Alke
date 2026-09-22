@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { refreshSession, type Session } from '../backend/pocketbase';
+import { authenticate, refreshSession, type Session } from '../backend/pocketbase';
 import { clearToken, readToken, writeToken } from '../backend/session-store';
 
 export type User = { name: string; initials: string; email: string };
@@ -40,6 +40,8 @@ type AuthState = {
   defaultEmail: string;
   /** Takes the session the server just handed back and keeps it. */
   signInWithSession: (session: Session) => void;
+  /** An address and its password, the way every app does it. */
+  signInWithPassword: (email: string, password: string) => Promise<boolean>;
   signInWithEmail: (email: string, opts?: { registering?: boolean }) => void;
   finishRegistering: () => void;
   signOut: () => void;
@@ -73,6 +75,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setEntered(true);
     void writeToken(session.token);
   }, []);
+
+  const signInWithPassword = useCallback(
+    async (email: string, password: string) => {
+      const session = await authenticate(email.trim(), password);
+      if (!session) return false;
+      signInWithSession(session);
+      return true;
+    },
+    [signInWithSession],
+  );
 
   // One question on launch: is the token still good? The server answers, and
   // whatever it says is the truth — not what was on disk.
@@ -116,15 +128,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       defaultEmail: '',
       signInWithEmail,
       signInWithSession,
+      signInWithPassword,
       finishRegistering,
       signOut: () => {
         setUser(null);
         setEntered(false);
         setRegistering(false);
-        void clearToken();
+        void clearEverything();
       },
     }),
-    [user, entered, registering, restoring, signInWithEmail, signInWithSession, finishRegistering],
+    [
+      user,
+      entered,
+      registering,
+      restoring,
+      signInWithEmail,
+      signInWithSession,
+      signInWithPassword,
+      finishRegistering,
+    ],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
