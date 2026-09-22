@@ -36,6 +36,7 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
   const [error, setError] = useState<string | null>(null);
   /** One sheet of glass, three faces: the address, the wait, the account. */
   const [step, setStep] = useState<'email' | 'verify' | 'register'>('email');
+  const [focused, setFocused] = useState(false);
 
   const enter = (address: string) => {
     signInWithEmail(address);
@@ -145,16 +146,20 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
             inputMode="email"
             returnKeyType="go"
             onSubmitEditing={submit}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
             placeholder="Email"
             placeholderTextColor={c.textSecondary}
             accessibilityLabel="Email address"
+            // The design's input, focused and at rest: `design/rungs-ui.pdf`,
+            // "Buttons and inputs" draws it raised with a 2px accent edge.
             style={{
               height: 52,
               paddingHorizontal: 14,
               borderRadius: tokens.radius.button,
-              backgroundColor: c.surface,
-              borderWidth: 1,
-              borderColor: c.border,
+              backgroundColor: focused ? c.surfaceRaised : c.surface,
+              borderWidth: focused ? 2 : 1,
+              borderColor: focused ? c.accent : c.border,
               color: c.text,
               fontFamily: tokens.fontFamily.sansRegular,
               fontSize: tokens.type.body.size,
