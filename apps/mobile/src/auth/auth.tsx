@@ -7,7 +7,12 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { refreshSession, type Session } from '../backend/pocketbase';
+import {
+  refreshSession,
+  updateAccount,
+  type AccountRecord,
+  type Session,
+} from '../backend/pocketbase';
 import { clearToken, readToken, writeToken } from '../backend/session-store';
 
 export type User = { name: string; initials: string; email: string };
@@ -36,6 +41,13 @@ type AuthState = {
    * showing itself for a frame to somebody who is already signed in.
    */
   restoring: boolean;
+  /** The stored account, as the server holds it. Null until signed in. */
+  account: AccountRecord | null;
+  /**
+   * Changes a column on the account and keeps what the server sends back, so
+   * what Profile shows is what is stored rather than what was tapped.
+   */
+  saveAccount: (patch: Partial<AccountRecord>) => Promise<boolean>;
   /** The screen opens on an empty field; there is no account to prefill. */
   defaultEmail: string;
   /** Takes the session the server just handed back and keeps it. */
@@ -66,27 +78,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [entered, setEntered] = useState(false);
   const [registering, setRegistering] = useState(false);
   const [restoring, setRestoring] = useState(true);
+  const [account, setAccount] = useState<AccountRecord | null>(null);
+  const [token, setToken] = useState<string | null>(null);
 
   const signInWithSession = useCallback((session: Session) => {
     setUser(userFromSession(session));
+    setAccount(session.record);
+    setToken(session.token);
     setRegistering(false);
     setEntered(true);
     void writeToken(session.token);
   }, []);
+
+  const saveAccount = useCallback(
+    async (patch: Partial<AccountRecord>) => {
+      if (!token || !account) return false;
+      const saved = await updateAccount(token, account.id, patch);
+      if (!saved) return false;
+      setAccount(saved);
+      return true;
+    },
+    [token, account],
+  );
 
   // One question on launch: is the token still good? The server answers, and
   // whatever it says is the truth — not what was on disk.
   useEffect(() => {
     let alive = true;
     (async () => {
-      const token = await readToken();
-      const session = token ? await refreshSession(token) : null;
+      const stored = await readToken();
+      const session = stored ? await refreshSession(stored) : null;
       if (!alive) return;
       if (session) {
         setUser(userFromSession(session));
+        setAccount(session.record);
+        setToken(session.token);
         setEntered(true);
         void writeToken(session.token);
-      } else if (token) {
+      } else if (stored) {
         void clearToken();
       }
       setRestoring(false);
@@ -110,6 +139,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthState>(
     () => ({
       user,
+      account,
+      saveAccount,
       entered,
       registering,
       restoring,
@@ -119,6 +150,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       finishRegistering,
       signOut: () => {
         setUser(null);
+        setAccount(null);
+        setToken(null);
         setEntered(false);
         setRegistering(false);
         void clearToken();

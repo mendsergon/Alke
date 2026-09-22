@@ -83,8 +83,14 @@ export const GENDER_OPTIONS = ['Male', 'Female', PREFER_NOT_TO_SAY] as const;
 
 export const SUBSCRIPTION_OPTIONS = ['free', 'premium'] as const;
 
+/** Weights are always stored in kg; this is only how they are shown (§1.3). */
+export const UNIT_OPTIONS = ['kg', 'lb'] as const;
+export const THEME_OPTIONS = ['light', 'dark', 'system'] as const;
+
 export type Gender = (typeof GENDER_OPTIONS)[number];
 export type SubscriptionStatus = (typeof SUBSCRIPTION_OPTIONS)[number];
+export type Units = (typeof UNIT_OPTIONS)[number];
+export type ThemePreference = (typeof THEME_OPTIONS)[number];
 
 /** The three boxes the date is given in, each empty until it is chosen. */
 export type DateOfBirth = { day: string; month: string; year: string };

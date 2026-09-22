@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Screen, ScreenHeader } from '../../components/screen';
@@ -10,8 +10,12 @@ import { tokens, useTheme } from '../../theme/theme';
 import { useGym } from '../../gym/gym';
 import { useAuth } from '../../auth/auth';
 
-const UNITS = ['kg', 'lb'] as const;
-const THEMES = ['light', 'dark', 'system'] as const;
+import {
+  THEME_OPTIONS,
+  UNIT_OPTIONS,
+  type ThemePreference,
+  type Units,
+} from '../../account/account-fields';
 
 /** A settings row whose control sits under its label, full width. */
 function SettingRow({
@@ -44,8 +48,21 @@ export default function Profile() {
   const { c, preference, setPreference } = useTheme();
   const { gym } = useGym();
   const router = useRouter();
-  const { user, signOut } = useAuth();
-  const [units, setUnits] = useState<(typeof UNITS)[number]>('kg');
+  const { user, account, saveAccount, signOut } = useAuth();
+
+  // What is shown is what is stored. Tapping writes the column and the row
+  // that comes back is what the controls read, so nothing here is a setting
+  // that only this phone knows about.
+  const units = (account?.units as Units | undefined) ?? 'kg';
+  const storedTheme = account?.theme as ThemePreference | undefined;
+
+  // The app opens in the theme the account chose.
+  useEffect(() => {
+    if (storedTheme && storedTheme !== preference) setPreference(storedTheme);
+    // Only when the stored value changes: this follows the account, not the
+    // control.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storedTheme]);
 
   return (
     <Screen gap={12}>
@@ -127,7 +144,7 @@ export default function Profile() {
           <View style={{ flexGrow: 1, flexShrink: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Txt variant="rowTitle" weight={600} tracking={0}>
-                Free
+                {account?.subscription_status === 'premium' ? 'Premium' : 'Free'}
               </Txt>
               <Pill label="Current" tone="neutral" />
             </View>
@@ -138,10 +155,22 @@ export default function Profile() {
 
       <Card padding={16}>
         <SettingRow label="Units" first>
-          <Segmented options={UNITS} value={units} onChange={setUnits} />
+          <Segmented
+            options={UNIT_OPTIONS}
+            value={units}
+            onChange={(next) => void saveAccount({ units: next })}
+          />
         </SettingRow>
         <SettingRow label="Theme">
-          <Segmented options={THEMES} value={preference} onChange={setPreference} />
+          <Segmented
+            options={THEME_OPTIONS}
+            value={storedTheme ?? preference}
+            onChange={(next) => {
+              // Answer the tap now, keep it on the server after.
+              setPreference(next);
+              void saveAccount({ theme: next });
+            }}
+          />
         </SettingRow>
       </Card>
 

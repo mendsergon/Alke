@@ -35,10 +35,45 @@ function unusedPasswordColumn(): string {
 }
 
 /** A signed-in session: what the server gave back, and who it belongs to. */
-export type Session = {
-  token: string;
-  record: { id: string; email: string; name: string; username: string };
+/** The stored account, as the collection holds it. */
+export type AccountRecord = {
+  id: string;
+  email: string;
+  name: string;
+  surname: string;
+  username: string;
+  date_of_birth: string;
+  gender: string;
+  subscription_status: string;
+  units: string;
+  theme: string;
 };
+
+export type Session = { token: string; record: AccountRecord };
+
+/**
+ * Writes a change back to the row. Everything on Profile that is the person's
+ * own — what they are subscribed to, which units they read, which theme the
+ * app opens in — is a column, so it is the same on the next device and after
+ * the next reinstall.
+ */
+export async function updateAccount(
+  token: string,
+  id: string,
+  patch: Partial<AccountRecord>,
+): Promise<AccountRecord | null> {
+  try {
+    const response = await fetch(`${POCKETBASE_URL}/api/collections/users/records/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: token },
+      body: JSON.stringify(patch),
+    });
+    if (!response.ok) return null;
+    return (await response.json()) as AccountRecord;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Whether this address already has an account. `users` only lets a person read
@@ -152,6 +187,8 @@ export async function createAccount(
     date_of_birth: toIsoDate(account.dateOfBirth),
     gender: account.gender,
     subscription_status: account.subscriptionStatus,
+    units: 'kg',
+    theme: 'system',
   };
   body.passwordConfirm = body.password;
 
