@@ -33,7 +33,7 @@ export default function Home() {
           Let’s build something to train.
         </Txt>
         <View style={{ marginTop: 18 }}>
-          <PrimaryButton label="Build my program" icon="sparkle" />
+          <PrimaryButton label="Build my program" icon="orb" />
         </View>
         <View style={{ height: 10 }} />
         <SecondaryButton

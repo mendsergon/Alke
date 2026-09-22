@@ -32,7 +32,7 @@ export default function Progress() {
     ? undefined
     : {
         action: 'Build my program',
-        icon: 'sparkle' as const,
+        icon: 'orb' as const,
         secondary: 'Browse templates',
         secondaryIcon: 'compass' as const,
         go: () => router.push('/explore'),

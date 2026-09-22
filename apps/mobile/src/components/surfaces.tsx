@@ -2,7 +2,7 @@ import { Pressable, View, type ViewProps, type ViewStyle } from 'react-native';
 import type { ReactNode } from 'react';
 import { tokens, useTheme } from '../theme/theme';
 import { Txt } from '../theme/text';
-import { Icon, type IconName } from './icon';
+import { Icon, Mark, type IconName, type MarkName } from './icon';
 
 /** The standard card: surface, radius 16, 20px padding, 1px border in light. */
 export function Card({
@@ -121,7 +121,7 @@ export function PrimaryButton({
   onPress,
 }: {
   label: string;
-  icon?: IconName;
+  icon?: MarkName;
   height?: number;
   /** Drawn, but not yet available. */
   disabled?: boolean;
@@ -146,7 +146,7 @@ export function PrimaryButton({
         opacity: disabled ? 0.45 : 1,
       }}
     >
-      {icon ? <Icon name={icon} size={20} color={c.onAccent} width={1.8} /> : null}
+      {icon ? <Mark name={icon} size={20} color={c.onAccent} width={1.8} /> : null}
       <Txt variant="buttonLabel" weight={600} color={c.onAccent}>
         {label}
       </Txt>
@@ -165,7 +165,7 @@ export function SecondaryButton({
   style,
 }: {
   label: string;
-  icon?: IconName;
+  icon?: MarkName;
   height?: number;
   dashed?: boolean;
   /** Drawn, but not yet available. Reads as quiet, never as an error. */
@@ -198,7 +198,7 @@ export function SecondaryButton({
         style,
       ]}
     >
-      {icon ? <Icon name={icon} size={dashed ? 18 : 20} color={quiet ? c.textSecondary : c.text} /> : null}
+      {icon ? <Mark name={icon} size={dashed ? 18 : 20} color={quiet ? c.textSecondary : c.text} /> : null}
       <Txt variant="rowLabel" weight={500} color={quiet ? c.textSecondary : c.text}>
         {label}
       </Txt>
@@ -333,7 +333,7 @@ export function EmptyState({
   line: string;
   action?: string;
   onAction?: () => void;
-  icon?: IconName;
+  icon?: MarkName;
   actionDisabled?: boolean;
   /** A second way out of the empty state, drawn under the first. */
   secondary?: string;

@@ -185,7 +185,7 @@ export default function Library() {
           <EmptyState
             line="No programs yet."
             action="Build my program"
-            icon="sparkle"
+            icon="orb"
             secondary="Browse templates"
             secondaryIcon="compass"
             onSecondary={() => router.push('/explore')}

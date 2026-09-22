@@ -1,5 +1,6 @@
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import type { ReactNode } from 'react';
+import { Orb } from './orb';
 
 /**
  * The line icons, path for path out of design/rungs-ui.html.
@@ -145,4 +146,31 @@ export function Icon({
       {draw({ s: color, w: width })}
     </Svg>
   );
+}
+
+/**
+ * A button's leading mark.
+ *
+ * Everything here is a stroked line icon except `orb`, which is a still
+ * composing orb — the same mark the generator animates while it works, so the
+ * button that starts it and the wait that follows are visibly the same object
+ * rather than a star handing over to something unrelated.
+ */
+export type MarkName = IconName | 'orb';
+
+export function Mark({
+  name,
+  size,
+  color,
+  width = 1.6,
+}: {
+  name: MarkName;
+  size: number;
+  color: string;
+  width?: number;
+}) {
+  if (name === 'orb') {
+    return <Orb mood="idle" size={size} still flat ink={color} />;
+  }
+  return <Icon name={name} size={size} color={color} width={width} />;
 }
