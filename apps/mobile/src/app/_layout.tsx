@@ -109,6 +109,16 @@ const REDUCED = { duration: 200, reduceMotion: ReduceMotion.Never } as const;
 const GLASS_BLUR = 56;
 /** The size the glass forms from and returns to. Never 0 — nothing appears from nothing. */
 const GLASS_GONE = 0.94;
+/**
+ * How far the pane hangs off every side of the screen.
+ *
+ * The pane is a rectangle, and a rectangle scaled down inside the frame walks
+ * its own edges into view — you watch the blur's corners travel, which is the
+ * one thing that gives away that it is a layer rather than a material. Hung
+ * past the screen on all four sides, it can shrink through its whole range
+ * without an edge ever crossing the frame.
+ */
+const GLASS_BLEED = 80;
 /** How far back the app sits under the glass, before it comes forward. */
 const APP_RECESSED = 0.96;
 /**
@@ -228,7 +238,11 @@ function Gate() {
             style={[StyleSheet.absoluteFill, { backgroundColor: c.bg }, scrimStyle]}
           />
           <Animated.View
-            style={[StyleSheet.absoluteFill, paneStyle]}
+            style={[
+              StyleSheet.absoluteFill,
+              { margin: -GLASS_BLEED },
+              paneStyle,
+            ]}
             pointerEvents={entered ? 'none' : 'auto'}
           >
             {liquid && !solid ? (
@@ -248,7 +262,9 @@ function Gate() {
                 style={[StyleSheet.absoluteFill, { backgroundColor: solid ? c.bg : `${c.bg}A6` }]}
               />
             )}
-            <Animated.View style={[StyleSheet.absoluteFill, contentStyle]}>
+            <Animated.View
+              style={[StyleSheet.absoluteFill, { margin: GLASS_BLEED }, contentStyle]}
+            >
               <SignIn onGlass />
             </Animated.View>
           </Animated.View>
@@ -264,8 +280,36 @@ function Navigator() {
     <>
       <Stack
         screenOptions={{
-          headerShown: false,
+          // A native navigation bar has to exist for the system to draw its
+          // scroll edge effect under it — that is what the effect attaches to.
+          // It is transparent and carries no title, so the screen still draws
+          // its own heading in the content and nothing is duplicated; all the
+          // bar contributes is the chrome the effect needs.
+          headerShown: true,
+          headerTransparent: true,
+          headerTitle: '',
+          headerBackVisible: false,
           contentStyle: { backgroundColor: c.bg },
+          // The system's own scroll edge effect (`UIScrollEdgeEffect`), which
+          // varies the blur radius continuously across the edge. Rebuilt in
+          // JS it cannot be: a stack of blur panes bands at every boundary,
+          // and a gradient-masked blur only varies the *alpha* of a uniformly
+          // blurred copy, so sharp content ghosts through it.
+          //
+          // expo-router already passes this to `ScreenStackItem` for every
+          // screen (native-stack/views/NativeStackView.native.js), defaulting
+          // each edge to `automatic`; this only changes the value. `soft` is
+          // the progressive fade. `hidden` at the bottom because the bottom of
+          // the screen is the tab bar's buttons, and nothing is blurred over a
+          // control.
+          //
+          // iOS 26 and above. Android has no equivalent and gets no edge.
+          scrollEdgeEffects: {
+            top: 'soft',
+            bottom: 'hidden',
+            left: 'automatic',
+            right: 'automatic',
+          },
         }}
       >
         <Stack.Screen name="(tabs)" />
