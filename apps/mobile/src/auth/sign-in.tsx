@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AlkeMark } from '../components/alke-mark';
+import { PrimaryButton } from '../components/surfaces';
 import { Txt } from '../theme/text';
 import { tokens, useTheme } from '../theme/theme';
 import { useAuth } from './auth';
@@ -44,16 +45,6 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
 
   // Ben's is the account that already exists (PLAN.md §2, "Sign-in gate") and
   // goes straight in. Any other address is new, so it is asked to register.
-  // No button: the address turns the glass by itself, a beat after the typing
-  // stops. Every keystroke restarts the beat.
-  useEffect(() => {
-    if (step !== 'email') return;
-    if (email.trim().length === 0) return;
-    const turnsOver = setTimeout(() => submit(), SETTLE);
-    return () => clearTimeout(turnsOver);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [email, step]);
-
   const submit = () => {
     if (email.trim().length === 0) {
       setError('That email is wrong.');
@@ -176,6 +167,14 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
           />
         </View>
 
+        <View style={{ marginTop: tokens.space[12] }}>
+          <PrimaryButton
+            label="Continue"
+            height={tokens.sizing.primaryButtonHeight.min}
+            onPress={submit}
+          />
+        </View>
+
         <View
           style={{
             flexDirection: 'row',
@@ -239,9 +238,6 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
     </View>
   );
 }
-
-/** How long the address is left alone before the glass turns. */
-const SETTLE = 1500;
 
 /** The three faces in the order the gate turns them over. */
 const FACE_ORDER = ['email', 'verify', 'register'] as const;
