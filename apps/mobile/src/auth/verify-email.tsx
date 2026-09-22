@@ -39,10 +39,11 @@ export function VerifyEmail({
   const [confirmed, setConfirmed] = useState(false);
 
   useEffect(() => {
-    if (!active) {
-      setConfirmed(false);
-      return;
-    }
+    // Only ever reset on the way IN. Clearing this when the face stops being
+    // the active one snapped it back to the waiting copy while it was still
+    // fading out — the screen appeared to un-confirm itself as it left.
+    if (!active) return;
+    setConfirmed(false);
     const arrives = setTimeout(() => setConfirmed(true), CONFIRM_AFTER);
     return () => clearTimeout(arrives);
   }, [active]);
