@@ -50,7 +50,7 @@ export default function Progress() {
             <BodyMap scores={USER_MUSCLE_SCORES} />
           </Card>
           <EmptyState
-            line="No volume yet. Log a session and the map fills in muscle by muscle."
+            line="No volume yet."
             action={start?.action}
             icon={start?.icon}
             actionDisabled={start?.disabled}
@@ -63,7 +63,7 @@ export default function Progress() {
 
       {tab === 'Exercises' ? (
         <EmptyState
-          line="No exercise history yet. Log a set and its estimated 1RM, records and trend appear here."
+          line="No exercise history yet."
           action={start?.action}
           icon={start?.icon}
           actionDisabled={start?.disabled}
@@ -89,7 +89,7 @@ export default function Progress() {
 
       {tab === 'Reports' ? (
         USER_REPORTS.latest === null ? (
-          <EmptyState line="No report yet. The first one arrives after a full week of training." />
+          <EmptyState line="No report yet." />
         ) : null
       ) : null}
     </Screen>

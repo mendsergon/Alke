@@ -88,7 +88,7 @@ export default function Library() {
           </Card>
         ) : (
           <EmptyState
-            line="No programs yet. Build one from your own answers, or start from a template."
+            line="No programs yet."
             action="Build my program"
             icon="sparkle"
             actionDisabled

@@ -207,7 +207,7 @@ export default function Explore() {
       <View style={{ height: 4 }} />
       <MicroCaps>Shared by other lifters</MicroCaps>
       {SHARED_PROGRAMS.length > 0 ? null : (
-        <EmptyState line="Nobody has shared a program yet. Shared programs arrive with the social layer." />
+        <EmptyState line="No shared programs yet." />
       )}
 
       <View style={{ height: 4 }} />
@@ -219,11 +219,7 @@ export default function Explore() {
       </View>
       {GYM_PROGRAMS.length > 0 ? null : (
         <EmptyState
-          line={
-            gym
-              ? 'Your gym has not published a program yet.'
-              : 'Join a gym and its programs show up here.'
-          }
+          line={gym ? 'No programs from your gym yet.' : 'No gym joined.'}
           action={gym ? undefined : 'Join with a code'}
           icon="qr"
           onAction={() => router.push('/join-gym')}

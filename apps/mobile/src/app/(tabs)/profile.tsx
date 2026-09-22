@@ -74,7 +74,7 @@ export default function Profile() {
           <View style={{ flexGrow: 1, flexShrink: 1 }}>
             <Txt variant="nameTitle">{user ? user.name : 'Not signed in'}</Txt>
             <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: 1 }}>
-              {user ? user.email : 'Sign in to sync your training across devices.'}
+              {user ? user.email : 'No account'}
             </Txt>
           </View>
           {user ? <Icon name="chevronRight" size={20} color={c.textSecondary} /> : null}
@@ -106,9 +106,7 @@ export default function Profile() {
               {gym ? gym.name : 'No gym'}
             </Txt>
             <Txt variant="captionTight" color={c.textSecondary}>
-              {gym
-                ? `${gym.place} · ${gym.machines} machines on file`
-                : 'Your gym’s equipment shapes every program the app builds.'}
+              {gym ? `${gym.place} · ${gym.machines} machines on file` : 'Not joined'}
             </Txt>
           </View>
         </View>
@@ -131,10 +129,7 @@ export default function Profile() {
               </Txt>
               <Pill label="Current" tone="neutral" />
             </View>
-            <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: 2 }}>
-              Logging is never paywalled. Premium adds the all-time dashboard and the per-muscle
-              report.
-            </Txt>
+
           </View>
         </View>
       </Card>

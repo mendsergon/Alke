@@ -30,36 +30,22 @@ export default function Home() {
         <Txt variant="serifCardTitle" family="serif" weight={500}>
           Let’s build something to train.
         </Txt>
-        <Txt variant="bodySmall" color={c.textSecondary} style={{ marginTop: 10, marginBottom: 18 }}>
-          Six questions — days a week, experience, what you want to bring up. Your gym’s
-          equipment decides the exercises. Or start from a template instead.
-        </Txt>
-        <PrimaryButton label="Build my program" icon="sparkle" disabled />
+        <View style={{ marginTop: 18 }}>
+          <PrimaryButton label="Build my program" icon="sparkle" disabled />
+        </View>
         <View style={{ height: 10 }} />
         <SecondaryButton
           label="Browse templates"
           icon="compass"
           onPress={() => router.push('/explore')}
         />
-        <Txt variant="caption" color={c.textSecondary} style={{ marginTop: 12 }}>
-          The generator opens once its questionnaire is designed.
-        </Txt>
       </Card>
 
       <WeekStats stats={WEEK_TARGETS} />
 
-      <EmptyState line="No weekly report yet. It arrives after your first full week of training." />
+      <EmptyState line="No weekly report yet." />
 
-      <View>
-        <SecondaryButton label="Start empty workout" icon="plus" disabled />
-        <Txt
-          variant="caption"
-          color={c.textSecondary}
-          style={{ textAlign: 'center', marginTop: 10 }}
-        >
-          Logging opens once the session screen is wired up.
-        </Txt>
-      </View>
+      <SecondaryButton label="Start empty workout" icon="plus" disabled />
     </Screen>
   );
 }
