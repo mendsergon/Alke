@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Screen, ScreenContainer } from 'react-native-screens';
 import { PrimaryButton } from '../components/surfaces';
 import { SelectField } from '../components/select-field';
 import { DateOfBirthField, type DatePart } from '../components/date-of-birth-field';
@@ -55,6 +56,16 @@ export function Register({ onDone }: { onDone: (account: Account) => void }) {
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      {/* The scroll edge effect is a property of a native Screen. The gate is
+          a layer over the navigator, not a navigator, so the register brings
+          its own Screen and asks for the same `top: 'soft'` the tab screens
+          get from the Stack in `app/_layout.tsx`. */}
+      <ScreenContainer style={{ flexGrow: 1, flexShrink: 1 }}>
+      <Screen
+        activityState={2}
+        style={{ flex: 1 }}
+        scrollEdgeEffects={{ top: 'soft', bottom: 'hidden', left: 'automatic', right: 'automatic' }}
+      >
       <ScrollView
         style={{ flexGrow: 1 }}
         contentContainerStyle={{
@@ -143,6 +154,8 @@ export function Register({ onDone }: { onDone: (account: Account) => void }) {
         </View>
 
       </ScrollView>
+      </Screen>
+      </ScreenContainer>
 
       {/* The design puts the primary action at the foot of the screen
           (`design/rungs-ui.pdf`, "Join a gym"). It stays there: opening a
