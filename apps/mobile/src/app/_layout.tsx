@@ -283,9 +283,11 @@ function Navigator() {
           headerShown: true,
           headerTitle: '',
           headerBackVisible: false,
-          // The large-title layout reserves a much deeper bar region, so the
-          // blur covers a band rather than a strip.
-          headerLargeTitleEnabled: true,
+          // No large title. It reserves a deep bar region, and the system
+          // re-blurs that whole band every frame of every scroll on every
+          // screen — which is what made the app drag. The compact bar gives
+          // the same effect over a strip the hardware can actually keep up
+          // with.
           // No `headerBlurEffect` and no `headerTransparent`: both of those
           // paste a material of our own over the bar's region, and a pasted
           // material has a hard bottom edge — the flat band. Left alone, the
