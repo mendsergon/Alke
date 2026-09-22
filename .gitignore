@@ -37,6 +37,9 @@ xcuserdata/
 .vscode/
 *.swp
 
+# Third-party sources kept locally for reference, never pushed
+vendor/
+
 # Local tooling (never committed)
 CLAUDE.md
 CLAUDE.local.md
