@@ -16,7 +16,7 @@ import { PrimaryButton } from '../components/surfaces';
 import { Txt } from '../theme/text';
 import { tokens, useTheme } from '../theme/theme';
 import { checkEmail } from '../account/account-fields';
-import { accountExists } from '../backend/pocketbase';
+import { accountExists, sessionForVerifiedEmail } from '../backend/pocketbase';
 import { useAuth } from './auth';
 import { Register } from './register';
 import { VerifyEmail } from './verify-email';
@@ -255,10 +255,17 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
           <VerifyEmail
             active={step === 'verify'}
             email={email.trim()}
-            onConfirmed={() => {
-              // A known address has nothing left to tell us.
-              if (returning) enter(email);
-              else setStep('register');
+            onConfirmed={async () => {
+              if (!returning) {
+                setStep('register');
+                return;
+              }
+              // The address is verified, so the account is signed in properly
+              // — a real session, kept, so closing the app and opening it
+              // again lands on Home.
+              const session = await sessionForVerifiedEmail(email);
+              if (session) signInWithSession(session);
+              else enter(email);
             }}
             onResend={() => setNote('The link is on its way again.')}
           />

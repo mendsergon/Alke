@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -62,6 +63,46 @@ func main() {
 			record, err := app.FindAuthRecordByEmail("users", email)
 			return e.JSON(http.StatusOK, map[string]any{"exists": err == nil && record != nil})
 		})
+		// Signing in without a password means the server has to hand out a
+		// session to somebody who has proved they own the address. In the real
+		// thing that proof is a link they opened. While the app's verification
+		// screen is a stand-in, this is its counterpart: it takes an address
+		// and returns a session for it.
+		//
+		// It is an authentication bypass and it knows it. It exists only while
+		// ALKE_TEST_SESSIONS is set, it is off by default, and a real magic
+		// link replaces both it and the screen that calls it.
+		if os.Getenv("ALKE_TEST_SESSIONS") == "1" {
+			se.Router.POST("/api/alke/test-session", func(e *core.RequestEvent) error {
+				data := struct {
+					Email string `json:"email"`
+				}{}
+				if err := e.BindBody(&data); err != nil {
+					return e.JSON(http.StatusBadRequest, map[string]any{"message": "An address is required."})
+				}
+
+				record, err := app.FindAuthRecordByEmail("users", strings.TrimSpace(data.Email))
+				if err != nil || record == nil {
+					return e.JSON(http.StatusNotFound, map[string]any{"message": "No account for that address."})
+				}
+
+				token, err := record.NewAuthToken()
+				if err != nil {
+					return e.JSON(http.StatusInternalServerError, map[string]any{"message": "Could not make a session."})
+				}
+
+				return e.JSON(http.StatusOK, map[string]any{
+					"token": token,
+					"record": map[string]any{
+						"id":       record.Id,
+						"email":    record.Email(),
+						"name":     record.GetString("name"),
+						"username": record.GetString("username"),
+					},
+				})
+			})
+		}
+
 		return se.Next()
 	})
 

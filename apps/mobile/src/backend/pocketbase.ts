@@ -60,6 +60,27 @@ export async function accountExists(email: string): Promise<boolean | null> {
   }
 }
 
+/**
+ * A session for an address that has just been verified.
+ *
+ * Signing back in has no password to offer, so the server issues the session
+ * once the address is proved. `backend/main.go` answers this only while it is
+ * started with ALKE_TEST_SESSIONS=1, and the real magic link replaces it.
+ */
+export async function sessionForVerifiedEmail(email: string): Promise<Session | null> {
+  try {
+    const response = await fetch(`${POCKETBASE_URL}/api/alke/test-session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim() }),
+    });
+    if (!response.ok) return null;
+    return (await response.json()) as Session;
+  } catch {
+    return null;
+  }
+}
+
 /** Trades an address and its secret for a token. */
 export async function authenticate(
   email: string,
