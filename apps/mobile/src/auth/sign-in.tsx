@@ -22,9 +22,16 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
   const { defaultEmail, signInWithEmail } = useAuth();
   const [email, setEmail] = useState(defaultEmail);
   const [note, setNote] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Works with or without an address until there is a backend to check one.
+  // Until there is a backend, the only account that exists is Ben's
+  // (PLAN.md §2, "Sign-in gate"). Anything else is turned away at the field.
   const submit = () => {
+    if (!email.toLowerCase().includes('ben')) {
+      setError('That email is wrong.');
+      return;
+    }
+    setError(null);
     signInWithEmail(email);
     if (router.canGoBack()) router.back();
   };
@@ -67,11 +74,30 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
         </View>
 
         <View style={{ marginTop: tokens.space[32] }}>
+          {/* Absolutely placed above the field: the message appears in the gap
+              that is already there, so nothing below it moves. */}
+          {error ? (
+            <Txt
+              variant="captionTight"
+              color={c.destructive}
+              accessibilityLiveRegion="polite"
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                bottom: '100%',
+                marginBottom: tokens.space[8],
+              }}
+            >
+              {error}
+            </Txt>
+          ) : null}
           <TextInput
             value={email}
             onChangeText={(next) => {
               setEmail(next);
               setNote(null);
+              setError(null);
             }}
             autoCapitalize="none"
             autoComplete="email"
