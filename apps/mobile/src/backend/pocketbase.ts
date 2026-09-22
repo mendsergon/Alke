@@ -34,6 +34,51 @@ function unusedPasswordColumn(): string {
   return filler.slice(0, 40);
 }
 
+/** A signed-in session: what the server gave back, and who it belongs to. */
+export type Session = {
+  token: string;
+  record: { id: string; email: string; name: string; username: string };
+};
+
+/** Trades an address and its secret for a token. */
+export async function authenticate(
+  email: string,
+  password: string,
+): Promise<Session | null> {
+  try {
+    const response = await fetch(
+      `${POCKETBASE_URL}/api/collections/users/auth-with-password`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identity: email, password }),
+      },
+    );
+    if (!response.ok) return null;
+    return (await response.json()) as Session;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Asks whether a token is still good, and takes the fresher one it is given.
+ * This is what a restart runs: the app trusts the server about its own
+ * session rather than trusting whatever it wrote to disk last time.
+ */
+export async function refreshSession(token: string): Promise<Session | null> {
+  try {
+    const response = await fetch(
+      `${POCKETBASE_URL}/api/collections/users/auth-refresh`,
+      { method: 'POST', headers: { Authorization: token } },
+    );
+    if (!response.ok) return null;
+    return (await response.json()) as Session;
+  } catch {
+    return null;
+  }
+}
+
 /** What the server said was wrong, in the app's own field names. */
 export type ServerRejection = { fields: AccountErrors; message: string | null };
 
@@ -55,7 +100,7 @@ const FIELD_NAMES: Record<string, keyof Account | 'email'> = {
 export async function createAccount(
   account: Account,
   email: string,
-): Promise<ServerRejection | null> {
+): Promise<{ rejected: ServerRejection } | { session: Session | null }> {
   const body = {
     email: email.trim(),
     password: unusedPasswordColumn(),
@@ -77,10 +122,12 @@ export async function createAccount(
       body: JSON.stringify(body),
     });
   } catch {
-    return { fields: {}, message: 'Alke could not reach the server.' };
+    return { rejected: { fields: {}, message: 'Alke could not reach the server.' } };
   }
 
-  if (response.ok) return null;
+  // The row exists; now hold a session for it, so a restart does not start
+  // over. The column's filler is used once, here, and never kept.
+  if (response.ok) return { session: await authenticate(body.email, body.password) };
 
   const payload = (await response.json().catch(() => null)) as
     | { message?: string; data?: Record<string, { message?: string }> }
@@ -99,7 +146,7 @@ export async function createAccount(
     }
   }
 
-  if (elsewhere.length > 0) return { fields, message: elsewhere[0] ?? null };
-  if (Object.keys(fields).length > 0) return { fields, message: null };
-  return { fields, message: payload?.message ?? 'That did not save.' };
+  if (elsewhere.length > 0) return { rejected: { fields, message: elsewhere[0] ?? null } };
+  if (Object.keys(fields).length > 0) return { rejected: { fields, message: null } };
+  return { rejected: { fields, message: payload?.message ?? 'That did not save.' } };
 }

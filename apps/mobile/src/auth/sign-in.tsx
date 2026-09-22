@@ -31,7 +31,7 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { defaultEmail, signInWithEmail } = useAuth();
+  const { defaultEmail, signInWithEmail, signInWithSession } = useAuth();
   const [email, setEmail] = useState(defaultEmail);
   const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -252,7 +252,16 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
         ) : null}
       </Face>
       <Face turn={turn} index={2} active={step === 'register'}>
-        {built.has('register') ? <Register email={email.trim()} onDone={() => enter(email)} /> : null}
+        {built.has('register') ? <Register
+            email={email.trim()}
+            onDone={(_account, session) => {
+              // The server's own session where there is one; the address only
+              // as a fallback, so the gate still opens if the token did not
+              // come back.
+              if (session) signInWithSession(session);
+              else signInWithEmail(email);
+            }}
+          /> : null}
       </Face>
     </View>
   );

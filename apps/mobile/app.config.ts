@@ -29,6 +29,9 @@ const config: ExpoConfig = {
   },
   plugins: [
     'expo-router',
+    // The session token lives in the Keychain, not in plain storage
+    // (PLAN.md §5).
+    'expo-secure-store',
     [
       'expo-splash-screen',
       {

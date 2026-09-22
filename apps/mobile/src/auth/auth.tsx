@@ -1,4 +1,14 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
+import { refreshSession, type Session } from '../backend/pocketbase';
+import { clearToken, readToken, writeToken } from '../backend/session-store';
 
 export type User = { name: string; initials: string; email: string };
 
@@ -21,8 +31,15 @@ type AuthState = {
    * arrives when the account is made, not before.
    */
   registering: boolean;
+  /**
+   * The stored session has not been checked yet. The gate waits rather than
+   * showing itself for a frame to somebody who is already signed in.
+   */
+  restoring: boolean;
   /** The screen opens on an empty field; there is no account to prefill. */
   defaultEmail: string;
+  /** Takes the session the server just handed back and keeps it. */
+  signInWithSession: (session: Session) => void;
   signInWithEmail: (email: string, opts?: { registering?: boolean }) => void;
   finishRegistering: () => void;
   signOut: () => void;
@@ -48,6 +65,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [entered, setEntered] = useState(false);
   const [registering, setRegistering] = useState(false);
+  const [restoring, setRestoring] = useState(true);
+
+  const signInWithSession = useCallback((session: Session) => {
+    setUser(userFromSession(session));
+    setRegistering(false);
+    setEntered(true);
+    void writeToken(session.token);
+  }, []);
+
+  // One question on launch: is the token still good? The server answers, and
+  // whatever it says is the truth — not what was on disk.
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const token = await readToken();
+      const session = token ? await refreshSession(token) : null;
+      if (!alive) return;
+      if (session) {
+        setUser(userFromSession(session));
+        setEntered(true);
+        void writeToken(session.token);
+      } else if (token) {
+        void clearToken();
+      }
+      setRestoring(false);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const signInWithEmail = useCallback(
     (email: string, opts?: { registering?: boolean }) => {
@@ -65,18 +112,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       entered,
       registering,
+      restoring,
       defaultEmail: '',
       signInWithEmail,
+      signInWithSession,
       finishRegistering,
       signOut: () => {
         setUser(null);
         setEntered(false);
         setRegistering(false);
+        void clearToken();
       },
     }),
-    [user, entered, registering, signInWithEmail, finishRegistering],
+    [user, entered, registering, restoring, signInWithEmail, signInWithSession, finishRegistering],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+}
+
+/** The account as the server describes it, not as an address was parsed. */
+function userFromSession(session: Session): User {
+  const name = session.record.name || session.record.username || 'Account';
+  return {
+    name,
+    initials: name.charAt(0).toUpperCase(),
+    email: session.record.email,
+  };
 }
 
 export function useAuth(): AuthState {

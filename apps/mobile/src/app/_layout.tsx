@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
@@ -132,20 +132,43 @@ const APP_RECESSED = 0.96;
  */
 const SCRIM = 0.4;
 
+/**
+ * The splash stays up until the stored session has been asked about. Without
+ * it the gate shows itself for a frame or two to somebody who is already
+ * signed in, which reads as being logged out and then not.
+ */
+function SplashHold() {
+  const { restoring } = useAuth();
+  useEffect(() => {
+    if (!restoring) SplashScreen.hideAsync();
+  }, [restoring]);
+  return null;
+}
+
 function Gate() {
   const { c, scheme } = useTheme();
-  const { entered, registering } = useAuth();
+  const { entered, registering, restoring } = useAuth();
   const reduced = useReducedMotion();
 
   // 1 = the glass is formed over the app. 0 = it is gone.
   const glass = useSharedValue(entered ? 0 : 1);
   // 0 = the app is suspended behind the glass. 1 = it has arrived.
   const arrival = useSharedValue(entered ? 1 : 0);
-  const [gateMounted, setGateMounted] = useState(!entered);
+  // Nothing is mounted or animated while the session is still a question: an
+  // app that opens already signed in should never draw the gate at all.
+  const [gateMounted, setGateMounted] = useState(false);
+  const settled = !restoring;
   const [solid, setSolid] = useState(false);
   // Liquid Glass is missing on some iOS 26 betas and on every other platform,
   // and touching it there crashes. Frost is the fallback.
   const [liquid] = useState(isGlassEffectAPIAvailable);
+  /** True when the app opened already signed in, so there is no gate to leave. */
+  const openedSignedIn = useRef(false);
+  const decided = useRef(false);
+  if (settled && !decided.current) {
+    decided.current = true;
+    openedSignedIn.current = entered;
+  }
 
   // Reduced transparency: a translucent pane becomes an opaque one (§14).
   useEffect(() => {
@@ -167,6 +190,7 @@ function Gate() {
   // The glass. It answers only to the gate being up or down, so finishing the
   // register later does not set a spring going on a pane that has already left.
   useEffect(() => {
+    if (!settled) return;
     if (!entered) {
       setGateMounted(true);
       glass.set(reduced ? withTiming(1, REDUCED) : withSpring(1, RELEASE));
@@ -182,7 +206,7 @@ function Gate() {
       if (finished) scheduleOnRN(unmountGate);
     };
     glass.set(reduced ? withTiming(0, REDUCED, done) : withSpring(0, RELEASE, done));
-  }, [entered, glass, reduced, unmountGate]);
+  }, [settled, entered, glass, reduced, unmountGate]);
 
   // The arrival. No hold — a pause between the glass leaving and the app
   // arriving reads as the transition stopping dead, so the two overlap. But
@@ -190,9 +214,16 @@ function Gate() {
   // behind it stays suspended until the account is made: its arrival is
   // something the person sees rather than something that already happened.
   useEffect(() => {
+    if (!settled) return;
     const arrived = entered && !registering;
-    arrival.set(withTiming(arrived ? 1 : 0, reduced ? REDUCED : ARRIVE));
-  }, [entered, registering, arrival, reduced]);
+    // A session restored from the Keychain was never behind glass, so it has
+    // nothing to arrive from: it is simply already here.
+    arrival.set(
+      openedSignedIn.current
+        ? withTiming(1, { duration: 0 })
+        : withTiming(arrived ? 1 : 0, reduced ? REDUCED : ARRIVE),
+    );
+  }, [settled, entered, registering, arrival, reduced]);
 
   // The app comes out of its recess as the glass loses its hold on it.
   const appStyle = useAnimatedStyle(() => ({
@@ -342,10 +373,6 @@ export default function RootLayout() {
     Geist_600SemiBold,
   });
 
-  useEffect(() => {
-    if (loaded) SplashScreen.hideAsync();
-  }, [loaded]);
-
   if (!loaded) return null;
 
   return (
@@ -357,6 +384,7 @@ export default function RootLayout() {
               <LibraryProvider>
                 <SessionProvider>
                   <Gate />
+                  <SplashHold />
                 </SessionProvider>
               </LibraryProvider>
             </GymProvider>

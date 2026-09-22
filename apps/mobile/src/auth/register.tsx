@@ -14,7 +14,7 @@ import {
   type Account,
   type AccountErrors,
 } from '../account/account-fields';
-import { createAccount } from '../backend/pocketbase';
+import { createAccount, type Session } from '../backend/pocketbase';
 
 /**
  * The account a `users` row is made of, asked for once, after a new address
@@ -32,7 +32,7 @@ export function Register({
   onDone,
 }: {
   email: string;
-  onDone: (account: Account) => void;
+  onDone: (account: Account, session: Session | null) => void;
 }) {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
@@ -66,14 +66,14 @@ export function Register({
     // The row is written before the gate opens. A username nobody else has is
     // something only the server knows, so the account is not real until it
     // says so.
-    const rejected = await createAccount(account, email);
+    const outcome = await createAccount(account, email);
     setSaving(false);
-    if (rejected) {
-      setErrors(rejected.fields);
-      setTrouble(rejected.message);
+    if ('rejected' in outcome) {
+      setErrors(outcome.rejected.fields);
+      setTrouble(outcome.rejected.message);
       return;
     }
-    onDone(account);
+    onDone(account, outcome.session);
   };
 
   return (

@@ -113,3 +113,12 @@ Notes.
   requires 1.27. The tag wins.
 - OPEN: the Go module path is `alke/backend`, a local name. PLAN.md fixes no
   module path and there is no decision on where the backend is hosted.
+
+## Session storage
+
+| Package | Version | Licence | Source |
+|---|---|---|---|
+| `expo-secure-store` | 57.0.4 | MIT | chosen by `npx expo install` for Expo SDK 57; licence read from the installed package's `package.json` |
+
+The session token is written to the iOS Keychain rather than to plain storage,
+per PLAN.md §5.
