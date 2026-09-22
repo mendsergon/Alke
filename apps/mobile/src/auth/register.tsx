@@ -155,7 +155,7 @@ export function Register({ onDone }: { onDone: (account: Account) => void }) {
         }}
       >
         <PrimaryButton
-          label="Start training"
+          label="Create account"
           height={tokens.sizing.primaryButtonHeight.min}
           onPress={submit}
         />
