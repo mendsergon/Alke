@@ -40,6 +40,26 @@ export type Session = {
   record: { id: string; email: string; name: string; username: string };
 };
 
+/**
+ * Whether this address already has an account. `users` only lets a person read
+ * their own row, so the gate cannot look; `backend/main.go` answers instead.
+ *
+ * A server that cannot be reached answers null, and the gate treats an unknown
+ * answer as new rather than turning somebody away.
+ */
+export async function accountExists(email: string): Promise<boolean | null> {
+  try {
+    const response = await fetch(
+      `${POCKETBASE_URL}/api/alke/account-exists?email=${encodeURIComponent(email)}`,
+    );
+    if (!response.ok) return null;
+    const payload = (await response.json()) as { exists?: boolean };
+    return payload.exists === true;
+  } catch {
+    return null;
+  }
+}
+
 /** Trades an address and its secret for a token. */
 export async function authenticate(
   email: string,

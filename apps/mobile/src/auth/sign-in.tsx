@@ -16,6 +16,7 @@ import { PrimaryButton } from '../components/surfaces';
 import { Txt } from '../theme/text';
 import { tokens, useTheme } from '../theme/theme';
 import { checkEmail } from '../account/account-fields';
+import { accountExists } from '../backend/pocketbase';
 import { useAuth } from './auth';
 import { Register } from './register';
 import { VerifyEmail } from './verify-email';
@@ -37,6 +38,9 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
   const [error, setError] = useState<string | null>(null);
   /** One sheet of glass, three faces: the address, the wait, the account. */
   const [step, setStep] = useState<'email' | 'verify' | 'register'>('email');
+  /** Somebody coming back, not somebody new. The wait then signs them in. */
+  const [returning, setReturning] = useState(false);
+  const [asking, setAsking] = useState(false);
   const [focused, setFocused] = useState(false);
 
   const enter = (address: string) => {
@@ -46,7 +50,7 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
 
   // Ben's is the account that already exists (PLAN.md §2, "Sign-in gate") and
   // goes straight in. Any other address is new, so it is asked to register.
-  const submit = () => {
+  const submit = async () => {
     // Ben is the account that already exists while there is no real sign-in
     // (PLAN.md §2), so it is let through before the address is judged.
     if (email.toLowerCase().includes('ben')) {
@@ -62,6 +66,11 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
       return;
     }
     setError(null);
+    setAsking(true);
+    // Is this somebody coming back? Only the server knows.
+    const known = await accountExists(email.trim());
+    setAsking(false);
+    setReturning(known === true);
     setStep('verify');
   };
 
@@ -186,7 +195,7 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
 
         <View style={{ marginTop: tokens.space[12] }}>
           <PrimaryButton
-            label="Continue"
+            label={asking ? 'Checking' : 'Continue'}
             height={tokens.sizing.primaryButtonHeight.min}
             onPress={submit}
           />
@@ -246,7 +255,11 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
           <VerifyEmail
             active={step === 'verify'}
             email={email.trim()}
-            onConfirmed={() => setStep('register')}
+            onConfirmed={() => {
+              // A known address has nothing left to tell us.
+              if (returning) enter(email);
+              else setStep('register');
+            }}
             onResend={() => setNote('The link is on its way again.')}
           />
         ) : null}

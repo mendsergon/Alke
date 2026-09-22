@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
+	"strings"
 	"time"
 
 	validation "github.com/pocketbase/ozzo-validation/v4"
@@ -40,6 +42,27 @@ func main() {
 		}
 
 		return e.Next()
+	})
+
+	// The gate has to know whether an address it is given is somebody coming
+	// back or somebody new, and it cannot read `users` — that collection only
+	// lets a person see their own row. So it asks this, and this answers only
+	// yes or no.
+	//
+	// OPEN: answering it at all tells an unauthenticated caller whether an
+	// address has an account here. The alternative is PocketBase's OTP flow,
+	// where the server decides and never says; turning that on is what removes
+	// this route.
+	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+		se.Router.GET("/api/alke/account-exists", func(e *core.RequestEvent) error {
+			email := strings.TrimSpace(e.Request.URL.Query().Get("email"))
+			if email == "" {
+				return e.JSON(http.StatusBadRequest, map[string]any{"message": "An address is required."})
+			}
+			record, err := app.FindAuthRecordByEmail("users", email)
+			return e.JSON(http.StatusOK, map[string]any{"exists": err == nil && record != nil})
+		})
+		return se.Next()
 	})
 
 	if err := app.Start(); err != nil {
