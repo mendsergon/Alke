@@ -40,6 +40,11 @@ xcuserdata/
 # Third-party sources kept locally for reference, never pushed
 vendor/
 
+# PocketBase runtime data and built binary (never committed)
+backend/pb_data/
+backend/pb_public/
+backend/backend
+
 # Local tooling (never committed)
 CLAUDE.md
 CLAUDE.local.md
