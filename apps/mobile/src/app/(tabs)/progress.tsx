@@ -33,7 +33,6 @@ export default function Progress() {
     : {
         action: 'Build my program',
         icon: 'sparkle' as const,
-        disabled: true,
         secondary: 'Browse templates',
         secondaryIcon: 'compass' as const,
         go: () => router.push('/explore'),
@@ -53,7 +52,6 @@ export default function Progress() {
             line="No volume yet."
             action={start?.action}
             icon={start?.icon}
-            actionDisabled={start?.disabled}
             secondary={start?.secondary}
             secondaryIcon={start?.secondaryIcon}
             onSecondary={start?.go}
@@ -66,7 +64,6 @@ export default function Progress() {
           line="No exercise history yet."
           action={start?.action}
           icon={start?.icon}
-          actionDisabled={start?.disabled}
           secondary={start?.secondary}
           secondaryIcon={start?.secondaryIcon}
           onSecondary={start?.go}
@@ -79,7 +76,6 @@ export default function Progress() {
             line="No sessions logged yet."
             action={start?.action}
             icon={start?.icon}
-            actionDisabled={start?.disabled}
             secondary={start?.secondary}
             secondaryIcon={start?.secondaryIcon}
             onSecondary={start?.go}

@@ -31,7 +31,7 @@ export default function Home() {
           Let’s build something to train.
         </Txt>
         <View style={{ marginTop: 18 }}>
-          <PrimaryButton label="Build my program" icon="sparkle" disabled />
+          <PrimaryButton label="Build my program" icon="sparkle" />
         </View>
         <View style={{ height: 10 }} />
         <SecondaryButton
@@ -45,7 +45,7 @@ export default function Home() {
 
       <EmptyState line="No weekly report yet." />
 
-      <SecondaryButton label="Start empty workout" icon="plus" disabled />
+      <SecondaryButton label="Start empty workout" icon="plus" />
     </Screen>
   );
 }
