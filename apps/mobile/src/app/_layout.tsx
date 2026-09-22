@@ -305,6 +305,7 @@ function Navigator() {
       >
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="session" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="account" />
         <Stack.Screen name="join-gym" />
         <Stack.Screen name="report" />
         <Stack.Screen name="sign-in" options={{ presentation: 'modal' }} />

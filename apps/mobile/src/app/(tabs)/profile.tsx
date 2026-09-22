@@ -52,7 +52,12 @@ export default function Profile() {
       <ScreenHeader title="Profile" subtitle="Account, gyms, subscription" />
 
       <Card>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Account"
+          onPress={() => router.push('/account')}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}
+        >
           <View
             style={{
               width: 48,
@@ -80,7 +85,7 @@ export default function Profile() {
             ) : null}
           </View>
           <Icon name="chevronRight" size={20} color={c.textSecondary} />
-        </View>
+        </Pressable>
       </Card>
 
       <Card padding={16}>
