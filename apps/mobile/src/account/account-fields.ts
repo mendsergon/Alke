@@ -198,6 +198,12 @@ export function fromIsoDate(stored: string): DateOfBirth | null {
   return { day: String(Number(match[3])), month, year: match[1] ?? '' };
 }
 
+/** The stored date the way a person reads it: `3 February 2010`. */
+export function readableDate(stored: string): string | null {
+  const dob = fromIsoDate(stored);
+  return dob ? `${dob.day} ${dob.month} ${dob.year}` : null;
+}
+
 export function checkGender(value: string): string | null {
   if (value.length === 0) return MISSING;
   if (!(GENDER_OPTIONS as readonly string[]).includes(value)) {

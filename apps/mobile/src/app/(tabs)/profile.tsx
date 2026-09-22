@@ -9,9 +9,12 @@ import { tokens, useTheme } from '../../theme/theme';
 import { useGym } from '../../gym/gym';
 import { useAuth } from '../../auth/auth';
 
+import { PersonAvatar } from '../../figure/person';
+
 import {
   THEME_OPTIONS,
   UNIT_OPTIONS,
+  type Gender,
   type ThemePreference,
   type Units,
 } from '../../account/account-fields';
@@ -41,10 +44,8 @@ export default function Profile() {
 
   // Everything the card shows is a column, read straight off the row.
   const fullName = [account?.name, account?.surname].filter(Boolean).join(' ');
-  const initials = [account?.name, account?.surname]
-    .filter(Boolean)
-    .map((part) => part!.charAt(0).toUpperCase())
-    .join('');
+  // The header's figure is the account's own: the stored gender picks it.
+  const gender = (account?.gender ?? '') as Gender | '';
   const storedTheme = account?.theme as ThemePreference | undefined;
   const premium = account?.subscription_status === 'premium';
 
@@ -68,24 +69,7 @@ export default function Profile() {
           onPress={() => router.push('/account')}
           style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[16] }}
         >
-          <View
-            style={{
-              width: AVATAR,
-              height: AVATAR,
-              borderRadius: tokens.radius.rung,
-              backgroundColor: initials ? c.accentSoft : c.bg,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {initials ? (
-              <Txt variant="avatarInitials" color={c.accent}>
-                {initials}
-              </Txt>
-            ) : (
-              <Icon name="person" size={22} color={c.textSecondary} />
-            )}
-          </View>
+          <PersonAvatar gender={gender} size={AVATAR} />
           <View style={{ flexGrow: 1, flexShrink: 1 }}>
             <Txt variant="nameTitle">{fullName || 'Account'}</Txt>
             {account ? (
@@ -172,7 +156,7 @@ export default function Profile() {
   );
 }
 
-/** The design's avatar on page 13: 48pt, `accentSoft`, initials in accent. */
+/** The design's avatar on page 13, carrying the account's own figure. */
 const AVATAR = 48;
 
 /** The mark's tile, as page 13 sets the gym's: 40pt, the button radius, `bg`. */

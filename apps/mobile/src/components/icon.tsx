@@ -135,6 +135,16 @@ const PATHS: Record<string, (p: { s: string; w: number }) => ReactNode> = {
       <Path d="M8 12h8" stroke={s} strokeWidth={w} />
     </>
   ),
+  // The sheet's `body`: the standing figure.
+  body: ({ s, w }) => (
+    <>
+      <Circle cx={12} cy={4.2} r={2} stroke={s} strokeWidth={w} />
+      <Path d="M12 6.7v7.3" stroke={s} strokeWidth={w} />
+      <Path d="M8.4 9.8 12 8.7l3.6 1.8" stroke={s} strokeWidth={w} />
+      <Path d="M12 14 9 20.5" stroke={s} strokeWidth={w} />
+      <Path d="M12 14l3 6.5" stroke={s} strokeWidth={w} />
+    </>
+  ),
   // Not on the sheet. Drawn to its rule — 24x24, stroked, round caps — for
   // the two Profile rows the design never drew.
   contrast: ({ s, w }) => (
@@ -148,6 +158,22 @@ const PATHS: Record<string, (p: { s: string; w: number }) => ReactNode> = {
       <Path d="M12 4.5H6.5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2H12" stroke={s} strokeWidth={w} />
       <Path d="M10.5 12h9" stroke={s} strokeWidth={w} />
       <Path d="M16 8.5 19.5 12 16 15.5" stroke={s} strokeWidth={w} />
+    </>
+  ),
+  mail: ({ s, w }) => (
+    <>
+      <Rect x={3.5} y={5.5} width={17} height={13} rx={2.5} stroke={s} strokeWidth={w} />
+      <Path d="M4.5 8 12 13.5 19.5 8" stroke={s} strokeWidth={w} />
+    </>
+  ),
+  at: ({ s, w }) => (
+    <>
+      <Circle cx={12} cy={12} r={3.6} stroke={s} strokeWidth={w} />
+      <Path
+        d="M15.6 8.4v5.3c0 1.7 1.2 2.8 2.8 2.8 1.7 0 2.8-1.4 3-3.2A8.6 8.6 0 1 0 17.4 20.3"
+        stroke={s}
+        strokeWidth={w}
+      />
     </>
   ),
 };
