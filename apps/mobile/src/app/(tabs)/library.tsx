@@ -10,9 +10,31 @@ import { MicroCaps, Txt } from '../../theme/text';
 import { tokens, useTheme } from '../../theme/theme';
 import { useLibrary } from '../../library/library';
 import { EXERCISE_CATALOG, USER_CUSTOM_EXERCISES, type ProgramRow } from '../../mock/mock-data';
-import { EXERCISE_ICONS, type ExerciseIconKey } from '../../figure/figure.generated';
+import type { ExerciseIconKey } from '../../figure/figure.generated';
 
 const TABS = ['Programs', 'Exercises'] as const;
+
+/**
+ * The muscle groups, in Stavros's order. Several are whole regions rather
+ * than the single muscles the body map draws: Back covers lats, traps and
+ * erectors, Shoulders covers all three heads, Biceps carries brachialis and
+ * Abs carries obliques. The icon on each is the generated crop for that
+ * region.
+ */
+const MUSCLE_GROUPS: { name: string; icon: ExerciseIconKey }[] = [
+  { name: 'Chest', icon: 'bench' },
+  { name: 'Back', icon: 'row' },
+  { name: 'Biceps', icon: 'curl' },
+  { name: 'Triceps', icon: 'pushdown' },
+  { name: 'Shoulders', icon: 'ohp' },
+  { name: 'Quads', icon: 'squat' },
+  { name: 'Hamstrings', icon: 'rdl' },
+  { name: 'Adductors', icon: 'adduction' },
+  { name: 'Glutes', icon: 'hipthrust' },
+  { name: 'Abs', icon: 'crunch' },
+  { name: 'Forearms', icon: 'wristcurl' },
+  { name: 'Neck', icon: 'neckcurl' },
+];
 
 function ProgramListRow({ program, first }: { program: ProgramRow; first: boolean }) {
   const { c } = useTheme();
@@ -62,13 +84,9 @@ export default function Library() {
   const [tab, setTab] = useState<(typeof TABS)[number]>('Programs');
   const { programs } = useLibrary();
   const exercises = [...EXERCISE_CATALOG, ...USER_CUSTOM_EXERCISES];
-  // One icon per muscle, straight out of the design export's generated icon
-  // set. The exercises inside a group are served, so a group stays empty
-  // until the backend fills it.
+  // The exercises inside a group are served, so a group stays empty until the
+  // backend fills it.
   const [group, setGroup] = useState<string | null>(null);
-  const groups = (Object.entries(EXERCISE_ICONS) as [ExerciseIconKey, { muscle: string }][])
-    .map(([icon, def]) => ({ muscle: def.muscle, icon }))
-    .sort((a, b) => a.muscle.localeCompare(b.muscle));
   const inGroup = group ? exercises.filter((e) => e.muscle === group) : [];
 
   return (
@@ -111,28 +129,27 @@ export default function Library() {
         <>
           <SearchBar />
           {group === null ? (
-            <>
-              <MicroCaps>Muscle groups</MicroCaps>
-              <Card>
-                {groups.map((g, i) => (
-                  <Pressable
-                    key={g.muscle}
-                    accessibilityRole="button"
-                    onPress={() => setGroup(g.muscle)}
-                  >
-                    <Row first={i === 0}>
-                      <ExerciseIcon icon={g.icon} size={tokens.iconTile.size.listRow} />
-                      <View style={{ flexGrow: 1, flexShrink: 1 }}>
-                        <Txt variant="rowLabel" weight={500}>
-                          {g.muscle}
-                        </Txt>
-                      </View>
-                      <Icon name="chevronRight" size={18} color={c.textSecondary} />
-                    </Row>
-                  </Pressable>
-                ))}
-              </Card>
-            </>
+            <View
+              style={{
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                gap: tokens.space[12],
+              }}
+            >
+              {MUSCLE_GROUPS.map((g) => (
+                <Pressable
+                  key={g.name}
+                  accessibilityRole="button"
+                  onPress={() => setGroup(g.name)}
+                  style={{ width: '31%', alignItems: 'center', gap: 6 }}
+                >
+                  <ExerciseIcon icon={g.icon} size={tokens.iconTile.size.exerciseDetail} />
+                  <Txt variant="captionTight" weight={500} numberOfLines={1}>
+                    {g.name}
+                  </Txt>
+                </Pressable>
+              ))}
+            </View>
           ) : (
             <>
               <Pressable
