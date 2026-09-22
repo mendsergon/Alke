@@ -1,12 +1,23 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useRouter } from 'expo-router';
-import { KeyboardAvoidingView, Platform, Pressable, TextInput, View } from 'react-native';
+import {
+  Animated,
+  Easing,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AlkeMark } from '../components/alke-mark';
 import { PrimaryButton } from '../components/surfaces';
 import { Txt } from '../theme/text';
 import { tokens, useTheme } from '../theme/theme';
 import { useAuth } from './auth';
+import { Register } from './register';
+import { VerifyEmail } from './verify-email';
 import { AppleMark, GoogleMark } from './brand-marks';
 
 /**
@@ -23,20 +34,45 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
   const [email, setEmail] = useState(defaultEmail);
   const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** One sheet of glass, three faces: the address, the wait, the account. */
+  const [step, setStep] = useState<'email' | 'verify' | 'register'>('email');
 
-  // Until there is a backend, the only account that exists is Ben's
-  // (PLAN.md §2, "Sign-in gate"). Anything else is turned away at the field.
+  const enter = (address: string) => {
+    signInWithEmail(address);
+    if (router.canGoBack()) router.back();
+  };
+
+  // Ben's is the account that already exists (PLAN.md §2, "Sign-in gate") and
+  // goes straight in. Any other address is new, so it is asked to register.
   const submit = () => {
-    if (!email.toLowerCase().includes('ben')) {
+    if (email.trim().length === 0) {
       setError('That email is wrong.');
       return;
     }
     setError(null);
-    signInWithEmail(email);
-    if (router.canGoBack()) router.back();
+    // Ben's account already exists and goes straight in. A new address turns
+    // the same sheet of glass over to the account, with no screen pushed and
+    // nothing to swipe: the gate keeps its own fade.
+    if (email.toLowerCase().includes('ben')) {
+      enter(email);
+      return;
+    }
+    setStep('verify');
   };
 
-  return (
+  // The two faces cross-fade on the same sheet of glass, in the gate's own
+  // language — nothing is pushed, nothing pops, nothing can be swiped away.
+  const turn = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(turn, {
+      toValue: FACE_ORDER.indexOf(step),
+      duration: 340,
+      easing: Easing.inOut(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [step, turn]);
+
+  const emailFace = (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: onGlass ? 'transparent' : c.bg }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -176,6 +212,70 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
 
       </View>
     </KeyboardAvoidingView>
+  );
+
+  return (
+    <View style={{ flex: 1, backgroundColor: onGlass ? 'transparent' : c.bg }}>
+      <Face turn={turn} index={0} active={step === 'email'}>
+        {emailFace}
+      </Face>
+      <Face turn={turn} index={1} active={step === 'verify'}>
+        <VerifyEmail
+          email={email.trim()}
+          onConfirmed={() => setStep('register')}
+          onResend={() => setNote('The link is on its way again.')}
+        />
+      </Face>
+      <Face turn={turn} index={2} active={step === 'register'}>
+        <Register onDone={() => enter(email)} />
+      </Face>
+    </View>
+  );
+}
+
+/** The three faces in the order the gate turns them over. */
+const FACE_ORDER = ['email', 'verify', 'register'] as const;
+
+/**
+ * One face of the glass. Only the face the gate is on is opaque and takes
+ * touches; its neighbours fade out and drop back by a breath as it comes up.
+ */
+function Face({
+  turn,
+  index,
+  active,
+  children,
+}: {
+  turn: Animated.Value;
+  index: number;
+  active: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <Animated.View
+      pointerEvents={active ? 'auto' : 'none'}
+      style={[
+        StyleSheet.absoluteFill,
+        {
+          opacity: turn.interpolate({
+            inputRange: [index - 1, index, index + 1],
+            outputRange: [0, 1, 0],
+            extrapolate: 'clamp',
+          }),
+          transform: [
+            {
+              scale: turn.interpolate({
+                inputRange: [index - 1, index, index + 1],
+                outputRange: [1.02, 1, 0.98],
+                extrapolate: 'clamp',
+              }),
+            },
+          ],
+        },
+      ]}
+    >
+      {children}
+    </Animated.View>
   );
 }
 
