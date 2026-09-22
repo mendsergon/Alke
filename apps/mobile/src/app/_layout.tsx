@@ -79,8 +79,10 @@ SplashScreen.preventAutoHideAsync();
 
 /** A spring, not a curve: interruptible and re-targetable mid-flight (§4). */
 const RELEASE = {
-  duration: 420,
-  dampingRatio: 0.9,
+  duration: 520,
+  // Critically damped. At 0.9 the pane overshoots and settles back, and that
+  // wobble is what reads as the end of the transition not being smooth.
+  dampingRatio: 1,
   // Reduced motion is decided below; the spring must not skip to its end value
   // behind that decision.
   reduceMotion: ReduceMotion.Never,
@@ -192,7 +194,10 @@ function Gate() {
 
   // Size and radius together — the pane's own de-materializing (§12).
   const paneStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(glass.get(), [0, 0.5, 1], [0, 0.94, 1], Extrapolation.CLAMP),
+    // Fully invisible at 0.1, not at 0: the material has to be gone before the
+    // spring finishes and the pane leaves the tree, or the system draws one
+    // last light frame of it on the way out.
+    opacity: interpolate(glass.get(), [0.1, 0.5, 1], [0, 0.94, 1], Extrapolation.CLAMP),
     transform: [
       {
         scale: reduced
