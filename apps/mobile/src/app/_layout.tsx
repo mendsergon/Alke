@@ -8,7 +8,6 @@ import Animated, {
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
-  withDelay,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
@@ -127,8 +126,6 @@ const APP_RECESSED = 0.96;
  * a fade.
  */
 const SCRIM = 0.4;
-/** The beat of bare glass: the sign-in has gone, Home has not started. */
-const ARRIVAL_HOLD = 130;
 
 function Gate() {
   const { c, scheme } = useTheme();
@@ -172,7 +169,9 @@ function Gate() {
       if (finished) scheduleOnRN(setGateMounted, false);
     };
     glass.set(reduced ? withTiming(0, REDUCED, done) : withSpring(0, RELEASE, done));
-    arrival.set(reduced ? withTiming(1, REDUCED) : withDelay(ARRIVAL_HOLD, withTiming(1, ARRIVE)));
+    // No hold. A pause between the glass leaving and the app arriving reads
+    // as the transition stopping dead; the two overlap instead.
+    arrival.set(withTiming(1, reduced ? REDUCED : ARRIVE));
   }, [entered, glass, arrival, reduced]);
 
   // The app comes out of its recess as the glass loses its hold on it.
@@ -275,41 +274,32 @@ function Navigator() {
     <>
       <Stack
         screenOptions={{
-          // A native navigation bar has to exist for the system to draw its
-          // scroll edge effect under it — that is what the effect attaches to.
-          // It is transparent and carries no title, so the screen still draws
-          // its own heading in the content and nothing is duplicated; all the
-          // bar contributes is the chrome the effect needs.
+          // Content blurs as it scrolls behind the top of the screen.
+          //
+          // A native navigation bar has to exist for any of this: it is what
+          // the material and the edge effect attach to. It is transparent and
+          // has no title, so each screen still draws its own heading in the
+          // content — all the bar contributes is the region.
           headerShown: true,
-          headerTransparent: true,
           headerTitle: '',
           headerBackVisible: false,
-          // The effect covers the navigation bar's region, so a bar with only
-          // the compact height gives a shallow band. The large-title layout
-          // reserves a much taller one — with no title set, all it adds is
-          // depth for the effect to work over.
+          // The large-title layout reserves a much deeper bar region, so the
+          // blur covers a band rather than a strip.
           headerLargeTitleEnabled: true,
-          contentStyle: { backgroundColor: c.bg },
-          // The system's own scroll edge effect (`UIScrollEdgeEffect`), which
-          // varies the blur radius continuously across the edge. Rebuilt in
-          // JS it cannot be: a stack of blur panes bands at every boundary,
-          // and a gradient-masked blur only varies the *alpha* of a uniformly
-          // blurred copy, so sharp content ghosts through it.
-          //
-          // expo-router already passes this to `ScreenStackItem` for every
-          // screen (native-stack/views/NativeStackView.native.js), defaulting
-          // each edge to `automatic`; this only changes the value. `soft` is
-          // the progressive fade. `hidden` at the bottom because the bottom of
-          // the screen is the tab bar's buttons, and nothing is blurred over a
-          // control.
-          //
-          // iOS 26 and above. Android has no equivalent and gets no edge.
+          // No `headerBlurEffect` and no `headerTransparent`: both of those
+          // paste a material of our own over the bar's region, and a pasted
+          // material has a hard bottom edge — the flat band. Left alone, the
+          // system draws its own bar and its own scroll edge effect under it,
+          // which is the progressive one.
+          // `hidden` at the bottom: that is the tab bar's buttons, and nothing
+          // is blurred over a control.
           scrollEdgeEffects: {
             top: 'soft',
             bottom: 'hidden',
             left: 'automatic',
             right: 'automatic',
           },
+          contentStyle: { backgroundColor: c.bg },
         }}
       >
         <Stack.Screen name="(tabs)" />
