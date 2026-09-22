@@ -32,6 +32,9 @@ function Side({ view, label, scores }: { view: FigureView; label: string; scores
         height={248}
         strokeWidth={BODY_STROKE}
         fillFor={fillsFor(view, scores, c.heat)}
+        // A map has to show the muscles that carry nothing, so it seams them
+        // all rather than only the ones with volume against them.
+        seamAll
       />
       <Txt variant="micro" weight={500} color={c.textSecondary} tracking={0.04}>
         {label}

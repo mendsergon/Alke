@@ -18,12 +18,18 @@ let seq = 0;
  * muscle drawn as its own region on top of it, clipped to the silhouette.
  * Changing a region's fill is all a heat map or a highlight ever does.
  *
- * The seams belong to the lit regions only. From the design export: the figure
- * is "coloured in two flat tones: the body in #B3AC95 (light) / #5A574D
- * (dark), the target muscle in the accent … each lit region is seamed in the
- * body tone so neighbouring lit muscles stay separate masses". Seaming every
- * muscle instead of only the lit ones turns the body into faceted plating and
- * loses the two tones the whole mark is built on.
+ * Two ways to seam it, because the figure does two different jobs.
+ *
+ * As an exercise icon it is a mark: the design export says it is "coloured in
+ * two flat tones: the body in #B3AC95 (light) / #5A574D (dark), the target
+ * muscle in the accent … each lit region is seamed in the body tone so
+ * neighbouring lit muscles stay separate masses". Seaming every muscle there
+ * turns a 44px mark into faceted plating and loses the two tones it is built
+ * on. That is the default.
+ *
+ * As the body map it is a diagram, and reading volume per muscle depends on
+ * every muscle being visible whether or not it carries any — an unworked
+ * muscle is exactly the thing you need to be able to see. That is `seamAll`.
  */
 export function Figure({
   view,
@@ -36,6 +42,7 @@ export function Figure({
   fillFor,
   outline,
   base,
+  seamAll = false,
 }: {
   view: FigureView;
   viewBox: string;
@@ -54,9 +61,15 @@ export function Figure({
   outline?: string;
   /** The silhouette under the muscle regions. Defaults to the body tone. */
   base?: string;
+  /**
+   * Seam every muscle, not only the lit ones, over a recessed silhouette —
+   * the body map's reading, where an unlit muscle still has to be legible.
+   */
+  seamAll?: boolean;
 }) {
   const { c } = useTheme();
-  // Kept for callers that pass their own recessed base or outline.
+  // The shade the body sits at when every muscle is seamed, so the seams have
+  // something to be drawn against.
   const recess = mix(c.iconBody, c.bg, 0.45);
   const id = useRef(`fig${++seq}`).current;
   const figure = FIGURE[view];
@@ -70,7 +83,11 @@ export function Figure({
           <Path d={figure.silhouette} clipRule="evenodd" />
         </ClipPath>
       </Defs>
-      <Path d={figure.silhouette} fill={base ?? c.iconBody} fillRule="evenodd" />
+      <Path
+        d={figure.silhouette}
+        fill={base ?? (seamAll ? recess : c.iconBody)}
+        fillRule="evenodd"
+      />
       <G clipPath={`url(#${id})`}>
         {paint.map((r, i) => {
           const custom = fillFor?.(r);
@@ -78,6 +95,7 @@ export function Figure({
           // Only those are seamed; the rest are the body, and the body is one
           // tone.
           const lit = custom !== undefined || accentSet.has(r);
+          const seamed = seamAll || lit;
           return (
             <Path
               key={`${r}-${i}`}
@@ -85,8 +103,8 @@ export function Figure({
               translateX={tx}
               translateY={ty}
               fill={custom ?? (accentSet.has(r) ? c.accent : c.iconBody)}
-              stroke={lit ? outline ?? c.iconBody : 'none'}
-              strokeWidth={lit ? strokeWidth : 0}
+              stroke={seamed ? outline ?? (seamAll ? recess : c.iconBody) : 'none'}
+              strokeWidth={seamed ? strokeWidth : 0}
             />
           );
         })}
