@@ -40,7 +40,13 @@ export type ProgramRow = {
   target: number;
 };
 
-export type ExerciseRow = { name: string; detail: string; icon: ExerciseIconKey };
+export type ExerciseRow = {
+  name: string;
+  /** The muscle this movement trains first. Exercises are grouped by it. */
+  muscle: string;
+  equipment: string;
+  icon: ExerciseIconKey;
+};
 
 export type SharedProgram = {
   name: string;
@@ -107,19 +113,68 @@ export type RecordByReps = { range: string; weight: string; reps: string; date: 
  * are a later job.
  */
 export const EXERCISE_CATALOG: ExerciseRow[] = [
-  { name: 'Barbell Back Squat', detail: 'Quads · barbell', icon: 'squat' },
-  { name: 'Romanian Deadlift', detail: 'Hamstrings · barbell', icon: 'rdl' },
-  { name: 'Barbell Row', detail: 'Lats · barbell', icon: 'row' },
-  { name: 'Bench Press', detail: 'Chest · barbell', icon: 'bench' },
-  { name: 'Overhead Press', detail: 'Front delts · barbell', icon: 'ohp' },
-  { name: 'Dumbbell Lateral Raise', detail: 'Side delts · dumbbell', icon: 'lateral' },
-  { name: 'Face Pull', detail: 'Rear delts · cable', icon: 'facepull' },
-  { name: 'Barbell Curl', detail: 'Biceps · barbell', icon: 'curl' },
-  { name: 'Triceps Pushdown', detail: 'Triceps · cable', icon: 'pushdown' },
-  { name: 'Hip Thrust', detail: 'Glutes · barbell', icon: 'hipthrust' },
-  { name: 'Standing Calf Raise', detail: 'Calves · machine', icon: 'calfraise' },
-  { name: 'Back Extension', detail: 'Erectors · bodyweight', icon: 'backext' },
+  { name: 'Barbell Back Squat', muscle: 'Quads', equipment: 'barbell', icon: 'squat' },
+  { name: 'Front Squat', muscle: 'Quads', equipment: 'barbell', icon: 'squat' },
+  { name: 'Leg Press', muscle: 'Quads', equipment: 'machine', icon: 'squat' },
+  { name: 'Bulgarian Split Squat', muscle: 'Quads', equipment: 'dumbbell', icon: 'squat' },
+
+  { name: 'Romanian Deadlift', muscle: 'Hamstrings', equipment: 'barbell', icon: 'rdl' },
+  { name: 'Lying Leg Curl', muscle: 'Hamstrings', equipment: 'machine', icon: 'rdl' },
+  { name: 'Good Morning', muscle: 'Hamstrings', equipment: 'barbell', icon: 'rdl' },
+
+  { name: 'Hip Thrust', muscle: 'Glutes', equipment: 'barbell', icon: 'hipthrust' },
+  { name: 'Cable Kickback', muscle: 'Glutes', equipment: 'cable', icon: 'hipthrust' },
+
+  { name: 'Barbell Row', muscle: 'Lats', equipment: 'barbell', icon: 'row' },
+  { name: 'Lat Pulldown', muscle: 'Lats', equipment: 'cable', icon: 'row' },
+  { name: 'Pull-up', muscle: 'Lats', equipment: 'bodyweight', icon: 'row' },
+  { name: 'Seated Cable Row', muscle: 'Lats', equipment: 'cable', icon: 'row' },
+
+  { name: 'Bench Press', muscle: 'Chest', equipment: 'barbell', icon: 'bench' },
+  { name: 'Incline Bench Press', muscle: 'Chest', equipment: 'barbell', icon: 'bench' },
+  { name: 'Dumbbell Press', muscle: 'Chest', equipment: 'dumbbell', icon: 'bench' },
+  { name: 'Cable Fly', muscle: 'Chest', equipment: 'cable', icon: 'bench' },
+
+  { name: 'Overhead Press', muscle: 'Front delts', equipment: 'barbell', icon: 'ohp' },
+  { name: 'Seated Dumbbell Press', muscle: 'Front delts', equipment: 'dumbbell', icon: 'ohp' },
+
+  { name: 'Dumbbell Lateral Raise', muscle: 'Side delts', equipment: 'dumbbell', icon: 'lateral' },
+  { name: 'Cable Lateral Raise', muscle: 'Side delts', equipment: 'cable', icon: 'lateral' },
+
+  { name: 'Face Pull', muscle: 'Rear delts', equipment: 'cable', icon: 'facepull' },
+  { name: 'Reverse Dumbbell Fly', muscle: 'Rear delts', equipment: 'dumbbell', icon: 'facepull' },
+
+  { name: 'Barbell Curl', muscle: 'Biceps', equipment: 'barbell', icon: 'curl' },
+  { name: 'Incline Dumbbell Curl', muscle: 'Biceps', equipment: 'dumbbell', icon: 'curl' },
+  { name: 'Hammer Curl', muscle: 'Brachialis', equipment: 'dumbbell', icon: 'hammer' },
+
+  { name: 'Triceps Pushdown', muscle: 'Triceps', equipment: 'cable', icon: 'pushdown' },
+  { name: 'Overhead Triceps Extension', muscle: 'Triceps', equipment: 'cable', icon: 'pushdown' },
+
+  { name: 'Barbell Shrug', muscle: 'Traps', equipment: 'barbell', icon: 'shrug' },
+
+  { name: 'Standing Calf Raise', muscle: 'Calves', equipment: 'machine', icon: 'calfraise' },
+  { name: 'Seated Calf Raise', muscle: 'Calves', equipment: 'machine', icon: 'calfraise' },
+
+  { name: 'Cable Crunch', muscle: 'Abs', equipment: 'cable', icon: 'crunch' },
+  { name: 'Pallof Press', muscle: 'Obliques', equipment: 'cable', icon: 'pallof' },
+
+  { name: 'Back Extension', muscle: 'Erectors', equipment: 'bodyweight', icon: 'backext' },
+  { name: 'Hip Adduction', muscle: 'Adductors', equipment: 'machine', icon: 'adduction' },
+  { name: 'Wrist Curl', muscle: 'Forearms', equipment: 'dumbbell', icon: 'wristcurl' },
+  { name: 'Neck Curl', muscle: 'Neck', equipment: 'bodyweight', icon: 'neckcurl' },
 ];
+
+/** The muscle groups in the catalog, in the order the list shows them. */
+export function muscleGroups(exercises: readonly ExerciseRow[]) {
+  const byMuscle = new Map<string, ExerciseRow[]>();
+  for (const e of exercises) {
+    const list = byMuscle.get(e.muscle);
+    if (list) list.push(e);
+    else byMuscle.set(e.muscle, [e]);
+  }
+  return [...byMuscle.entries()].map(([muscle, items]) => ({ muscle, items }));
+}
 
 /**
  * Starter templates. Structure only — days, split, level. No author and no
