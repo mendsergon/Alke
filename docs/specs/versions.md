@@ -34,3 +34,22 @@ Notes.
 - `pnpm-workspace.yaml` sets `allowBuilds: '@shopify/react-native-skia': true`.
   pnpm 12 blocks dependency install scripts by default; Skia's copies its
   prebuilt xcframeworks into place and the package does not work without it.
+
+## The sign-in gate's material
+
+| Package | Version | Licence | Source |
+|---|---|---|---|
+| `expo-glass-effect` | 57.0.3 | MIT | chosen by `npx expo install expo-glass-effect` for Expo SDK 57 — https://www.npmjs.com/package/expo-glass-effect |
+
+Notes.
+
+- `expo-glass-effect` wraps iOS 26's `UIGlassEffect`. That is Liquid Glass
+  proper: it refracts what is behind it, where `expo-blur`'s `UIBlurEffect`
+  only blurs. The gate needs the refraction, so `expo-blur` stays as the
+  fallback rather than being replaced.
+- `isGlassEffectAPIAvailable()` is checked before the view is rendered.
+  Upstream added it because some iOS 26 betas ship without the API and
+  touching it there crashes. It returns `true` on the iOS 26.5 simulator,
+  confirmed by rendering both paths and diffing the frames.
+- It is a native module, so the iOS project needs a rebuild. A clean
+  checkout cannot run this on Expo Go.
