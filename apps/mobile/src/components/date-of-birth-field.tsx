@@ -36,6 +36,7 @@ export function DateOfBirthField({
     <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: tokens.space[8] }}>
       <Box
         label="Day"
+        placeholder="Day"
         part="day"
         options={DAY_OPTIONS}
         value={value.day}
@@ -45,42 +46,56 @@ export function DateOfBirthField({
       />
       <Box
         label="Month"
+        placeholder="Month"
         part="month"
         options={MONTH_OPTIONS}
         value={value.month}
+        // The list names the month in full; the box shows it short, because
+        // four boxes share one line.
+        display={shortMonth(value.month)}
         open={open}
         onToggle={onToggle}
         onSelect={(month) => onChange({ ...value, month })}
-        grow={1.5}
+        grow={1.15}
       />
       <Box
         label="Year"
+        placeholder="Year"
         part="year"
         options={years}
         value={value.year}
         open={open}
         onToggle={onToggle}
         onSelect={(year) => onChange({ ...value, year })}
+        grow={1.25}
       />
     </View>
   );
 }
 
-/** Month names are long, so that box takes half again the width of the others. */
+/** A four-digit year is the widest thing on the row, so that box is widest. */
+function shortMonth(month: string): string {
+  return month.slice(0, 3);
+}
+
 function Box({
   label,
+  placeholder,
   part,
   options,
   value,
+  display,
   open,
   onToggle,
   onSelect,
   grow = 1,
 }: {
   label: string;
+  placeholder: string;
   part: DatePart;
   options: readonly string[];
   value: string;
+  display?: string;
   open: DatePart | null;
   onToggle: (part: DatePart) => void;
   onSelect: (next: string) => void;
@@ -91,8 +106,9 @@ function Box({
       <SelectField
         align="center"
         accessibilityLabel={label}
-        placeholder={label}
+        placeholder={placeholder}
         value={value}
+        display={display}
         options={options}
         open={open === part}
         onToggle={() => onToggle(part)}

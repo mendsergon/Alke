@@ -64,10 +64,23 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
   // The two faces cross-fade on the same sheet of glass, in the gate's own
   // language — nothing is pushed, nothing pops, nothing can be swiped away.
   const turn = useRef(new Animated.Value(0)).current;
+  /**
+   * Which faces are built. A face the gate has not reached yet is not worth
+   * mounting — the register face alone is three lists and five fields, and it
+   * was alive behind the address from launch. The face being left stays up
+   * until the turn is over so the cross-fade has something to fade.
+   */
+  const [built, setBuilt] = useState<Set<string>>(() => new Set(['email']));
+  useEffect(() => {
+    setBuilt((prev) => (prev.has(step) ? prev : new Set(prev).add(step)));
+    const settled = setTimeout(() => setBuilt(new Set([step])), TURN + 40);
+    return () => clearTimeout(settled);
+  }, [step]);
+
   useEffect(() => {
     Animated.timing(turn, {
       toValue: FACE_ORDER.indexOf(step),
-      duration: 340,
+      duration: TURN,
       easing: Easing.inOut(Easing.cubic),
       useNativeDriver: true,
     }).start();
@@ -222,22 +235,27 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
   return (
     <View style={{ flex: 1, backgroundColor: onGlass ? 'transparent' : c.bg }}>
       <Face turn={turn} index={0} active={step === 'email'}>
-        {emailFace}
+        {built.has('email') ? emailFace : null}
       </Face>
       <Face turn={turn} index={1} active={step === 'verify'}>
-        <VerifyEmail
-          active={step === 'verify'}
-          email={email.trim()}
-          onConfirmed={() => setStep('register')}
-          onResend={() => setNote('The link is on its way again.')}
-        />
+        {built.has('verify') ? (
+          <VerifyEmail
+            active={step === 'verify'}
+            email={email.trim()}
+            onConfirmed={() => setStep('register')}
+            onResend={() => setNote('The link is on its way again.')}
+          />
+        ) : null}
       </Face>
       <Face turn={turn} index={2} active={step === 'register'}>
-        <Register onDone={() => enter(email)} />
+        {built.has('register') ? <Register onDone={() => enter(email)} /> : null}
       </Face>
     </View>
   );
 }
+
+/** How long one face takes to become the next. */
+const TURN = 340;
 
 /** The three faces in the order the gate turns them over. */
 const FACE_ORDER = ['email', 'verify', 'register'] as const;

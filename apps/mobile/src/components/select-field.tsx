@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, ScrollView, View } from 'react-native';
 import { Icon } from './icon';
 import { Txt } from '../theme/text';
@@ -22,6 +22,7 @@ export function SelectField({
   onSelect,
   accessibilityLabel,
   align = 'left',
+  display,
 }: {
   value: string;
   placeholder: string;
@@ -35,6 +36,8 @@ export function SelectField({
    * equal boxes on one line, the value in the middle of each.
    */
   align?: 'left' | 'center';
+  /** What the box shows, when that is not the value itself (September → 9). */
+  display?: string;
 }) {
   const { c } = useTheme();
   const scroller = useRef<ScrollView>(null);
@@ -43,10 +46,26 @@ export function SelectField({
   const rows = Math.min(options.length, VISIBLE_ROWS);
   const listHeight = rows * OPTION_HEIGHT + tokens.space[8] * 2;
 
+  /**
+   * The options exist only while the list is down. A year list is eighty-six
+   * rows; three of these on one screen, all mounted from launch, is a hundred
+   * and thirty live rows behind a closed box. They mount when it opens and
+   * leave once it has finished closing.
+   */
+  const [mounted, setMounted] = useState(open);
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+      return;
+    }
+    const gone = setTimeout(() => setMounted(false), CLOSE_MS);
+    return () => clearTimeout(gone);
+  }, [open]);
+
   useEffect(() => {
     Animated.timing(reveal, {
       toValue: open ? 1 : 0,
-      duration: open ? 200 : 150,
+      duration: open ? OPEN_MS : CLOSE_MS,
       easing: open ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
       // A height cannot be driven natively. One small box, not a long list.
       useNativeDriver: false,
@@ -56,11 +75,11 @@ export function SelectField({
   // Eighty-seven years open on the one already chosen, not at 15.
   const selected = options.indexOf(value);
   useEffect(() => {
-    if (!open || selected < 1) return;
+    if (!open || !mounted || selected < 1) return;
     const y = Math.max(0, (selected - 1) * OPTION_HEIGHT);
     const id = setTimeout(() => scroller.current?.scrollTo({ y, animated: false }), 0);
     return () => clearTimeout(id);
-  }, [open, selected]);
+  }, [open, mounted, selected]);
 
   return (
     <View>
@@ -89,7 +108,7 @@ export function SelectField({
           numberOfLines={1}
           style={align === 'center' ? { flexShrink: 1 } : { flexGrow: 1, flexShrink: 1 }}
         >
-          {value || placeholder}
+          {(value ? display ?? value : '') || placeholder}
         </Txt>
         <Animated.View
           style={{
@@ -131,7 +150,7 @@ export function SelectField({
           }}
         >
           <ScrollView ref={scroller} showsVerticalScrollIndicator={false} nestedScrollEnabled>
-            {options.map((option) => {
+            {(mounted ? options : []).map((option) => {
               const on = option === value;
               return (
                 <Pressable
@@ -149,6 +168,7 @@ export function SelectField({
                     borderRadius: tokens.radius.chip,
                     flexDirection: 'row',
                     alignItems: 'center',
+                    justifyContent: align === 'center' ? 'center' : 'flex-start',
                     gap: tokens.space[8],
                     backgroundColor: on ? c.accentSoft : 'transparent',
                   }}
@@ -158,7 +178,7 @@ export function SelectField({
                     weight={on ? 600 : 400}
                     color={on ? c.accent : c.text}
                     numberOfLines={1}
-                    style={{ flexGrow: 1, flexShrink: 1 }}
+                    style={align === 'center' ? { flexShrink: 1 } : { flexGrow: 1, flexShrink: 1 }}
                   >
                     {option}
                   </Txt>
@@ -174,6 +194,8 @@ export function SelectField({
 }
 
 /** The design's field height, one option, and how many are down before it scrolls. */
+const OPEN_MS = 200;
+const CLOSE_MS = 150;
 const FIELD_HEIGHT = 52;
 const OPTION_HEIGHT = 40;
 const VISIBLE_ROWS = 4;

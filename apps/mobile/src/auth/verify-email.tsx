@@ -68,11 +68,19 @@ export function VerifyEmail({
       <View style={{ flexGrow: 3 }} />
 
       <View style={{ alignItems: 'center' }}>
-        <Orb
-          mood={confirmed ? 'idle' : 'thinking'}
-          size={72}
-          ink={confirmed ? c.accent : undefined}
-        />
+        {/* The orb is a Skia canvas with a loop on it. All three faces of the
+            gate stay mounted to cross-fade, so it exists only while this one
+            is the face showing — otherwise it redraws every frame of a screen
+            nobody is looking at. */}
+        <View style={{ width: 72, height: 72 }}>
+          {active ? (
+            <Orb
+              mood={confirmed ? 'idle' : 'thinking'}
+              size={72}
+              ink={confirmed ? c.accent : undefined}
+            />
+          ) : null}
+        </View>
         <Txt
           variant="screenTitle"
           family="serif"

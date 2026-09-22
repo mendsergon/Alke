@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Screen, ScreenContainer } from 'react-native-screens';
 import { ScrollViewMarker } from 'react-native-screens/experimental';
 import { PrimaryButton } from '../components/surfaces';
 import { SelectField } from '../components/select-field';
@@ -56,11 +57,18 @@ export function Register({ onDone }: { onDone: (account: Account) => void }) {
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      {/* The scroll edge effect is a native property, not a gradient we draw:
-          `ScrollViewMarker` hands the UIScrollEdgeEffect to the ScrollView in
-          its subtree, the same `top: 'soft'` the tab screens get from the
-          Stack in `app/_layout.tsx`. The gate is not a native Screen, so this
-          is how the register gets the real effect rather than an imitation. */}
+      {/* The scroll edge effect is a native property of a Screen, not a
+          gradient we draw: `Screen` carries `topScrollEdgeEffect` and
+          `ScrollViewMarker` points it at the ScrollView in its subtree. The
+          gate is not a navigator, so the register brings its own Screen and
+          gets the same `top: 'soft'` the tab screens get from the Stack in
+          `app/_layout.tsx`. */}
+      <ScreenContainer style={{ flexGrow: 1, flexShrink: 1 }}>
+      <Screen
+        activityState={2}
+        style={{ flex: 1 }}
+        scrollEdgeEffects={{ top: 'soft', bottom: 'hidden', left: 'automatic', right: 'automatic' }}
+      >
       <ScrollViewMarker
         style={{ flexGrow: 1, flexShrink: 1 }}
         scrollEdgeEffects={{ top: 'soft', bottom: 'hidden', left: 'automatic', right: 'automatic' }}
@@ -149,6 +157,8 @@ export function Register({ onDone }: { onDone: (account: Account) => void }) {
 
       </ScrollView>
       </ScrollViewMarker>
+      </Screen>
+      </ScreenContainer>
 
       {/* The design puts the primary action at the foot of the screen
           (`design/rungs-ui.pdf`, "Join a gym"). It stays there: opening a
