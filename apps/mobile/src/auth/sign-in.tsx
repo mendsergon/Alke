@@ -73,25 +73,28 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
           </Txt>
         </View>
 
-        <View style={{ marginTop: tokens.space[32] }}>
-          {/* Absolutely placed above the field: the message appears in the gap
-              that is already there, so nothing below it moves. */}
-          {error ? (
-            <Txt
-              variant="captionTight"
-              color={c.destructive}
-              accessibilityLiveRegion="polite"
-              style={{
-                position: 'absolute',
-                left: 0,
-                right: 0,
-                bottom: '100%',
-                marginBottom: tokens.space[8],
-              }}
-            >
-              {error}
-            </Txt>
-          ) : null}
+        <View style={{ marginTop: tokens.space[20] }}>
+          {/* One caption line of height, reserved whether or not there is a
+              message, so showing one moves nothing on the screen. It sits
+              nearer the field than the line above it, because it belongs to
+              the field. */}
+          <View
+            style={{
+              height: tokens.type.captionTight.lineHeight,
+              marginBottom: tokens.space[8],
+              justifyContent: 'center',
+            }}
+          >
+            {error ? (
+              <Txt
+                variant="captionTight"
+                color={c.destructive}
+                accessibilityLiveRegion="polite"
+              >
+                {error}
+              </Txt>
+            ) : null}
+          </View>
           <TextInput
             value={email}
             onChangeText={(next) => {
