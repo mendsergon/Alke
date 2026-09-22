@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Screen, ScreenContainer } from 'react-native-screens';
-import { ScrollViewMarker } from 'react-native-screens/experimental';
 import { PrimaryButton } from '../components/surfaces';
 import { SelectField } from '../components/select-field';
 import { DateOfBirthField, type DatePart } from '../components/date-of-birth-field';
@@ -57,22 +55,6 @@ export function Register({ onDone }: { onDone: (account: Account) => void }) {
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      {/* The scroll edge effect is a native property of a Screen, not a
-          gradient we draw: `Screen` carries `topScrollEdgeEffect` and
-          `ScrollViewMarker` points it at the ScrollView in its subtree. The
-          gate is not a navigator, so the register brings its own Screen and
-          gets the same `top: 'soft'` the tab screens get from the Stack in
-          `app/_layout.tsx`. */}
-      <ScreenContainer style={{ flexGrow: 1, flexShrink: 1 }}>
-      <Screen
-        activityState={2}
-        style={{ flex: 1 }}
-        scrollEdgeEffects={{ top: 'soft', bottom: 'hidden', left: 'automatic', right: 'automatic' }}
-      >
-      <ScrollViewMarker
-        style={{ flexGrow: 1, flexShrink: 1 }}
-        scrollEdgeEffects={{ top: 'soft', bottom: 'hidden', left: 'automatic', right: 'automatic' }}
-      >
       <ScrollView
         style={{ flexGrow: 1 }}
         contentContainerStyle={{
@@ -93,6 +75,7 @@ export function Register({ onDone }: { onDone: (account: Account) => void }) {
         <Labelled label="Name" error={errors.name}>
           <Entry
             value={account.name}
+            invalid={errors.name !== undefined}
             onChangeText={(v) => set('name', v)}
             placeholder="Ελένη"
             label="Name"
@@ -105,6 +88,7 @@ export function Register({ onDone }: { onDone: (account: Account) => void }) {
         <Labelled label="Surname" error={errors.surname}>
           <Entry
             value={account.surname}
+            invalid={errors.surname !== undefined}
             onChangeText={(v) => set('surname', v)}
             placeholder="Papadopoulou"
             label="Surname"
@@ -117,6 +101,7 @@ export function Register({ onDone }: { onDone: (account: Account) => void }) {
         <Labelled label="Username" error={errors.username}>
           <Entry
             value={account.username}
+            invalid={errors.username !== undefined}
             onChangeText={(v) => set('username', v)}
             placeholder="eleni"
             label="Username"
@@ -132,6 +117,7 @@ export function Register({ onDone }: { onDone: (account: Account) => void }) {
           <View style={{ flexGrow: 3, flexBasis: 0 }}>
             <Labelled label="Date of birth" error={errors.dateOfBirth}>
               <DateOfBirthField
+                invalid={errors.dateOfBirth !== undefined}
                 value={account.dateOfBirth}
                 open={openList === 'gender' ? null : openList}
                 onToggle={(part) => setOpenList((p) => (p === part ? null : part))}
@@ -143,6 +129,7 @@ export function Register({ onDone }: { onDone: (account: Account) => void }) {
             <Labelled label="Gender" error={errors.gender}>
               <SelectField
                 align="center"
+                invalid={errors.gender !== undefined}
                 accessibilityLabel="Gender"
                 placeholder="Gender"
                 value={account.gender}
@@ -156,9 +143,6 @@ export function Register({ onDone }: { onDone: (account: Account) => void }) {
         </View>
 
       </ScrollView>
-      </ScrollViewMarker>
-      </Screen>
-      </ScreenContainer>
 
       {/* The design puts the primary action at the foot of the screen
           (`design/rungs-ui.pdf`, "Join a gym"). It stays there: opening a
@@ -205,7 +189,12 @@ function Labelled({
         }}
       >
         {error ? (
-          <Txt variant="captionTight" color={c.destructive} accessibilityLiveRegion="polite">
+          <Txt
+            variant="captionTight"
+            color={c.destructive}
+            numberOfLines={1}
+            accessibilityLiveRegion="polite"
+          >
             {error}
           </Txt>
         ) : null}
@@ -217,6 +206,7 @@ function Labelled({
 /** The design's input: `surfaceRaised`, 12px radius, 2px accent border focused. */
 function Entry({
   value,
+  invalid = false,
   onChangeText,
   placeholder,
   label,
@@ -226,6 +216,7 @@ function Entry({
   autoCapitalize = 'words',
 }: {
   value: string;
+  invalid?: boolean;
   onChangeText: (v: string) => void;
   placeholder: string;
   label: string;
@@ -252,7 +243,7 @@ function Entry({
         borderRadius: tokens.radius.button,
         backgroundColor: focused ? c.surfaceRaised : c.surface,
         borderWidth: focused ? 2 : 1,
-        borderColor: focused ? c.accent : c.border,
+        borderColor: focused ? c.accent : invalid ? c.destructive : c.border,
         color: c.text,
         fontFamily: tokens.fontFamily.sansRegular,
         fontSize: tokens.type.body.size,

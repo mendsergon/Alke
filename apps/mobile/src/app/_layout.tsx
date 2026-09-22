@@ -310,6 +310,19 @@ function Navigator() {
       >
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="session" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+        {/* Fade, not a push: the gate hands over rather than sliding.
+            No gesture: the account is not optional. */}
+        <Stack.Screen
+          name="register"
+          options={{
+            animation: 'fade',
+            gestureEnabled: false,
+            // Transparent so the app stays visible through the register's
+            // glass, the way it is through the gate's.
+            presentation: 'transparentModal',
+            contentStyle: { backgroundColor: 'transparent' },
+          }}
+        />
         <Stack.Screen name="account" />
         <Stack.Screen name="join-gym" />
         <Stack.Screen name="report" />

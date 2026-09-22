@@ -16,6 +16,13 @@
  * is shown on the same line as the rest.
  */
 
+/**
+ * A field that is simply missing does not need a sentence — the box is marked
+ * and the person can see it is empty. This is that: present in the errors, with
+ * nothing to say. Only a rule that was actually broken gets words.
+ */
+export const MISSING = '';
+
 /** Letters from any alphabet, nothing else. Unicode-aware, so Ελένη passes. */
 export const LETTERS_ONLY = /^\p{L}+$/u;
 
@@ -82,7 +89,7 @@ export const EMPTY_ACCOUNT: Account = {
 /** A person-name field: required, letters only. `label` names it in the message. */
 function checkLetters(value: string, label: string): string | null {
   const v = value.trim();
-  if (v.length === 0) return `${label} is required.`;
+  if (v.length === 0) return MISSING;
   if (!LETTERS_ONLY.test(v)) return `${label} takes letters only — no numbers.`;
   return null;
 }
@@ -96,7 +103,7 @@ export function checkSurname(value: string): string | null {
 }
 
 export function checkUsername(value: string): string | null {
-  if (value.trim().length === 0) return 'Username is required.';
+  if (value.trim().length === 0) return MISSING;
   return null;
 }
 
@@ -106,7 +113,7 @@ export function checkUsername(value: string): string | null {
  * became: a Date given an impossible day rolls into the next month.
  */
 export function checkDateOfBirth(dob: DateOfBirth, today = new Date()): string | null {
-  if (!dob.day || !dob.month || !dob.year) return 'Date of birth is required.';
+  if (!dob.day || !dob.month || !dob.year) return MISSING;
 
   const monthIndex = (MONTH_OPTIONS as readonly string[]).indexOf(dob.month);
   const day = Number(dob.day);
@@ -149,7 +156,7 @@ export function toIsoDate(dob: DateOfBirth): string {
 }
 
 export function checkGender(value: string): string | null {
-  if (value.length === 0) return 'Gender is required.';
+  if (value.length === 0) return MISSING;
   if (!(GENDER_OPTIONS as readonly string[]).includes(value)) {
     return 'Pick a gender from the list.';
   }
@@ -177,7 +184,7 @@ export function checkAccount(a: Account): AccountErrors {
     ['subscriptionStatus', checkSubscriptionStatus(a.subscriptionStatus)],
   ];
   for (const [key, message] of pairs) {
-    if (message) errors[key] = message;
+    if (message !== null) errors[key] = message;
   }
   return errors;
 }

@@ -16,7 +16,6 @@ import { PrimaryButton } from '../components/surfaces';
 import { Txt } from '../theme/text';
 import { tokens, useTheme } from '../theme/theme';
 import { useAuth } from './auth';
-import { Register } from './register';
 import { VerifyEmail } from './verify-email';
 import { AppleMark, GoogleMark } from './brand-marks';
 
@@ -35,7 +34,7 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
   const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   /** One sheet of glass, three faces: the address, the wait, the account. */
-  const [step, setStep] = useState<'email' | 'verify' | 'register'>('email');
+  const [step, setStep] = useState<'email' | 'verify'>('email');
   const [focused, setFocused] = useState(false);
 
   const enter = (address: string) => {
@@ -242,13 +241,13 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
           <VerifyEmail
             active={step === 'verify'}
             email={email.trim()}
-            onConfirmed={() => setStep('register')}
+            onConfirmed={() => {
+              enter(email);
+              router.push('/register');
+            }}
             onResend={() => setNote('The link is on its way again.')}
           />
         ) : null}
-      </Face>
-      <Face turn={turn} index={2} active={step === 'register'}>
-        {built.has('register') ? <Register onDone={() => enter(email)} /> : null}
       </Face>
     </View>
   );
@@ -258,7 +257,7 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
 const TURN = 340;
 
 /** The three faces in the order the gate turns them over. */
-const FACE_ORDER = ['email', 'verify', 'register'] as const;
+const FACE_ORDER = ['email', 'verify'] as const;
 
 /**
  * One face of the glass. Only the face the gate is on is opaque and takes

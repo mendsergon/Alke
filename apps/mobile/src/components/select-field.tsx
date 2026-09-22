@@ -23,6 +23,7 @@ export function SelectField({
   accessibilityLabel,
   align = 'left',
   display,
+  invalid = false,
 }: {
   value: string;
   placeholder: string;
@@ -36,8 +37,10 @@ export function SelectField({
    * equal boxes on one line, the value in the middle of each.
    */
   align?: 'left' | 'center';
-  /** What the box shows, when that is not the value itself (September → 9). */
+  /** What the box shows, when that is not the value itself. */
   display?: string;
+  /** Marked because it is missing or wrong; the box says so without words. */
+  invalid?: boolean;
 }) {
   const { c } = useTheme();
   const scroller = useRef<ScrollView>(null);
@@ -95,7 +98,7 @@ export function SelectField({
           borderRadius: tokens.radius.button,
           backgroundColor: open ? c.surfaceRaised : c.surface,
           borderWidth: open ? 2 : 1,
-          borderColor: open ? c.accent : c.border,
+          borderColor: open ? c.accent : invalid ? c.destructive : c.border,
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: align === 'center' ? 'center' : 'flex-start',

@@ -95,6 +95,7 @@ export default function AccountScreen() {
           <Entry
             label="Name"
             value={account.name}
+            invalid={errors.name !== undefined}
             onChangeText={(v) => set('name', v)}
             placeholder="Ελένη"
             focused={focused === 'name'}
@@ -107,6 +108,7 @@ export default function AccountScreen() {
           <Entry
             label="Surname"
             value={account.surname}
+            invalid={errors.surname !== undefined}
             onChangeText={(v) => set('surname', v)}
             placeholder="Papadopoulou"
             focused={focused === 'surname'}
@@ -119,6 +121,7 @@ export default function AccountScreen() {
           <Entry
             label="Username"
             value={account.username}
+            invalid={errors.username !== undefined}
             onChangeText={(v) => set('username', v)}
             placeholder="eleni"
             autoCapitalize="none"
@@ -133,6 +136,7 @@ export default function AccountScreen() {
           <View style={{ flexGrow: 3, flexBasis: 0 }}>
             <Labelled label="Date of birth" error={errors.dateOfBirth}>
               <DateOfBirthField
+                invalid={errors.dateOfBirth !== undefined}
                 value={account.dateOfBirth}
                 open={openList === 'gender' ? null : openList}
                 onToggle={(part) => setOpenList((p) => (p === part ? null : part))}
@@ -144,6 +148,7 @@ export default function AccountScreen() {
             <Labelled label="Gender" error={errors.gender}>
               <SelectField
                 align="center"
+                invalid={errors.gender !== undefined}
                 accessibilityLabel="Gender"
                 placeholder="Gender"
                 value={account.gender}
@@ -199,7 +204,12 @@ function Labelled({
         }}
       >
         {error ? (
-          <Txt variant="captionTight" color={c.destructive} accessibilityLiveRegion="polite">
+          <Txt
+            variant="captionTight"
+            color={c.destructive}
+            numberOfLines={1}
+            accessibilityLiveRegion="polite"
+          >
             {error}
           </Txt>
         ) : null}
@@ -211,6 +221,7 @@ function Labelled({
 /** The design's input: `surfaceRaised`, 12px radius, 2px accent border focused. */
 function Entry({
   value,
+  invalid = false,
   onChangeText,
   placeholder,
   label,
@@ -220,6 +231,7 @@ function Entry({
   autoCapitalize = 'words',
 }: {
   value: string;
+  invalid?: boolean;
   onChangeText: (v: string) => void;
   placeholder: string;
   label: string;
@@ -246,7 +258,7 @@ function Entry({
         borderRadius: tokens.radius.button,
         backgroundColor: focused ? c.surfaceRaised : c.surface,
         borderWidth: focused ? 2 : 1,
-        borderColor: focused ? c.accent : c.border,
+        borderColor: focused ? c.accent : invalid ? c.destructive : c.border,
         color: c.text,
         fontFamily: tokens.fontFamily.sansRegular,
         fontSize: tokens.type.body.size,

@@ -24,12 +24,15 @@ export function DateOfBirthField({
   open,
   onToggle,
   onChange,
+  invalid = false,
 }: {
   value: DateOfBirth;
   /** Which of the three has its list down, if any. */
   open: DatePart | null;
   onToggle: (part: DatePart) => void;
   onChange: (next: DateOfBirth) => void;
+  /** Marked because the date is missing or impossible. */
+  invalid?: boolean;
 }) {
   const years = yearOptions();
   return (
@@ -43,6 +46,7 @@ export function DateOfBirthField({
         open={open}
         onToggle={onToggle}
         onSelect={(day) => onChange({ ...value, day })}
+        invalid={invalid && !value.day}
       />
       <Box
         label="Month"
@@ -56,6 +60,7 @@ export function DateOfBirthField({
         open={open}
         onToggle={onToggle}
         onSelect={(month) => onChange({ ...value, month })}
+        invalid={invalid && !value.month}
         grow={1.15}
       />
       <Box
@@ -67,6 +72,7 @@ export function DateOfBirthField({
         open={open}
         onToggle={onToggle}
         onSelect={(year) => onChange({ ...value, year })}
+        invalid={invalid && !value.year}
         grow={1.25}
       />
     </View>
@@ -88,6 +94,7 @@ function Box({
   open,
   onToggle,
   onSelect,
+  invalid = false,
   grow = 1,
 }: {
   label: string;
@@ -99,12 +106,14 @@ function Box({
   open: DatePart | null;
   onToggle: (part: DatePart) => void;
   onSelect: (next: string) => void;
+  invalid?: boolean;
   grow?: number;
 }) {
   return (
     <View style={{ flexGrow: grow, flexBasis: 0 }}>
       <SelectField
         align="center"
+        invalid={invalid}
         accessibilityLabel={label}
         placeholder={placeholder}
         value={value}
