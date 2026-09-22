@@ -33,6 +33,20 @@ export const LETTERS_ONLY = /^\p{L}+$/u;
  */
 export const ENGLISH_ONLY = /^[A-Za-z0-9]+$/;
 
+/**
+ * An address the server will accept: something, an @, a domain with a dot in
+ * it. Deliberately not a full grammar — the link that gets sent is what really
+ * decides whether an address exists.
+ */
+export const LOOKS_LIKE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export function checkEmail(value: string): string | null {
+  const v = value.trim();
+  if (v.length === 0) return MISSING;
+  if (!LOOKS_LIKE_EMAIL.test(v)) return 'That is not an email address.';
+  return null;
+}
+
 export const PREFER_NOT_TO_SAY = 'Prefer not to say';
 
 /** The youngest and oldest Alke accepts, in years, today. */

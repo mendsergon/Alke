@@ -87,11 +87,19 @@ export async function createAccount(
     | null;
 
   const fields: AccountErrors = {};
+  const elsewhere: string[] = [];
   for (const [column, detail] of Object.entries(payload?.data ?? {})) {
     const field = FIELD_NAMES[column];
-    if (field && field !== 'email') fields[field] = detail?.message ?? '';
+    if (field && field !== 'email') {
+      fields[field] = detail?.message ?? '';
+    } else if (detail?.message) {
+      // Something this form does not own — the address, say. Its own words are
+      // worth more than "Failed to create record".
+      elsewhere.push(detail.message);
+    }
   }
 
-  const unclaimed = Object.keys(fields).length === 0;
-  return { fields, message: unclaimed ? (payload?.message ?? 'That did not save.') : null };
+  if (elsewhere.length > 0) return { fields, message: elsewhere[0] ?? null };
+  if (Object.keys(fields).length > 0) return { fields, message: null };
+  return { fields, message: payload?.message ?? 'That did not save.' };
 }

@@ -15,6 +15,7 @@ import { AlkeMark } from '../components/alke-mark';
 import { PrimaryButton } from '../components/surfaces';
 import { Txt } from '../theme/text';
 import { tokens, useTheme } from '../theme/theme';
+import { checkEmail } from '../account/account-fields';
 import { useAuth } from './auth';
 import { Register } from './register';
 import { VerifyEmail } from './verify-email';
@@ -46,17 +47,21 @@ export function SignIn({ onGlass = false }: { onGlass?: boolean } = {}) {
   // Ben's is the account that already exists (PLAN.md §2, "Sign-in gate") and
   // goes straight in. Any other address is new, so it is asked to register.
   const submit = () => {
-    if (email.trim().length === 0) {
-      setError('That email is wrong.');
-      return;
-    }
-    setError(null);
-    // Ben's account already exists and goes straight in. A new address turns
-    // the glass over to the wait, and the wait hands off to the register.
+    // Ben is the account that already exists while there is no real sign-in
+    // (PLAN.md §2), so it is let through before the address is judged.
     if (email.toLowerCase().includes('ben')) {
+      setError(null);
       enter(email);
       return;
     }
+    // Anything else is going to be written to the server, and the server will
+    // not take something that is not an address. Better to say so here.
+    const wrong = checkEmail(email);
+    if (wrong !== null) {
+      setError(wrong || 'That email is wrong.');
+      return;
+    }
+    setError(null);
     setStep('verify');
   };
 
