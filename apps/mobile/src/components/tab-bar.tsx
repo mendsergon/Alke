@@ -2,6 +2,7 @@ import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/theme';
 import { Txt } from '../theme/text';
+import { Arriving } from './arrival';
 import { Icon, type IconName } from './icon';
 import { MiniBar } from './mini-bar';
 
@@ -25,7 +26,10 @@ export function TabBar({ state, navigation }: TabBarProps) {
   const current = state.routes[state.index]?.name;
 
   return (
-    <View>
+    // The bar is the app's frame, so it arrives first and the screen's blocks
+    // follow it in. Left out of the procession it snaps to full brightness
+    // while the content is still on its way, and the seam shows.
+    <Arriving index={0}>
       <MiniBar />
       <View
         style={{
@@ -71,6 +75,6 @@ export function TabBar({ state, navigation }: TabBarProps) {
           );
         })}
       </View>
-    </View>
+    </Arriving>
   );
 }
