@@ -125,6 +125,31 @@ const PATHS: Record<string, (p: { s: string; w: number }) => ReactNode> = {
     </>
   ),
   diamond: ({ s, w }) => <Path d="M12 3.5 20 12l-8 8.5L4 12z" stroke={s} strokeWidth={w} />,
+  // The sheet's `log`: end collars, two plates, the bar between them.
+  barbell: ({ s, w }) => (
+    <>
+      <Path d="M4 10.5v3" stroke={s} strokeWidth={w} />
+      <Path d="M8 7.5v9" stroke={s} strokeWidth={w} />
+      <Path d="M16 7.5v9" stroke={s} strokeWidth={w} />
+      <Path d="M20 10.5v3" stroke={s} strokeWidth={w} />
+      <Path d="M8 12h8" stroke={s} strokeWidth={w} />
+    </>
+  ),
+  // Not on the sheet. Drawn to its rule — 24x24, stroked, round caps — for
+  // the two Profile rows the design never drew.
+  contrast: ({ s, w }) => (
+    <>
+      <Circle cx={12} cy={12} r={7.5} stroke={s} strokeWidth={w} />
+      <Path d="M12 4.5v15" stroke={s} strokeWidth={w} />
+    </>
+  ),
+  signOut: ({ s, w }) => (
+    <>
+      <Path d="M12 4.5H6.5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2H12" stroke={s} strokeWidth={w} />
+      <Path d="M10.5 12h9" stroke={s} strokeWidth={w} />
+      <Path d="M16 8.5 19.5 12 16 15.5" stroke={s} strokeWidth={w} />
+    </>
+  ),
 };
 
 export type IconName = keyof typeof PATHS;
