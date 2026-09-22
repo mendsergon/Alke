@@ -5,7 +5,6 @@ import Animated, {
   Extrapolation,
   interpolate,
   ReduceMotion,
-  useAnimatedProps,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
@@ -131,8 +130,6 @@ const SCRIM = 0.4;
 /** The beat of bare glass: the sign-in has gone, Home has not started. */
 const ARRIVAL_HOLD = 130;
 
-const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
-
 function Gate() {
   const { c, scheme } = useTheme();
   const { entered } = useAuth();
@@ -219,10 +216,6 @@ function Gate() {
     ],
   }));
 
-  const blurProps = useAnimatedProps(() => ({
-    intensity: interpolate(glass.get(), [0, 1], [0, GLASS_BLUR], Extrapolation.CLAMP),
-  }));
-
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
@@ -255,9 +248,11 @@ function Gate() {
                 style={StyleSheet.absoluteFill}
               />
             ) : (
-              <AnimatedBlurView
-                animatedProps={solid ? undefined : blurProps}
-                intensity={solid ? 0 : undefined}
+              <BlurView
+                // Static. Animating a full-screen blur's radius re-renders the
+                // blur on every frame, which is what made the transition drag;
+                // the pane's own opacity and scale carry the motion instead.
+                intensity={solid ? 0 : GLASS_BLUR}
                 tint={scheme === 'dark' ? 'systemMaterialDark' : 'systemMaterialLight'}
                 style={[StyleSheet.absoluteFill, { backgroundColor: solid ? c.bg : `${c.bg}A6` }]}
               />
@@ -289,6 +284,11 @@ function Navigator() {
           headerTransparent: true,
           headerTitle: '',
           headerBackVisible: false,
+          // The effect covers the navigation bar's region, so a bar with only
+          // the compact height gives a shallow band. The large-title layout
+          // reserves a much taller one — with no title set, all it adds is
+          // depth for the effect to work over.
+          headerLargeTitleEnabled: true,
           contentStyle: { backgroundColor: c.bg },
           // The system's own scroll edge effect (`UIScrollEdgeEffect`), which
           // varies the blur radius continuously across the edge. Rebuilt in
