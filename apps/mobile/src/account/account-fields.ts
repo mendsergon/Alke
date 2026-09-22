@@ -6,7 +6,7 @@
  * live collection:
  *
  *   name, surname          text,   required, pattern ^\p{L}+$
- *   username               text,   required, unique index idx_users_username
+ *   username               text,   required, English, unique index idx_users_username
  *   date_of_birth          date,   required, a real date, 15 to 100 today
  *   gender                 select, required, GENDER_OPTIONS
  *   subscription_status    select, required, SUBSCRIPTION_OPTIONS
@@ -25,6 +25,13 @@ export const MISSING = '';
 
 /** Letters from any alphabet, nothing else. Unicode-aware, so Ελένη passes. */
 export const LETTERS_ONLY = /^\p{L}+$/u;
+
+/**
+ * A username is English. Names carry whatever alphabet the person's name is
+ * written in; a handle is typed, shared and searched by other people, so it
+ * stays in the one alphabet everyone can reach.
+ */
+export const ENGLISH_ONLY = /^[A-Za-z0-9]+$/;
 
 export const PREFER_NOT_TO_SAY = 'Prefer not to say';
 
@@ -103,7 +110,9 @@ export function checkSurname(value: string): string | null {
 }
 
 export function checkUsername(value: string): string | null {
-  if (value.trim().length === 0) return MISSING;
+  const v = value.trim();
+  if (v.length === 0) return MISSING;
+  if (!ENGLISH_ONLY.test(v)) return 'Username takes English letters and numbers.';
   return null;
 }
 
