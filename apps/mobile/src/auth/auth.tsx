@@ -134,7 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setEntered(false);
         setRegistering(false);
-        void clearEverything();
+        void clearToken();
       },
     }),
     [
