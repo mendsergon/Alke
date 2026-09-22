@@ -94,3 +94,22 @@ It draws with `@shopify/react-native-skia` and takes its geometry from
 > not survive a clean checkout. Two ways out — anchor the rule to `/vendor/`,
 > or move the port to a directory not called `vendor`. Stavros decides; nothing
 > has been changed.
+
+## Backend
+
+| Package | Version | Licence | Source |
+|---|---|---|---|
+| `github.com/pocketbase/pocketbase` | v0.40.4 | MIT | https://github.com/pocketbase/pocketbase/releases/tag/v0.40.4 — latest non-prerelease, published 2026-09-12, read from the GitHub releases API |
+| Go toolchain | 1.27 | BSD-3-Clause | https://raw.githubusercontent.com/pocketbase/pocketbase/v0.40.4/go.mod — the pinned tag's own `go` directive |
+
+Notes.
+
+- PLAN.md §4 pins an exact tag because PocketBase is pre-1.0. v0.40.4 is that
+  tag; every upgrade needs its changelog read first.
+- The licence was read from
+  https://raw.githubusercontent.com/pocketbase/pocketbase/v0.40.4/LICENSE.md
+  — MIT, so no copyleft question under PLAN.md §4.
+- pocketbase.io/docs/go-overview states Go 1.23+; the pinned tag's `go.mod`
+  requires 1.27. The tag wins.
+- OPEN: the Go module path is `alke/backend`, a local name. PLAN.md fixes no
+  module path and there is no decision on where the backend is hosted.
