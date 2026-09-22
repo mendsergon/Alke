@@ -1,6 +1,21 @@
-import { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { AccessibilityInfo, StyleSheet, View } from 'react-native';
+import Animated, {
+  Easing,
+  Extrapolation,
+  interpolate,
+  ReduceMotion,
+  useAnimatedProps,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withDelay,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { BlurView } from 'expo-blur';
+import { GlassView, isGlassEffectAPIAvailable } from 'expo-glass-effect';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -18,43 +33,112 @@ import { SessionProvider } from '../session/session';
 import { GymProvider } from '../gym/gym';
 import { AuthProvider, useAuth } from '../auth/auth';
 import { SignIn } from '../auth/sign-in';
+import { ArrivalProvider } from '../components/arrival';
 import { LibraryProvider } from '../library/library';
 
 SplashScreen.preventAutoHideAsync();
 
 /**
- * The app opens on sign-in; Continue is what gets you past it.
+ * Signing in is two things at once: a sheet of glass de-materializes, and the
+ * app materializes through it.
  *
- * Signing in is not a cut. The gate lifts: it fades and rises a little while
- * the app settles in from just below full size underneath it. One movement,
- * answering the tap, and nothing animates after it.
+ * The second half is the one that matters, and it is the one that is easy to
+ * miss. A gate that merely uncovers a finished screen has not transitioned into
+ * anything — the app reads as having launched while you were not looking,
+ * whatever the gate did on its way out. So Home is not waiting there complete.
+ * It is suspended: held back and dim behind the glass, which through the blur
+ * is the soft field of light a material needs in order to be a material at all.
+ * As the glass releases, Home comes forward into itself, block after block. It
+ * arrives by depth, not by displacement — a block sliding a few pixels up has
+ * moved, but it has not resolved into anything.
+ *
+ * The glass follows apple-design §12 literally:
+ *
+ *   "Materialize, don't just fade. For glass/blur surfaces, animate blur radius
+ *    and scale together on enter/exit, so the surface reads as a real material
+ *    arriving rather than a plain opacity fade."
+ *
+ *   "Dim to focus, separate to keep flow. A modal task pairs the surface with a
+ *    dimming scrim and pushes the background back."
+ *
+ * So the pane does not travel anywhere. It loses its size and its blur
+ * together, in place, and the app comes forward out of its recess through it.
+ *
+ * The material is `GlassView` (iOS 26 `UIGlassEffect`) wherever the runtime has
+ * it: Liquid Glass proper, which bends what is behind it instead of only
+ * blurring it. That refraction is the difference between glass and frost, and
+ * it is why the suspended screen underneath has to be lit. `BlurView` is the
+ * fallback, and there the blur radius carries what the refraction would have.
+ *
+ * The two halves overlap rather than queue — the app is already on its way up
+ * while the glass is still going, so the in-between frames point at the outcome
+ * (§8). Enter and exit are the same path reversed (§7).
+ *
+ * Everything animated is transform, opacity or blur radius — no layout pass —
+ * and it runs on the UI thread through Reanimated worklets, so a busy JS thread
+ * cannot stutter it.
  */
+
+/** A spring, not a curve: interruptible and re-targetable mid-flight (§4). */
+const RELEASE = {
+  duration: 420,
+  dampingRatio: 0.9,
+  // Reduced motion is decided below; the spring must not skip to its end value
+  // behind that decision.
+  reduceMotion: ReduceMotion.Never,
+} as const;
+
 /**
- * Signing in lifts a pane of glass off the app.
- *
- * Following the apple-design skill: the gate is a real translucent material
- * over the app, not a second screen. It does not merely fade — blur radius,
- * scale and opacity move together, so the glass reads as a material leaving
- * rather than a layer being cross-faded (§12, "materialize, don't just
- * fade"). The motion is a spring, not a fixed curve, so it stays
- * interruptible and can be re-targeted mid-flight (§4).
+ * The arrival is not a spring. It is a staggered procession with no finger on
+ * it, so it takes a strong ease-out and runs longer than the glass: the last
+ * block is still settling after the pane has gone.
  */
-const GLASS_BLUR = 48;
-const SPRING = { stiffness: 140, damping: 22, mass: 1, useNativeDriver: true } as const;
+const ARRIVE = {
+  duration: 820,
+  easing: Easing.bezier(0.23, 1, 0.32, 1),
+  reduceMotion: ReduceMotion.Never,
+} as const;
+
+/** Reduced motion keeps the state legible and drops travel and scale (§14). */
+const REDUCED = { duration: 200, reduceMotion: ReduceMotion.Never } as const;
+
+/**
+ * OPEN: PLAN.md §3 defines no motion or material tokens, so the timings above
+ * and the three values below are choices in code, not plan values.
+ */
+const GLASS_BLUR = 56;
+/** The size the glass forms from and returns to. Never 0 — nothing appears from nothing. */
+const GLASS_GONE = 0.94;
+/** How far back the app sits under the glass, before it comes forward. */
+const APP_RECESSED = 0.96;
+/**
+ * How far the scrim dims the app. It dims; it does not cover. An opaque scrim
+ * leaves the glass with nothing behind it, and glass with nothing behind it is
+ * a coloured rectangle — which is exactly how a transition collapses back into
+ * a fade.
+ */
+const SCRIM = 0.4;
+/** The beat of bare glass: the sign-in has gone, Home has not started. */
+const ARRIVAL_HOLD = 130;
 
 const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
 
 function Gate() {
   const { c, scheme } = useTheme();
   const { entered } = useAuth();
-  // Transforms and opacity run on the native driver; blur radius cannot, so
-  // it gets its own value driven with the same spring.
-  const lift = useRef(new Animated.Value(entered ? 1 : 0)).current;
-  const glass = useRef(new Animated.Value(entered ? 0 : 1)).current;
+  const reduced = useReducedMotion();
+
+  // 1 = the glass is formed over the app. 0 = it is gone.
+  const glass = useSharedValue(entered ? 0 : 1);
+  // 0 = the app is suspended behind the glass. 1 = it has arrived.
+  const arrival = useSharedValue(entered ? 1 : 0);
   const [gateMounted, setGateMounted] = useState(!entered);
   const [solid, setSolid] = useState(false);
+  // Liquid Glass is missing on some iOS 26 betas and on every other platform,
+  // and touching it there crashes. Frost is the fallback.
+  const [liquid] = useState(isGlassEffectAPIAvailable);
 
-  // Reduced transparency: a frosted pane becomes a solid one (§14).
+  // Reduced transparency: a translucent pane becomes an opaque one (§14).
   useEffect(() => {
     let alive = true;
     AccessibilityInfo.isReduceTransparencyEnabled().then((on) => {
@@ -68,51 +152,107 @@ function Gate() {
   }, []);
 
   useEffect(() => {
-    if (entered) setGateMounted(true);
-    const to = entered ? 1 : 0;
-    const run = Animated.parallel([
-      Animated.spring(lift, { ...SPRING, toValue: to }),
-      Animated.spring(glass, { ...SPRING, toValue: 1 - to, useNativeDriver: false }),
-    ]);
-    run.start(({ finished }) => {
-      if (finished && entered) setGateMounted(false);
-    });
-    return () => run.stop();
-  }, [entered, lift, glass]);
+    if (!entered) {
+      setGateMounted(true);
+      glass.set(reduced ? withTiming(1, REDUCED) : withSpring(1, RELEASE));
+      arrival.set(withTiming(0, reduced ? REDUCED : ARRIVE));
+      return;
+    }
+    const done = (finished?: boolean) => {
+      'worklet';
+      // Once the glass is gone it leaves the tree, so nothing is blurring an
+      // app nobody is looking through.
+      if (finished) scheduleOnRN(setGateMounted, false);
+    };
+    glass.set(reduced ? withTiming(0, REDUCED, done) : withSpring(0, RELEASE, done));
+    arrival.set(reduced ? withTiming(1, REDUCED) : withDelay(ARRIVAL_HOLD, withTiming(1, ARRIVE)));
+  }, [entered, glass, arrival, reduced]);
 
-  const intensity = glass.interpolate({ inputRange: [0, 1], outputRange: [0, GLASS_BLUR] });
-  const glassOpacity = lift.interpolate({ inputRange: [0, 1], outputRange: [1, 0] });
-  // The pane pulls toward the viewer as it goes, the way glass lifts away.
-  const glassScale = lift.interpolate({ inputRange: [0, 1], outputRange: [1, 1.06] });
-  const appScale = lift.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] });
+  // The app comes out of its recess as the glass loses its hold on it.
+  const appStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        scale: reduced
+          ? 1
+          : interpolate(glass.get(), [0, 1], [1, APP_RECESSED], Extrapolation.CLAMP),
+      },
+    ],
+  }));
+
+  // The dimming that focus costs, lifting with the surface that imposed it.
+  const scrimStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(glass.get(), [0, 1], [0, SCRIM], Extrapolation.CLAMP),
+  }));
+
+  // Size and radius together — the pane's own de-materializing (§12).
+  const paneStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(glass.get(), [0, 0.5, 1], [0, 0.94, 1], Extrapolation.CLAMP),
+    transform: [
+      {
+        scale: reduced
+          ? 1
+          : interpolate(glass.get(), [0, 1], [GLASS_GONE, 1], Extrapolation.CLAMP),
+      },
+    ],
+  }));
+
+  // The sign-in is gone inside the first fifth of the release, well before Home
+  // starts to rise. Overlap the two and they read as one cross-fade — two
+  // legible layers in the same place at the same time is the whole definition
+  // of one. So this is a hand-off, not a blend: writing off the glass, a beat
+  // of bare material, then the app coming up through it.
+  const contentStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(glass.get(), [0.82, 1], [0, 1], Extrapolation.CLAMP),
+    // It goes back into the glass rather than dissolving where it stands.
+    transform: [
+      { scale: reduced ? 1 : interpolate(glass.get(), [0.82, 1], [0.97, 1], Extrapolation.CLAMP) },
+    ],
+  }));
+
+  const blurProps = useAnimatedProps(() => ({
+    intensity: interpolate(glass.get(), [0, 1], [0, GLASS_BLUR], Extrapolation.CLAMP),
+  }));
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-      <Animated.View style={{ flex: 1, opacity: lift, transform: [{ scale: appScale }] }}>
-        <Navigator />
+      <Animated.View style={[{ flex: 1 }, appStyle]}>
+        <ArrivalProvider progress={arrival}>
+          <Navigator />
+        </ArrivalProvider>
       </Animated.View>
       {gateMounted ? (
-        <Animated.View
-          style={[
-            StyleSheet.absoluteFill,
-            { opacity: glassOpacity, transform: [{ scale: glassScale }] },
-          ]}
-          pointerEvents={entered ? 'none' : 'auto'}
-        >
-          <AnimatedBlurView
-            intensity={solid ? GLASS_BLUR : intensity}
-            tint={scheme === 'dark' ? 'systemMaterialDark' : 'systemMaterialLight'}
-            style={[
-              StyleSheet.absoluteFill,
-              // The material is tinted with the app's own background so the
-              // glass belongs to Alke rather than to the system.
-              { backgroundColor: solid ? c.bg : `${c.bg}D8` },
-            ]}
+        <>
+          <Animated.View
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFill, { backgroundColor: c.bg }, scrimStyle]}
+          />
+          <Animated.View
+            style={[StyleSheet.absoluteFill, paneStyle]}
+            pointerEvents={entered ? 'none' : 'auto'}
           >
-            <SignIn onGlass />
-          </AnimatedBlurView>
-        </Animated.View>
+            {liquid && !solid ? (
+              <GlassView
+                glassEffectStyle="regular"
+                colorScheme={scheme}
+                // Tinted with the app's own background, so the glass belongs to
+                // Alke and not to the system.
+                tintColor={`${c.bg}40`}
+                style={StyleSheet.absoluteFill}
+              />
+            ) : (
+              <AnimatedBlurView
+                animatedProps={solid ? undefined : blurProps}
+                intensity={solid ? 0 : undefined}
+                tint={scheme === 'dark' ? 'systemMaterialDark' : 'systemMaterialLight'}
+                style={[StyleSheet.absoluteFill, { backgroundColor: solid ? c.bg : `${c.bg}A6` }]}
+              />
+            )}
+            <Animated.View style={[StyleSheet.absoluteFill, contentStyle]}>
+              <SignIn onGlass />
+            </Animated.View>
+          </Animated.View>
+        </>
       ) : null}
     </View>
   );
