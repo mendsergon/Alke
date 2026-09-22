@@ -119,26 +119,33 @@ export function Register({ onDone }: { onDone: (account: Account) => void }) {
           />
         </Labelled>
 
-        <Labelled label="Date of birth" error={errors.dateOfBirth}>
-          <DateOfBirthField
-            value={account.dateOfBirth}
-            open={openList === 'gender' ? null : openList}
-            onToggle={(part) => setOpenList((p) => (p === part ? null : part))}
-            onChange={(next) => set('dateOfBirth', next)}
-          />
-        </Labelled>
-
-        <Labelled label="Gender" error={errors.gender}>
-          <SelectField
-            accessibilityLabel="Gender"
-            placeholder="Choose"
-            value={account.gender}
-            options={GENDER_OPTIONS}
-            open={openList === 'gender'}
-            onToggle={() => setOpenList((p) => (p === 'gender' ? null : 'gender'))}
-            onSelect={(v) => set('gender', v as Account['gender'])}
-          />
-        </Labelled>
+        {/* Four boxes on one line: the date's three, then gender. */}
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: tokens.space[12] }}>
+          <View style={{ flexGrow: 3, flexBasis: 0 }}>
+            <Labelled label="Date of birth" error={errors.dateOfBirth}>
+              <DateOfBirthField
+                value={account.dateOfBirth}
+                open={openList === 'gender' ? null : openList}
+                onToggle={(part) => setOpenList((p) => (p === part ? null : part))}
+                onChange={(next) => set('dateOfBirth', next)}
+              />
+            </Labelled>
+          </View>
+          <View style={{ flexGrow: 1.3, flexBasis: 0 }}>
+            <Labelled label="Gender" error={errors.gender}>
+              <SelectField
+                align="center"
+                accessibilityLabel="Gender"
+                placeholder="Gender"
+                value={account.gender}
+                options={GENDER_OPTIONS}
+                open={openList === 'gender'}
+                onToggle={() => setOpenList((p) => (p === 'gender' ? null : 'gender'))}
+                onSelect={(v) => set('gender', v as Account['gender'])}
+              />
+            </Labelled>
+          </View>
+        </View>
 
       </ScrollView>
       </ScrollViewMarker>
