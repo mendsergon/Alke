@@ -1,4 +1,5 @@
 import { Pressable, ScrollView, View } from 'react-native';
+import { GlassView } from 'expo-glass-effect';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Card } from '../components/surfaces';
@@ -25,7 +26,7 @@ import { readableDate } from '../account/account-fields';
  * rule `users` enforces is checked.
  */
 export default function AccountScreen() {
-  const { c, cardBorderWidth } = useTheme();
+  const { c } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { account } = useAuth();
@@ -38,34 +39,12 @@ export default function AccountScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <View
-        style={{ paddingTop: insets.top + tokens.space[20], paddingHorizontal: tokens.space[20] }}
-      >
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Back"
-          onPress={() => router.back()}
-          style={{
-            width: tokens.sizing.tapTarget.ios,
-            height: tokens.sizing.tapTarget.ios,
-            // The bubble page 01 puts the gym chip in: the surface tone, fully
-            // rounded, carrying the hairline every surface takes in light.
-            borderRadius: tokens.radius.rung,
-            backgroundColor: c.surface,
-            borderWidth: cardBorderWidth,
-            borderColor: c.border,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Icon name="chevronLeft" size={22} color={c.text} width={1.6} />
-        </Pressable>
-      </View>
-
       <ScrollView
         style={{ flexGrow: 1 }}
         contentContainerStyle={{
-          paddingTop: tokens.space[12],
+          // Clears the bubble, which floats above rather than sitting in a
+          // bar: glass only reads when something is passing under it.
+          paddingTop: insets.top + tokens.space[20] + tokens.sizing.tapTarget.ios + tokens.space[16],
           paddingHorizontal: tokens.space[24],
           paddingBottom: Math.max(tokens.space[24], insets.bottom),
         }}
@@ -157,7 +136,50 @@ export default function AccountScreen() {
           </Card>
         )}
       </ScrollView>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Back"
+        onPress={() => router.back()}
+        style={{
+          position: 'absolute',
+          top: insets.top + tokens.space[20],
+          left: tokens.space[20],
+        }}
+      >
+        <BackBubble />
+      </Pressable>
     </View>
+  );
+}
+
+/**
+ * Back, as a glass bubble.
+ *
+ * `expo-glass-effect@57.0.3` wraps UIVisualEffectView's UIGlassEffect
+ * (`ios/GlassView.swift`). `colorScheme` is given the app's own scheme, not
+ * the phone's, because Alke carries its own theme — which is the case that
+ * prop exists for (`GlassView.types.d.ts`) — and `isInteractive` is what
+ * makes the lens answer a finger the way the system's own buttons do.
+ */
+function BackBubble() {
+  const { c, scheme } = useTheme();
+  const size = tokens.sizing.tapTarget.ios;
+  return (
+    <GlassView
+      glassEffectStyle="regular"
+      isInteractive
+      colorScheme={scheme}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Icon name="chevronLeft" size={22} color={c.text} width={1.6} />
+    </GlassView>
   );
 }
 
