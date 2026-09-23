@@ -92,11 +92,8 @@ function LibraryCard({ program }: { program: ProgramRecord }) {
                 {weekLine(program)}
               </Txt>
             </View>
-            <Pill
-              label={program.active ? 'Active' : 'Saved'}
-              tone={program.active ? 'accent' : 'neutral'}
-              size="regular"
-            />
+            {/* Everything in Library is saved; only the active program is marked. */}
+            {program.active ? <Pill label="Active" size="regular" /> : null}
           </View>
 
           <View
