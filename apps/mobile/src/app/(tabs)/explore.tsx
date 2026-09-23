@@ -12,7 +12,6 @@ import { useGym } from '../../gym/gym';
 import { useLibrary } from '../../library/library';
 import { listTemplates, trainingDays, type ProgramRecord } from '../../backend/programs';
 import { DayDots, ProgramCard, weekLine } from '../../components/program-card';
-import { GlassButton } from '../../components/glass-button';
 import { GYM_PROGRAMS, SHARED_PROGRAMS } from '../../mock/mock-data';
 
 function SearchBar({ value, onChange }: { value: string; onChange: (next: string) => void }) {
@@ -225,12 +224,7 @@ export default function Explore() {
 
   return (
     <Screen gap={14}>
-      {/* OPEN: the program builder is not designed yet (PLAN.md §3), so the + opens nothing. */}
-      <ScreenHeader
-        title="Explore"
-        subtitle="Programs from other lifters"
-        action={<GlassButton icon="plus" label="Create a program" />}
-      />
+      <ScreenHeader title="Explore" subtitle="Programs from other lifters" />
       <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
         <Segmented options={SIDES} value={side} onChange={setSide} fit />
       </View>
