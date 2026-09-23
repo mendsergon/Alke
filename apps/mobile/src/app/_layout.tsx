@@ -14,7 +14,7 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 import { BlurView } from 'expo-blur';
 import { GlassView, isGlassEffectAPIAvailable } from 'expo-glass-effect';
-import { Stack } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider as NavigationTheme } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -320,9 +320,14 @@ function Gate() {
 }
 
 function Navigator() {
-  const { c } = useTheme();
+  const { c, scheme } = useTheme();
+  // The native stack paints its container with the navigation theme's
+  // background, and that container shows at the screen's edges while a
+  // screen is pushed. Without a theme it is React Navigation's light grey.
+  const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
+  const navigationTheme = { ...base, colors: { ...base.colors, background: c.bg } };
   return (
-    <>
+    <NavigationTheme value={navigationTheme}>
       <Stack
         screenOptions={{
           // The system's scroll edge effect blurs content into the top of the
@@ -361,7 +366,7 @@ function Navigator() {
         <Stack.Screen name="report" />
         <Stack.Screen name="sign-in" options={{ presentation: 'modal' }} />
       </Stack>
-    </>
+    </NavigationTheme>
   );
 }
 
