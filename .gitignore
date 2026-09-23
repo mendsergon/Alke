@@ -51,3 +51,7 @@ CLAUDE.local.md
 .claude/
 .mcp.json
 .worktreeinclude
+
+# Local planning notes, never committed.
+PLAN.md
+HANDOFF.md
