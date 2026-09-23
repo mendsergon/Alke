@@ -44,10 +44,21 @@ export default function Library() {
   );
 }
 
+const WEEKDAY_SHORT: Record<string, string> = {
+  monday: 'Mon',
+  tuesday: 'Tue',
+  wednesday: 'Wed',
+  thursday: 'Thu',
+  friday: 'Fri',
+  saturday: 'Sat',
+  sunday: 'Sun',
+};
+
 function ProgramListRow({ program, first }: { program: ProgramRecord; first: boolean }) {
   const { c } = useTheme();
   const days = trainingDays(program);
   const status = program.active ? 'Active' : 'Saved';
+  const week = program.days.map((d) => WEEKDAY_SHORT[d.weekday] ?? d.weekday).join(' · ');
   return (
     <View>
       {first ? null : (
@@ -71,11 +82,11 @@ function ProgramListRow({ program, first }: { program: ProgramRecord; first: boo
           <Pill label={status} tone={program.active ? 'accent' : 'neutral'} />
         </View>
         <Txt variant="captionTight" color={c.textSecondary} tnum style={{ marginTop: 1 }}>
-          {days} days
+          {week} · {days} days
         </Txt>
         <View style={{ marginTop: tokens.space[8] }}>
-          {/* Nothing is logged yet, so none of this week's sessions are done. */}
-          <Rung value={0} target={days} />
+          {/* The week it trains: training days out of the seven. */}
+          <Rung value={days} target={program.schedule.length} />
         </View>
       </Pressable>
     </View>
