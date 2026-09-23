@@ -5,10 +5,12 @@ import Animated, {
   scrollTo,
   useAnimatedReaction,
   useAnimatedRef,
+  useDerivedValue,
   useReducedMotion,
   useScrollOffset,
   useSharedValue,
   withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens, useTheme } from '../theme/theme';
@@ -40,7 +42,8 @@ export function SwitchScreen({
   gap = tokens.space[16],
   headerGap = gap,
 }: {
-  header: ReactNode;
+  /** Given the pager's progress, 0 to 1, for a switch that moves with it. */
+  header: (progress: SharedValue<number>) => ReactNode;
   pages: readonly [ReactNode, ReactNode];
   index: number;
   onIndexChange: (index: number) => void;
@@ -56,6 +59,7 @@ export function SwitchScreen({
   const target = useSharedValue(index * width);
   const sliding = useSharedValue(false);
   const reduceMotion = useReducedMotion();
+  const progress = useDerivedValue(() => (width > 0 ? offset.value / width : 0));
   // The index the pager was last sent to or last settled on, so a swipe that
   // moved the switch does not send the pager a second, redundant scroll.
   const shown = useRef(index);
@@ -83,7 +87,7 @@ export function SwitchScreen({
     );
   }, [index, width, offset, target, sliding, reduceMotion]);
 
-  const headerBlocks = flatten(header);
+  const headerBlocks = flatten(header(progress));
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
