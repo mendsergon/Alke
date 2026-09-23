@@ -542,3 +542,51 @@ func TestDeletingAUserDeletesTheirExercises(t *testing.T) {
 		t.Fatal("the catalog exercise went with the user")
 	}
 }
+
+// Each category carries the tile icon the app draws for it, so a category
+// added in PocketBase needs no app change.
+var wantCategoryIcons = map[string]struct {
+	icon    string
+	muscles []string
+	crop    string
+}{
+	"Chest":      {"bench", []string{"Chest"}, ""},
+	"Back":       {"row", []string{"Lats", "Traps", "Erectors"}, ""},
+	"Biceps":     {"curl", []string{"Biceps"}, ""},
+	"Triceps":    {"pushdown", []string{"Triceps"}, ""},
+	"Shoulders":  {"ohp", []string{"Delts", "Side delts", "Rear delts"}, ""},
+	"Quads":      {"squat", []string{"Quads"}, ""},
+	"Hamstrings": {"rdl", []string{"Hamstrings"}, ""},
+	"Adductors":  {"adduction", []string{"Adductors"}, ""},
+	"Glutes":     {"hipthrust", []string{"Glutes"}, "116.0 286.0 160.0 160.0"},
+	"Calves":     {"calfraise", []string{"Calves"}, ""},
+	"Abs":        {"crunch", []string{"Abs", "#21", "#22", "#23", "#24", "#25", "#26"}, ""},
+	"Forearms":   {"wristcurl", []string{"Forearms", "Brachialis"}, ""},
+	"Neck":       {"row", []string{"#14", "#49", "#50", "#51"}, "131.5 0.0 120.0 120.0"},
+}
+
+func TestMuscleCategoriesCarryTheirIcon(t *testing.T) {
+	app := newProgramsApp(t)
+	defer app.Cleanup()
+
+	got, err := app.FindAllRecords("muscle_categories")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != len(wantCategoryIcons) {
+		t.Fatalf("categories: got %d, want %d", len(got), len(wantCategoryIcons))
+	}
+	for _, r := range got {
+		want, ok := wantCategoryIcons[r.GetString("name")]
+		if !ok {
+			t.Fatalf("unexpected category %q", r.GetString("name"))
+		}
+		var muscles []string
+		if err := json.Unmarshal([]byte(r.GetString("icon_muscles")), &muscles); err != nil {
+			t.Fatalf("%s: icon_muscles: %v", r.GetString("name"), err)
+		}
+		if r.GetString("icon") != want.icon || strings.Join(muscles, ",") != strings.Join(want.muscles, ",") || r.GetString("icon_crop") != want.crop {
+			t.Errorf("%s: got %q %v %q, want %q %v %q", r.GetString("name"), r.GetString("icon"), muscles, r.GetString("icon_crop"), want.icon, want.muscles, want.crop)
+		}
+	}
+}
