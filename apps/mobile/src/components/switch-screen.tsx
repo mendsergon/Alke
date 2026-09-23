@@ -1,9 +1,22 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { ScrollView, View, useWindowDimensions } from 'react-native';
+import Animated, {
+  Easing,
+  scrollTo,
+  useAnimatedReaction,
+  useAnimatedRef,
+  useReducedMotion,
+  useScrollOffset,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens, useTheme } from '../theme/theme';
 import { Arriving } from './arrival';
 import { flatten } from './screen';
+
+/** How long the switch's slide takes. */
+const SLIDE_MS = 180;
 
 /**
  * A tab screen with two sides, such as Programs and Exercises.
@@ -15,6 +28,9 @@ import { flatten } from './screen';
  * scrolled to when the other is shown.
  *
  * Padding, gap and the arrival are the ones `Screen` uses.
+ *
+ * The switch's slide is driven here rather than by `scrollTo({ animated })`,
+ * whose duration is UIKit's own (about 0.3s) and cannot be set.
  */
 export function SwitchScreen({
   header,
@@ -35,16 +51,37 @@ export function SwitchScreen({
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const pager = useRef<ScrollView>(null);
+  const pager = useAnimatedRef<Animated.ScrollView>();
+  const offset = useScrollOffset(pager);
+  const target = useSharedValue(index * width);
+  const sliding = useSharedValue(false);
+  const reduceMotion = useReducedMotion();
   // The index the pager was last sent to or last settled on, so a swipe that
   // moved the switch does not send the pager a second, redundant scroll.
   const shown = useRef(index);
 
+  // Each frame of the slide moves the pager, on the UI thread.
+  useAnimatedReaction(
+    () => target.value,
+    (x) => {
+      if (sliding.value) scrollTo(pager, x, 0, false);
+    },
+  );
+
   useEffect(() => {
     if (shown.current === index) return;
     shown.current = index;
-    pager.current?.scrollTo({ x: index * width, animated: true });
-  }, [index, width]);
+    // From wherever the pager is now, which a swipe may have left anywhere.
+    target.value = offset.value;
+    sliding.value = true;
+    target.value = withTiming(
+      index * width,
+      { duration: reduceMotion ? 0 : SLIDE_MS, easing: Easing.out(Easing.cubic) },
+      () => {
+        sliding.value = false;
+      },
+    );
+  }, [index, width, offset, target, sliding, reduceMotion]);
 
   const headerBlocks = flatten(header);
 
@@ -67,10 +104,11 @@ export function SwitchScreen({
           </Arriving>
         ))}
       </View>
-      <ScrollView
+      <Animated.ScrollView
         ref={pager}
         horizontal
         pagingEnabled
+        decelerationRate="fast"
         showsHorizontalScrollIndicator={false}
         directionalLockEnabled
         onMomentumScrollEnd={(e) => {
@@ -100,7 +138,7 @@ export function SwitchScreen({
             ))}
           </ScrollView>
         ))}
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 }
