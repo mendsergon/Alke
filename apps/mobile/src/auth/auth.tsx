@@ -43,6 +43,8 @@ type AuthState = {
   restoring: boolean;
   /** The stored account, as the server holds it. Null until signed in. */
   account: AccountRecord | null;
+  /** The session token the server issued. Null until signed in. */
+  token: string | null;
   /**
    * Changes a column on the account and keeps what the server sends back, so
    * what Profile shows is what is stored rather than what was tapped.
@@ -140,6 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       account,
+      token,
       saveAccount,
       entered,
       registering,
@@ -164,6 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [
       user,
       account,
+      token,
       saveAccount,
       entered,
       registering,
