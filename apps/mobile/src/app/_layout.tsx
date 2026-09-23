@@ -348,10 +348,8 @@ function Navigator() {
             // The bottom of the screen is the tab bar's buttons, and nothing
             // is blurred over a control.
             bottom: 'hidden',
-            // `automatic` on the sides drew UIKit's edge effect down both
-            // edges of every screen — the glass seen around it on a push.
-            left: 'hidden',
-            right: 'hidden',
+            left: 'automatic',
+            right: 'automatic',
           },
           contentStyle: { backgroundColor: c.bg },
         }}
