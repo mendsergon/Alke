@@ -6,4 +6,7 @@ packages:
 # PLAN.md §4 already picks Skia for the charts and body map.
 allowBuilds:
   '@shopify/react-native-skia': true
-  esbuild: set this to true or false
+  # tsx pulls esbuild in for the figures script. Its postinstall only fetches a
+  # platform binary that the optional dependency already provides, and `pnpm
+  # figures` runs without it, so the script stays off.
+  esbuild: false
