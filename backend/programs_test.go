@@ -29,6 +29,7 @@ func newProgramsApp(t testing.TB) *tests.TestApp {
 		t.Fatal(err)
 	}
 	bindPrograms(app)
+	bindExercises(app)
 	return app
 }
 

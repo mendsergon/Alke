@@ -25,6 +25,7 @@ func main() {
 	app := pocketbase.New()
 
 	bindPrograms(app)
+	bindExercises(app)
 
 	// The collection's own `min`/`max` are absolute dates, and "fifteen years
 	// old today" is not an absolute date — it moves every midnight. So the
