@@ -114,7 +114,16 @@ export function Figure({
 }
 
 /** The tile an exercise icon sits in: surface-raised, radius 12 (16 over 56). */
-export function ExerciseIcon({ icon, size }: { icon: ExerciseIconKey; size: number }) {
+export function ExerciseIcon({
+  icon,
+  size,
+  seamAll = false,
+}: {
+  icon: ExerciseIconKey;
+  size: number;
+  /** Every muscle seamed and visible, the way Progress draws the body. */
+  seamAll?: boolean;
+}) {
   const { c } = useTheme();
   const def = EXERCISE_ICONS[icon];
   const inner = size - (size > 56 ? 4 : 3);
@@ -138,6 +147,7 @@ export function ExerciseIcon({ icon, size }: { icon: ExerciseIconKey; size: numb
         width={inner}
         height={inner}
         strokeWidth={def.strokeWidth}
+        seamAll={seamAll}
       />
     </View>
   );
