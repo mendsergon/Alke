@@ -25,7 +25,7 @@ import { readableDate } from '../account/account-fields';
  * rule `users` enforces is checked.
  */
 export default function AccountScreen() {
-  const { c } = useTheme();
+  const { c, cardBorderWidth } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { account } = useAuth();
@@ -45,9 +45,20 @@ export default function AccountScreen() {
           accessibilityRole="button"
           accessibilityLabel="Back"
           onPress={() => router.back()}
-          style={{ width: 44, height: 44, justifyContent: 'center' }}
+          style={{
+            width: tokens.sizing.tapTarget.ios,
+            height: tokens.sizing.tapTarget.ios,
+            // The bubble page 01 puts the gym chip in: the surface tone, fully
+            // rounded, carrying the hairline every surface takes in light.
+            borderRadius: tokens.radius.rung,
+            backgroundColor: c.surface,
+            borderWidth: cardBorderWidth,
+            borderColor: c.border,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
         >
-          <Icon name="chevronLeft" size={24} color={c.textSecondary} width={1.5} />
+          <Icon name="chevronLeft" size={22} color={c.text} width={1.6} />
         </Pressable>
       </View>
 
