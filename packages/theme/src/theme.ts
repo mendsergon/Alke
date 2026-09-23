@@ -176,8 +176,6 @@ const typeExtra = {
   serifPanelTitle: { size: 22, lineHeight: 28, weight: 500 },
   serifRowTitle: { size: 20, lineHeight: 26, weight: 500 },
   serifListTitle: { size: 19, lineHeight: 25, weight: 500 },
-  // Library's row name: cap height matched to page 05's 10.9pt, on its 22pt line.
-  serifRowName: { size: 17, lineHeight: 22, weight: 500 },
   serifProseSmall: { size: 17, lineHeight: 26, weight: 400 },
   // Sans
   buttonLabel: { size: 17, lineHeight: 22, weight: 600, tracking: -0.01 },
