@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { Screen, ScreenHeader } from '../../components/screen';
 import { EmptyState, Pill, Segmented } from '../../components/surfaces';
 import { MuscleCategories } from '../../components/muscle-categories';
+import { SwitchSide } from '../../components/switch-side';
 import { useState } from 'react';
 import { Icon } from '../../components/icon';
 import { GlassButton } from '../../components/glass-button';
@@ -42,28 +43,31 @@ export default function Library() {
         <Segmented options={SIDES} value={side} onChange={setSide} fit />
       </View>
 
-      {/* The category figures stay mounted and are only hidden, so they are
-          drawn once, not again on every switch. */}
-      <View style={{ display: side === 'Favorite exercises' ? 'flex' : 'none' }}>
-        <MuscleCategories />
+      {/* One child of the screen, so its gap never falls between the two sides. */}
+      <View>
+        <SwitchSide active={side === 'Programs'}>
+          {programs.length > 0 ? (
+            // Each program is its own card, on page 04's spacing between cards.
+            <View style={{ gap: tokens.space[32] }}>
+              {programs.map((p) => (
+                <LibraryCard key={p.id} program={p} />
+              ))}
+            </View>
+          ) : (
+            <EmptyState
+              line="No programs yet."
+              action="Build my program"
+              icon="orb"
+              secondary="Browse templates"
+              secondaryIcon="compass"
+              onSecondary={() => router.push('/explore')}
+            />
+          )}
+        </SwitchSide>
+        <SwitchSide active={side === 'Favorite exercises'}>
+          <MuscleCategories />
+        </SwitchSide>
       </View>
-      {side !== 'Programs' ? null : programs.length > 0 ? (
-        // Each program is its own card, on page 04's spacing between cards.
-        <View style={{ gap: tokens.space[32] }}>
-          {programs.map((p) => (
-            <LibraryCard key={p.id} program={p} />
-          ))}
-        </View>
-      ) : (
-        <EmptyState
-          line="No programs yet."
-          action="Build my program"
-          icon="orb"
-          secondary="Browse templates"
-          secondaryIcon="compass"
-          onSecondary={() => router.push('/explore')}
-        />
-      )}
     </Screen>
   );
 }

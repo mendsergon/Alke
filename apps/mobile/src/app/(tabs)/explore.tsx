@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Screen, ScreenHeader } from '../../components/screen';
 import { Card, EmptyState, Pill, PrimaryButton, Segmented } from '../../components/surfaces';
 import { MuscleCategories } from '../../components/muscle-categories';
+import { SwitchSide } from '../../components/switch-side';
 import { Icon } from '../../components/icon';
 import { MicroCaps, Txt } from '../../theme/text';
 import { tokens, useTheme } from '../../theme/theme';
@@ -232,51 +233,49 @@ export default function Explore() {
         />
       </View>
 
-      {side === 'Programs' ? (
-        <>
-        <BuildProgram />
-        <SearchBar value={query} onChange={setQuery} />
+      {/* One child of the screen, so its gap never falls between the two sides. */}
+      <View>
+        <SwitchSide active={side === 'Programs'}>
+          <View style={{ gap: 14 }}>
+          <BuildProgram />
+          <SearchBar value={query} onChange={setQuery} />
 
-        <MicroCaps>Featured</MicroCaps>
-        {shown.length > 0 ? (
-          // Page 04 keeps 34pt of ground between cards; 32 is the nearest step.
-          <View style={{ gap: tokens.space[32] }}>
-            {shown.map((t) => (
-              <TemplateCard key={t.id} template={t} />
-            ))}
+          <MicroCaps>Featured</MicroCaps>
+          {shown.length > 0 ? (
+            // Page 04 keeps 34pt of ground between cards; 32 is the nearest step.
+            <View style={{ gap: tokens.space[32] }}>
+              {shown.map((t) => (
+                <TemplateCard key={t.id} template={t} />
+              ))}
+            </View>
+          ) : (
+            <EmptyState line={templates.length > 0 ? 'No programs match.' : 'No featured programs yet.'} />
+          )}
+
+          <View style={{ height: 4 }} />
+          <MicroCaps>Shared by other lifters</MicroCaps>
+          {SHARED_PROGRAMS.length > 0 ? null : <EmptyState line="No shared programs yet." />}
+
+          <View style={{ height: 4 }} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Icon name="gym" size={16} color={gym ? c.accent : c.textSecondary} />
+            <MicroCaps color={gym ? c.accent : c.textSecondary}>
+              {gym ? `From ${gym.name}` : 'From your gym'}
+            </MicroCaps>
           </View>
-        ) : (
-          <EmptyState line={templates.length > 0 ? 'No programs match.' : 'No featured programs yet.'} />
-        )}
-
-        <View style={{ height: 4 }} />
-        <MicroCaps>Shared by other lifters</MicroCaps>
-        {SHARED_PROGRAMS.length > 0 ? null : <EmptyState line="No shared programs yet." />}
-
-        <View style={{ height: 4 }} />
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Icon name="gym" size={16} color={gym ? c.accent : c.textSecondary} />
-          <MicroCaps color={gym ? c.accent : c.textSecondary}>
-            {gym ? `From ${gym.name}` : 'From your gym'}
-          </MicroCaps>
-        </View>
-        {GYM_PROGRAMS.length > 0 ? null : (
-          <EmptyState
-            line={gym ? 'No programs from your gym yet.' : 'No gym joined.'}
-            action={gym ? undefined : 'Join with a code'}
-            icon="qr"
-            onAction={() => router.push('/join-gym')}
-          />
-        )}
-        </>
-      ) : null}
-      {/* The category figures stay mounted and are only hidden, last so a hidden
-          block adds no gap above anything, and so they are
-          drawn once, not again on every switch. The programs side mounts when
-          shown: its orb is Skia, and a Skia canvas does not come back from
-          display none. */}
-      <View style={{ display: side === 'Exercises' ? 'flex' : 'none' }}>
-        <MuscleCategories />
+          {GYM_PROGRAMS.length > 0 ? null : (
+            <EmptyState
+              line={gym ? 'No programs from your gym yet.' : 'No gym joined.'}
+              action={gym ? undefined : 'Join with a code'}
+              icon="qr"
+              onAction={() => router.push('/join-gym')}
+            />
+          )}
+          </View>
+        </SwitchSide>
+        <SwitchSide active={side === 'Exercises'}>
+          <MuscleCategories />
+        </SwitchSide>
       </View>
     </Screen>
   );
