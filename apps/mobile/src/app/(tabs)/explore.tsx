@@ -224,18 +224,14 @@ export default function Explore() {
 
   return (
     <Screen gap={14}>
-      <ScreenHeader title="Explore" subtitle="Programs from other lifters" />
-      <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-        <Segmented options={SIDES} value={side} onChange={setSide} fit />
+      {/* Both sides start at the same height under the header. */}
+      <View style={{ marginBottom: tokens.space[20] }}>
+        <ScreenHeader
+          title="Explore"
+          action={<Segmented options={SIDES} value={side} onChange={setSide} fit />}
+        />
       </View>
 
-      {/* The category figures stay mounted and are only hidden, so they are
-          drawn once, not again on every switch. The programs side mounts when
-          shown: its orb is Skia, and a Skia canvas does not come back from
-          display none. */}
-      <View style={{ display: side === 'Exercises' ? 'flex' : 'none' }}>
-        <MuscleCategories />
-      </View>
       {side === 'Programs' ? (
         <>
         <BuildProgram />
@@ -274,6 +270,14 @@ export default function Explore() {
         )}
         </>
       ) : null}
+      {/* The category figures stay mounted and are only hidden, last so a hidden
+          block adds no gap above anything, and so they are
+          drawn once, not again on every switch. The programs side mounts when
+          shown: its orb is Skia, and a Skia canvas does not come back from
+          display none. */}
+      <View style={{ display: side === 'Exercises' ? 'flex' : 'none' }}>
+        <MuscleCategories />
+      </View>
     </Screen>
   );
 }
