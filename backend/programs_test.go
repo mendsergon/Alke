@@ -84,6 +84,7 @@ func newUser(t testing.TB, app core.App, email string) *core.Record {
 	u := core.NewRecord(users)
 	u.SetEmail(email)
 	u.SetPassword("user-test-password")
+	u.Set("subscription_status", "free")
 	if err := app.Save(u); err != nil {
 		t.Fatal(err)
 	}

@@ -89,6 +89,7 @@ func TestRenameCopiesOfMisnamedTemplates(t *testing.T) {
 	u := core.NewRecord(users)
 	u.SetEmail("copy@alke.test")
 	u.SetPassword("copy-test-password")
+	u.Set("subscription_status", "free")
 	if err := app.Save(u); err != nil {
 		t.Fatal(err)
 	}
