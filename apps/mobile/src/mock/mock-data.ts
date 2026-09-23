@@ -13,10 +13,6 @@
  * The screens read the empty values below and render their empty states. When
  * a store lands, these become its initial state and nothing on the screens
  * needs to change.
- *
- * Still transcribed, and still marked mock, are MOCK_SESSION, MOCK_WEEKLY_REPORT
- * and the join-gym values: the session, report and join screens are outside
- * this pass and are untouched.
  */
 import type { ExerciseIconKey } from '../figure/figure.generated';
 
@@ -52,17 +48,6 @@ export type SharedProgram = {
   strip: number;
 };
 
-export type SessionSet = {
-  index: number;
-  state: 'done' | 'current' | 'empty';
-  weight: string;
-  reps: string;
-  rir: string;
-  fill: number;
-  target: number;
-  record?: boolean;
-};
-
 export type HistoryRow = {
   name: string;
   detail: string;
@@ -72,14 +57,6 @@ export type HistoryRow = {
 };
 
 export type MuscleScore = { muscle: string; score: number };
-
-export type Recommendation = {
-  muscle: string;
-  verdict: 'more' | 'keep' | 'less';
-  reason: string;
-};
-
-export type RecordByReps = { range: string; weight: string; reps: string; date: string };
 
 // ===========================================================================
 // CATALOG — real content, shipped with the app
@@ -128,59 +105,4 @@ export const USER_MUSCLE_SCORES: MuscleScore[] = [];
 export const USER_REPORTS: { latest: { week: string; prose: string } | null; archive: HistoryRow[] } = {
   latest: null,
   archive: [],
-};
-
-// ===========================================================================
-// Untouched by this pass: the session, report and join-gym screens
-// ===========================================================================
-
-/** Read only by the join-gym screen, which is outside this pass. */
-export const MOCK_GYM: Gym = {
-  name: 'Northgate Strength Hall',
-  shortName: 'Northgate',
-  place: 'Dover Row',
-  members: 142,
-  machines: 34,
-};
-
-export const MOCK_GYM_EQUIPMENT = [
-  '4 power racks',
-  'Deadlift platform',
-  '6 adjustable benches',
-  'Cable crossover',
-  'Trap bar',
-  'Dumbbells to 50 kg',
-];
-
-export const MOCK_GYM_CODE = 'NGH7';
-
-export const MOCK_SESSION = {
-  position: 'Exercise 2 of 5',
-  exercise: 'Barbell Back Squat',
-  icon: 'squat' as ExerciseIconKey,
-  last: 'Last · 100 × 8  ·  100 × 7  ·  95 × 8',
-  restLeft: '1:42',
-  restOf: 'rest of 2:30',
-  restDone: 31,
-  restTarget: 100,
-  miniBar: { exercise: 'Barbell Back Squat', detail: 'Set 3 of 4 · exercise 2 of 5', timer: '1:42' },
-  sets: [
-    { index: 1, state: 'done', weight: '100', reps: '8', rir: '2', fill: 68, target: 100 },
-    { index: 2, state: 'done', weight: '100', reps: '8', rir: '2', fill: 68, target: 100 },
-    { index: 3, state: 'current', weight: '102.5', reps: '6', rir: '1', fill: 74, target: 100, record: true },
-    { index: 4, state: 'empty', weight: '—', reps: '—', rir: '—', fill: 0, target: 100 },
-  ] satisfies SessionSet[],
-};
-
-export const MOCK_WEEKLY_REPORT = {
-  week: 'Week 38',
-  dates: '13 – 19 September',
-  prose:
-    'Four sessions, seventy-nine of the eighty-four sets you planned. Squat and press both moved up a step. Two groups came in under range — the two you cut when a session runs long.',
-  recommendations: [
-    { muscle: 'Hamstrings', verdict: 'more', reason: '6 sets against a range of 8 to 14.' },
-    { muscle: 'Rear delts', verdict: 'more', reason: '5 sets. Rowing carryover is not enough.' },
-    { muscle: 'Lats', verdict: 'keep', reason: '19 sets, top of range, e1RM rising.' },
-    { muscle: 'Side delts', verdict: 'less', reason: '16 direct sets plus pressing carryover.' },
-  ] satisfies Recommendation[],
 };

@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Screen, ScreenHeader } from '../../components/screen';
-import { Card, Pill, SecondaryButton, Segmented } from '../../components/surfaces';
+import { Card, Pill, Segmented } from '../../components/surfaces';
 import { Icon, type IconName } from '../../components/icon';
 import { MicroCaps, Txt } from '../../theme/text';
 import { tokens, useTheme } from '../../theme/theme';
@@ -108,14 +108,6 @@ export default function Profile() {
             title={gym ? gym.name : 'No gym'}
             detail={gym ? `${gym.place} · ${gym.machines} machines on file` : 'Not joined'}
             muted={!gym}
-          />
-        </View>
-        <View style={{ marginTop: tokens.space[16] }}>
-          <SecondaryButton
-            label="Join a gym with a code or QR"
-            icon="qr"
-            height={48}
-            onPress={() => router.push('/join-gym')}
           />
         </View>
       </Card>

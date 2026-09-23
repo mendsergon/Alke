@@ -267,12 +267,7 @@ export default function Explore() {
         </MicroCaps>
       </View>
       {GYM_PROGRAMS.length > 0 ? null : (
-        <EmptyState
-          line={gym ? 'No programs from your gym yet.' : 'No gym joined.'}
-          action={gym ? undefined : 'Join with a code'}
-          icon="qr"
-          onAction={() => router.push('/join-gym')}
-        />
+        <EmptyState line={gym ? 'No programs from your gym yet.' : 'No gym joined.'} />
       )}
         </>,
         <MuscleCategories

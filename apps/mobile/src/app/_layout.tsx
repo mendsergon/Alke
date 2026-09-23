@@ -27,7 +27,6 @@ import Geist_400Regular from '@expo-google-fonts/geist/400Regular/Geist_400Regul
 import Geist_500Medium from '@expo-google-fonts/geist/500Medium/Geist_500Medium.ttf';
 import Geist_600SemiBold from '@expo-google-fonts/geist/600SemiBold/Geist_600SemiBold.ttf';
 import { ThemeProvider, useTheme } from '../theme/theme';
-import { SessionProvider } from '../session/session';
 import { GymProvider } from '../gym/gym';
 import { AuthProvider, useAuth } from '../auth/auth';
 import { SignIn } from '../auth/sign-in';
@@ -360,10 +359,7 @@ function Navigator() {
         }}
       >
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="session" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="account" />
-        <Stack.Screen name="join-gym" />
-        <Stack.Screen name="report" />
         <Stack.Screen name="sign-in" options={{ presentation: 'modal' }} />
       </Stack>
     </NavigationTheme>
@@ -387,10 +383,8 @@ export default function RootLayout() {
           <AuthProvider>
             <GymProvider>
               <LibraryProvider>
-                <SessionProvider>
-                  <Gate />
-                  <SplashHold />
-                </SessionProvider>
+                <Gate />
+                <SplashHold />
               </LibraryProvider>
             </GymProvider>
           </AuthProvider>

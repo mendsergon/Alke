@@ -4,7 +4,6 @@ import { useTheme } from '../theme/theme';
 import { Txt } from '../theme/text';
 import { Arriving } from './arrival';
 import { Icon, type IconName } from './icon';
-import { MiniBar } from './mini-bar';
 
 const TABS: { name: string; label: string; icon: IconName }[] = [
   { name: 'index', label: 'Home', icon: 'home' },
@@ -30,7 +29,6 @@ export function TabBar({ state, navigation }: TabBarProps) {
     // follow it in. Left out of the procession it snaps to full brightness
     // while the content is still on its way, and the seam shows.
     <Arriving index={0}>
-      <MiniBar />
       <View
         style={{
           height: 76 + Math.max(0, insets.bottom - 16),

@@ -6,7 +6,6 @@ import { Card, EmptyState, PrimaryButton, SecondaryButton } from '../../componen
 import { Txt } from '../../theme/text';
 import { useTheme } from '../../theme/theme';
 import { useLibrary } from '../../library/library';
-import { useSession } from '../../session/session';
 import { WEEK_TARGETS } from '../../mock/mock-data';
 
 /**
@@ -21,7 +20,6 @@ export default function Home() {
   const { c } = useTheme();
   const router = useRouter();
   const { programs } = useLibrary();
-  const session = useSession();
   const hasProgram = programs.length > 0;
 
   return (
@@ -46,15 +44,6 @@ export default function Home() {
       <WeekStats stats={WEEK_TARGETS} />
 
       <EmptyState line="No weekly report yet." />
-
-      <SecondaryButton
-        label="Start empty workout"
-        icon="plus"
-        onPress={() => {
-          session.start();
-          router.push('/session');
-        }}
-      />
     </Screen>
   );
 }
