@@ -64,7 +64,7 @@ export default function AccountScreen() {
           Account
         </Txt>
         <Txt variant="bodySmall" color={c.textSecondary} style={{ marginTop: tokens.space[8] }}>
-          What Alke knows about you. A gym never sees any of it.
+          What Alke knows about you.
         </Txt>
 
         {account ? (
@@ -119,7 +119,7 @@ export default function AccountScreen() {
 
             {/* The address is not like the others — it is the way in. */}
             <Card tone="accentSoft" style={{ marginTop: tokens.space[24] }}>
-              <MicroCaps color={c.accent}>Signs in with</MicroCaps>
+              <MicroCaps color={c.accent}>Email</MicroCaps>
               <Txt
                 variant="dataValue"
                 numberOfLines={1}
