@@ -1,7 +1,9 @@
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Screen, ScreenHeader } from '../../components/screen';
-import { EmptyState, Pill } from '../../components/surfaces';
+import { EmptyState, Pill, Segmented } from '../../components/surfaces';
+import { MuscleCategories } from '../../components/muscle-categories';
+import { useState } from 'react';
 import { Icon } from '../../components/icon';
 import { GlassButton } from '../../components/glass-button';
 import { DayDots, ProgramCard, weekLine } from '../../components/program-card';
@@ -19,9 +21,13 @@ import { trainingDays, type ProgramRecord } from '../../backend/programs';
  * a line in a list. Page 05 draws rows in one block; this departs from it on
  * Stavros's instruction.
  */
+/** Page 05's Programs / Exercises switch, set top right. */
+const SIDES = ['Programs', 'Favorite exercises'] as const;
+
 export default function Library() {
   const router = useRouter();
   const { programs } = useLibrary();
+  const [side, setSide] = useState<(typeof SIDES)[number]>('Programs');
 
   return (
     <Screen gap={tokens.space[16]}>
@@ -32,7 +38,13 @@ export default function Library() {
         action={<GlassButton icon="plus" label="Create a program" />}
       />
 
-      {programs.length > 0 ? (
+      <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+        <Segmented options={SIDES} value={side} onChange={setSide} fit />
+      </View>
+
+      {side === 'Favorite exercises' ? (
+        <MuscleCategories />
+      ) : programs.length > 0 ? (
         // Each program is its own card, on page 04's spacing between cards.
         <View style={{ gap: tokens.space[32] }}>
           {programs.map((p) => (
