@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Screen, ScreenHeader } from '../../components/screen';
-import { Card, EmptyState, Pill, PrimaryButton } from '../../components/surfaces';
+import { Card, EmptyState, Pill, PrimaryButton, Segmented } from '../../components/surfaces';
+import { MuscleCategories } from '../../components/muscle-categories';
 import { Icon } from '../../components/icon';
 import { MicroCaps, Txt } from '../../theme/text';
 import { tokens, useTheme } from '../../theme/theme';
@@ -198,6 +199,9 @@ function BuildProgram() {
   );
 }
 
+/** Page 05's Programs / Exercises switch, set top right. */
+const SIDES = ['Programs', 'Exercises'] as const;
+
 /** The featured templates are read from PocketBase; the rest is not served yet. */
 export default function Explore() {
   const { c } = useTheme();
@@ -206,6 +210,7 @@ export default function Explore() {
   const { token } = useAuth();
   const [templates, setTemplates] = useState<ProgramRecord[]>([]);
   const [query, setQuery] = useState('');
+  const [side, setSide] = useState<(typeof SIDES)[number]>('Programs');
   const shown = templates.filter((t) => matches(t, query));
 
   useEffect(() => {
@@ -226,39 +231,49 @@ export default function Explore() {
         subtitle="Programs from other lifters"
         action={<GlassButton icon="plus" label="Create a program" />}
       />
-      <BuildProgram />
-      <SearchBar value={query} onChange={setQuery} />
-
-      <MicroCaps>Featured</MicroCaps>
-      {shown.length > 0 ? (
-        // Page 04 keeps 34pt of ground between cards; 32 is the nearest step.
-        <View style={{ gap: tokens.space[32] }}>
-          {shown.map((t) => (
-            <TemplateCard key={t.id} template={t} />
-          ))}
-        </View>
-      ) : (
-        <EmptyState line={templates.length > 0 ? 'No programs match.' : 'No featured programs yet.'} />
-      )}
-
-      <View style={{ height: 4 }} />
-      <MicroCaps>Shared by other lifters</MicroCaps>
-      {SHARED_PROGRAMS.length > 0 ? null : <EmptyState line="No shared programs yet." />}
-
-      <View style={{ height: 4 }} />
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <Icon name="gym" size={16} color={gym ? c.accent : c.textSecondary} />
-        <MicroCaps color={gym ? c.accent : c.textSecondary}>
-          {gym ? `From ${gym.name}` : 'From your gym'}
-        </MicroCaps>
+      <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+        <Segmented options={SIDES} value={side} onChange={setSide} fit />
       </View>
-      {GYM_PROGRAMS.length > 0 ? null : (
-        <EmptyState
-          line={gym ? 'No programs from your gym yet.' : 'No gym joined.'}
-          action={gym ? undefined : 'Join with a code'}
-          icon="qr"
-          onAction={() => router.push('/join-gym')}
-        />
+
+      {side === 'Exercises' ? (
+        <MuscleCategories />
+      ) : (
+        <>
+        <BuildProgram />
+        <SearchBar value={query} onChange={setQuery} />
+
+        <MicroCaps>Featured</MicroCaps>
+        {shown.length > 0 ? (
+          // Page 04 keeps 34pt of ground between cards; 32 is the nearest step.
+          <View style={{ gap: tokens.space[32] }}>
+            {shown.map((t) => (
+              <TemplateCard key={t.id} template={t} />
+            ))}
+          </View>
+        ) : (
+          <EmptyState line={templates.length > 0 ? 'No programs match.' : 'No featured programs yet.'} />
+        )}
+
+        <View style={{ height: 4 }} />
+        <MicroCaps>Shared by other lifters</MicroCaps>
+        {SHARED_PROGRAMS.length > 0 ? null : <EmptyState line="No shared programs yet." />}
+
+        <View style={{ height: 4 }} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Icon name="gym" size={16} color={gym ? c.accent : c.textSecondary} />
+          <MicroCaps color={gym ? c.accent : c.textSecondary}>
+            {gym ? `From ${gym.name}` : 'From your gym'}
+          </MicroCaps>
+        </View>
+        {GYM_PROGRAMS.length > 0 ? null : (
+          <EmptyState
+            line={gym ? 'No programs from your gym yet.' : 'No gym joined.'}
+            action={gym ? undefined : 'Join with a code'}
+            icon="qr"
+            onAction={() => router.push('/join-gym')}
+          />
+        )}
+        </>
       )}
     </Screen>
   );
