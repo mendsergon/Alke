@@ -6,8 +6,7 @@ import { Icon, type IconName } from '../components/icon';
 import { MicroCaps, Txt } from '../theme/text';
 import { tokens, useTheme } from '../theme/theme';
 import { useAuth } from '../auth/auth';
-import { PersonAvatar } from '../figure/person';
-import { readableDate, type Gender } from '../account/account-fields';
+import { readableDate } from '../account/account-fields';
 
 /**
  * The account, after it exists: every column of the person's row in `users`,
@@ -28,8 +27,11 @@ export default function AccountScreen() {
   const router = useRouter();
   const { account } = useAuth();
 
-  const gender = (account?.gender ?? '') as Gender | '';
   const fullName = [account?.name, account?.surname].filter(Boolean).join(' ');
+  const initials = [account?.name, account?.surname]
+    .filter(Boolean)
+    .map((part) => part!.charAt(0).toUpperCase())
+    .join('');
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
@@ -68,7 +70,24 @@ export default function AccountScreen() {
             {/* The person, as their own card. */}
             <Card>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[16] }}>
-                <PersonAvatar gender={gender} size={AVATAR} />
+                <View
+                  style={{
+                    width: AVATAR,
+                    height: AVATAR,
+                    borderRadius: tokens.radius.rung,
+                    backgroundColor: initials ? c.accentSoft : c.bg,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {initials ? (
+                    <Txt variant="avatarInitials" color={c.accent}>
+                      {initials}
+                    </Txt>
+                  ) : (
+                    <Icon name="person" size={22} color={c.textSecondary} />
+                  )}
+                </View>
                 <View style={{ flexGrow: 1, flexShrink: 1 }}>
                   <Txt variant="nameTitle">{fullName || 'Account'}</Txt>
                   <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: 2 }}>
