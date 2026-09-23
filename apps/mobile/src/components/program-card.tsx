@@ -11,10 +11,12 @@ import type { ProgramRecord } from '../backend/programs';
 export function ProgramCard({
   label,
   onPress,
+  padding = tokens.space[20],
   children,
 }: {
   label: string;
   onPress?: () => void;
+  padding?: number;
   children: ReactNode;
 }) {
   const { c } = useTheme();
@@ -30,7 +32,7 @@ export function ProgramCard({
         borderRadius: tokens.radius.card,
         borderWidth: 1,
         borderColor: c.border,
-        padding: tokens.space[20],
+        padding,
       })}
     >
       {children}

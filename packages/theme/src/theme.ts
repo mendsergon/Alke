@@ -176,6 +176,8 @@ const typeExtra = {
   serifPanelTitle: { size: 22, lineHeight: 28, weight: 500 },
   serifRowTitle: { size: 20, lineHeight: 26, weight: 500 },
   serifListTitle: { size: 19, lineHeight: 25, weight: 500 },
+  // A muscle category's name under its figure, three tiles to a row.
+  serifTileName: { size: 16, lineHeight: 20, weight: 500 },
   serifProseSmall: { size: 17, lineHeight: 26, weight: 400 },
   // Sans
   buttonLabel: { size: 17, lineHeight: 22, weight: 600, tracking: -0.01 },
