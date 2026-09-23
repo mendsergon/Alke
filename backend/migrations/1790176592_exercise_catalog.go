@@ -8,9 +8,7 @@ import (
 
 // The exercise catalog: the muscle categories, in Stavros's order, and the
 // exercises, which are grouped by them. Both are read by everyone and written
-// only by a superuser. No exercises are seeded yet.
-//
-// The shape of `muscles` on an exercise is checked in `backend/exercises.go`.
+// only by a superuser.
 func init() {
 	m.Register(func(app core.App) error {
 		categories := core.NewBaseCollection("muscle_categories")
@@ -65,7 +63,7 @@ func init() {
 	})
 }
 
-// Stavros's order (`apps/mobile/src/figure/muscle-groups.tsx`). Rear delts go
+// Stavros's order. Rear delts go
 // with the other delt heads.
 var muscleCategories = []struct {
 	name    string

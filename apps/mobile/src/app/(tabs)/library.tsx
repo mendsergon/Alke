@@ -15,13 +15,12 @@ import { useLibrary } from '../../library/library';
 import { trainingDays, type ProgramRecord } from '../../backend/programs';
 
 /**
- * Library is the user's own programs — created, forked, saved — and nothing
- * else (PLAN.md §2).
+ * Library is the user's own programs — created, forked, saved — and their
+ * favorite exercises.
  *
- * There is no segmented control and no exercise list here. Each program is its
- * own card, built like Explore's, so it reads as something to open rather than
- * a line in a list. Page 05 draws rows in one block; this departs from it on
- * Stavros's instruction.
+ * Each program is its own card, built like Explore's, so it reads as something
+ * to open rather than a line in a list. Page 05 draws rows in one block; this
+ * departs from it on Stavros's instruction.
  */
 /** Page 05's Programs / Exercises switch, set top right. */
 const SIDES = ['Programs', 'Favorite exercises'] as const;

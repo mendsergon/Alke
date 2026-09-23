@@ -5,9 +5,9 @@ import {
 } from '../account/account-fields';
 
 /**
- * The thinnest possible client for the one thing the app writes today: a row
- * in `users`. No SDK — one `fetch` against the REST API, so there is no
- * dependency to license and nothing to keep in step with.
+ * The thinnest possible client for PocketBase. No SDK — one `fetch` against
+ * the REST API, so there is no dependency to license and nothing to keep in
+ * step with.
  *
  * OPEN: the address is a constant. It is the local PocketBase from
  * `backend/`, which the iOS simulator reaches on the host's own loopback. A

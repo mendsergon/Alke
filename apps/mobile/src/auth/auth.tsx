@@ -62,10 +62,9 @@ type AuthState = {
 const Ctx = createContext<AuthState | null>(null);
 
 /**
- * The name comes from the address the person typed, not from a stored account
- * — there is no backend yet. Continue works with an empty field so the app can
- * be tested, and that account simply has no address on it yet. Nothing is
- * invented either way.
+ * The name comes from the address the person typed, not from a stored account.
+ * Continue works with an empty field so the app can be tested, and that
+ * account simply has no address on it yet. Nothing is invented either way.
  */
 function userFromEmail(email: string): User {
   const trimmed = email.trim();
