@@ -4,10 +4,12 @@ import { Txt } from '../theme/text';
 import { tokens, useTheme } from '../theme/theme';
 import { listMuscleCategories, type MuscleCategory } from '../backend/muscles';
 import { ProgramCard } from './program-card';
+import { GroupIcon, MUSCLE_GROUPS } from '../figure/muscle-groups';
 
 /**
- * The muscle categories, in order, as tiles. The exercises under each are
- * served and none exist yet, so a tile is the category's name only.
+ * The muscle categories, in order, as tiles: each group's crop of the body,
+ * drawn the way Progress draws it (`components/body-map.tsx`) — every muscle
+ * seamed and visible — with the group's muscles lit, over its name.
  *
  * OPEN: there is no exercise list yet, so a tile presses and opens nothing.
  */
@@ -34,16 +36,36 @@ export function MuscleCategories() {
         rowGap: tokens.space[12],
       }}
     >
-      {categories.map((category) => (
-        // Two to a row; the space between them is what the two leave over.
-        <View key={category.id} style={{ width: '48%' }}>
-          <ProgramCard label={category.name}>
-            <Txt variant="serifListTitle" family="serif" weight={500} color={c.text} numberOfLines={1}>
-              {category.name}
-            </Txt>
-          </ProgramCard>
-        </View>
-      ))}
+      {categories.map((category) => {
+        const group = MUSCLE_GROUPS.find((g) => g.name === category.name);
+        return (
+            // Three to a row; the space between them is what the three leave over.
+          <View key={category.id} style={{ width: '31.5%' }}>
+            <ProgramCard label={category.name} padding={tokens.space[12]}>
+              <View style={{ alignItems: 'center', gap: tokens.space[8] }}>
+                {group ? (
+                  <GroupIcon
+                    base={group.base}
+                    muscles={group.muscles}
+                    viewBox={group.viewBox}
+                    size={tokens.iconTile.size.sessionHeader}
+                    seamAll
+                  />
+                ) : null}
+                <Txt
+                  variant="serifTileName"
+                  family="serif"
+                  weight={500}
+                  color={c.text}
+                  numberOfLines={1}
+                >
+                  {category.name}
+                </Txt>
+              </View>
+            </ProgramCard>
+          </View>
+        );
+      })}
     </View>
   );
 }
