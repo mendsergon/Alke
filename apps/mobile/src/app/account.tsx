@@ -1,6 +1,6 @@
 import { Pressable, ScrollView, View } from 'react-native';
 import { GlassView } from 'expo-glass-effect';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Card } from '../components/surfaces';
 import { Icon } from '../components/icon';
@@ -39,6 +39,10 @@ export default function AccountScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
+      {/* The native bar's frame takes every touch inside it, which left the
+          top of the back bubble dead; hidden here, the bubble answers
+          everywhere and the swipe back still works. */}
+      <Stack.Screen options={{ headerShown: false }} />
       <ScrollView
         style={{ flexGrow: 1 }}
         contentContainerStyle={{
