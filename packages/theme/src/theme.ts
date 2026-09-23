@@ -209,6 +209,7 @@ const typeExtra = {
 const templateCard = {
   dayDot: { size: 6, radius: 2, gap: 3 },
   actionHeight: 34,
+  chipGap: 6,
 } as const;
 
 const fontFamily = {
