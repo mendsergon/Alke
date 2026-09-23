@@ -61,7 +61,7 @@ export function Screen({
  * one lump. Opening fragments makes the gap and the stagger apply to what is
  * actually on the screen.
  */
-function flatten(children: ReactNode): ReactElement[] {
+export function flatten(children: ReactNode): ReactElement[] {
   const out: ReactElement[] = [];
   for (const child of Children.toArray(children)) {
     if (!isValidElement(child)) continue;
