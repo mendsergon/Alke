@@ -4,7 +4,7 @@ import { Txt } from '../theme/text';
 import { tokens, useTheme } from '../theme/theme';
 import { listMuscleCategories, type MuscleCategory } from '../backend/muscles';
 import { ProgramCard } from './program-card';
-import { GroupIcon, MUSCLE_GROUPS } from '../figure/muscle-groups';
+import { GroupIcon } from '../figure/muscle-groups';
 
 /**
  * The muscle categories, in order, as tiles: each group's crop of the body,
@@ -37,40 +37,35 @@ export function MuscleCategories({ onOpen }: { onOpen?: (category: MuscleCategor
         rowGap: tokens.space[12],
       }}
     >
-      {categories.map((category) => {
-        const group = MUSCLE_GROUPS.find((g) => g.name === category.name);
-        return (
-            // Three to a row; the space between them is what the three leave over.
-          <View key={category.id} style={{ width: '31.5%' }}>
-            <ProgramCard
-              label={category.name}
-              padding={tokens.space[12]}
-              onPress={onOpen ? () => onOpen(category) : undefined}
-            >
-              <View style={{ alignItems: 'center', gap: tokens.space[8] }}>
-                {group ? (
-                  <GroupIcon
-                    base={group.base}
-                    muscles={group.muscles}
-                    viewBox={group.viewBox}
-                    size={tokens.iconTile.size.sessionHeader}
-                    seamAll
-                  />
-                ) : null}
-                <Txt
-                  variant="serifTileName"
-                  family="serif"
-                  weight={500}
-                  color={c.text}
-                  numberOfLines={1}
-                >
-                  {category.name}
-                </Txt>
-              </View>
-            </ProgramCard>
-          </View>
-        );
-      })}
+      {categories.map((category) => (
+        // Three to a row; the space between them is what the three leave over.
+        <View key={category.id} style={{ width: '31.5%' }}>
+          <ProgramCard
+            label={category.name}
+            padding={tokens.space[12]}
+            onPress={onOpen ? () => onOpen(category) : undefined}
+          >
+            <View style={{ alignItems: 'center', gap: tokens.space[8] }}>
+              <GroupIcon
+                base={category.icon}
+                muscles={category.icon_muscles}
+                viewBox={category.icon_crop || undefined}
+                size={tokens.iconTile.size.sessionHeader}
+                seamAll
+              />
+              <Txt
+                variant="serifTileName"
+                family="serif"
+                weight={500}
+                color={c.text}
+                numberOfLines={1}
+              >
+                {category.name}
+              </Txt>
+            </View>
+          </ProgramCard>
+        </View>
+      ))}
     </View>
   );
 }
