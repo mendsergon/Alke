@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/pocketbase/dbx"
 	validation "github.com/pocketbase/ozzo-validation/v4"
 	"github.com/pocketbase/pocketbase/core"
 )
@@ -43,6 +44,39 @@ type programDay struct {
 }
 
 func bindPrograms(app core.App) {
+	// Renaming a template renames its copies with it. Only the name follows:
+	// the copy's week and days are its own. A copy whose name no longer
+	// matches the template's old one was renamed by its owner and keeps it.
+	app.OnRecordUpdate("programs").BindFunc(func(e *core.RecordEvent) error {
+		was := e.Record.Original().GetString("name")
+		now := e.Record.GetString("name")
+		isTemplate := e.Record.GetString("owner") == ""
+
+		if err := e.Next(); err != nil {
+			return err
+		}
+		if !isTemplate || was == now {
+			return nil
+		}
+
+		copies, err := e.App.FindRecordsByFilter(
+			"programs",
+			"owner != '' && copied_from = {:id} && name = {:was}",
+			"", 0, 0,
+			dbx.Params{"id": e.Record.Id, "was": was},
+		)
+		if err != nil {
+			return err
+		}
+		for _, c := range copies {
+			c.Set("name", now)
+			if err := e.App.Save(c); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
 	// A JSON field has no shape of its own, so the week and its days are
 	// checked here, on every write, the superuser's included.
 	app.OnRecordValidate("programs").BindFunc(func(e *core.RecordEvent) error {
