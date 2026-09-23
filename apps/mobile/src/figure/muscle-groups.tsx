@@ -39,7 +39,7 @@ export const MUSCLE_GROUPS: {
   { name: 'Back', base: 'row', muscles: ['Lats', 'Traps', 'Erectors'] },
   { name: 'Biceps', base: 'curl', muscles: ['Biceps'] },
   { name: 'Triceps', base: 'pushdown', muscles: ['Triceps'] },
-  { name: 'Shoulders', base: 'ohp', muscles: ['Delts', 'Side delts'] },
+  { name: 'Shoulders', base: 'ohp', muscles: ['Delts', 'Side delts', 'Rear delts'] },
   { name: 'Quads', base: 'squat', muscles: ['Quads'] },
   { name: 'Hamstrings', base: 'rdl', muscles: ['Hamstrings'] },
   { name: 'Adductors', base: 'adduction', muscles: ['Adductors'] },
