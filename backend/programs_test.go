@@ -39,7 +39,7 @@ type fixture struct {
 	aliceTok string
 	bobTok   string
 	adminTok string
-	template *core.Record // "Full body"
+	template *core.Record // "Full Body"
 	bobsCopy *core.Record
 }
 
@@ -65,7 +65,7 @@ func newFixture(t testing.TB) *fixture {
 	}
 	f.adminTok = token(t, admin)
 
-	f.template, err = app.FindFirstRecordByFilter("programs", "owner = '' && name = 'Full body'")
+	f.template, err = app.FindFirstRecordByFilter("programs", "owner = '' && name = 'Full Body'")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,20 +153,20 @@ func TestTemplatesAreSeeded(t *testing.T) {
 	defer app.Cleanup()
 
 	want := map[string][]string{
-		"Full body":          {"training", "rest", "training", "rest", "training", "rest", "rest"},
-		"Upper / lower":      {"training", "training", "rest", "training", "training", "rest", "rest"},
-		"Push / pull / legs": {"training", "training", "training", "training", "training", "training", "rest"},
+		"Full Body":           {"training", "rest", "training", "rest", "training", "rest", "rest"},
+		"Upper / Lower":       {"training", "training", "rest", "training", "training", "rest", "rest"},
+		"Push / Pull / Lower": {"training", "training", "training", "training", "training", "training", "rest"},
 	}
 	wantDays := map[string]map[string][]string{
-		"Full body": {
+		"Full Body": {
 			"monday": {"Full body"}, "wednesday": {"Full body"}, "friday": {"Full body"},
 		},
-		"Upper / lower": {
+		"Upper / Lower": {
 			"monday": {"Upper"}, "tuesday": {"Lower"}, "thursday": {"Upper"}, "friday": {"Lower"},
 		},
-		"Push / pull / legs": {
-			"monday": {"Push"}, "tuesday": {"Pull"}, "wednesday": {"Legs"},
-			"thursday": {"Push"}, "friday": {"Pull"}, "saturday": {"Legs"},
+		"Push / Pull / Lower": {
+			"monday": {"Push"}, "tuesday": {"Pull"}, "wednesday": {"Lower"},
+			"thursday": {"Push"}, "friday": {"Pull"}, "saturday": {"Lower"},
 		},
 	}
 
@@ -502,9 +502,9 @@ func TestWriteRules(t *testing.T) {
 			Method:          http.MethodPatch,
 			URL:             "/api/collections/programs/records/" + f.template.Id,
 			Headers:         auth(f.adminTok),
-			Body:            strings.NewReader(`{"name":"Full body, edited"}`),
+			Body:            strings.NewReader(`{"name":"Full Body, edited"}`),
 			ExpectedStatus:  200,
-			ExpectedContent: []string{`"name":"Full body, edited"`},
+			ExpectedContent: []string{`"name":"Full Body, edited"`},
 		}
 	})
 }
@@ -526,7 +526,7 @@ func TestEditingTheTemplateLeavesTheCopy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.GetString("name") != "Full body" || got.GetString("days") != before {
+	if got.GetString("name") != "Full Body" || got.GetString("days") != before {
 		t.Fatalf("the copy changed with the template: %s / %s", got.GetString("name"), got.GetString("days"))
 	}
 }

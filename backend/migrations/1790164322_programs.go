@@ -134,7 +134,7 @@ var templates = []struct {
 	days     []day
 }{
 	{
-		name:     "Full body",
+		name:     "Full Body",
 		schedule: []string{"training", "rest", "training", "rest", "training", "rest", "rest"},
 		days: []day{
 			on("monday", "Full body", "full_body"),
@@ -143,7 +143,7 @@ var templates = []struct {
 		},
 	},
 	{
-		name:     "Upper / lower",
+		name:     "Upper / Lower",
 		schedule: []string{"training", "training", "rest", "training", "training", "rest", "rest"},
 		days: []day{
 			on("monday", "Upper", "upper"),
@@ -153,15 +153,15 @@ var templates = []struct {
 		},
 	},
 	{
-		name:     "Push / pull / legs",
+		name:     "Push / Pull / Lower",
 		schedule: []string{"training", "training", "training", "training", "training", "training", "rest"},
 		days: []day{
 			on("monday", "Push", "push"),
 			on("tuesday", "Pull", "pull"),
-			on("wednesday", "Legs", "legs"),
+			on("wednesday", "Lower", "lower"),
 			on("thursday", "Push", "push"),
 			on("friday", "Pull", "pull"),
-			on("saturday", "Legs", "legs"),
+			on("saturday", "Lower", "lower"),
 		},
 	},
 }

@@ -27,7 +27,6 @@ var workoutIcons = map[string]bool{
 	"lower":     true,
 	"push":      true,
 	"pull":      true,
-	"legs":      true,
 }
 
 // A workout inside a program is a placeholder: a name and an icon, nothing
