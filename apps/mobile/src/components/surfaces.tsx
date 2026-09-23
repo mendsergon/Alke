@@ -59,9 +59,12 @@ export function Chip({ children }: { children: ReactNode }) {
 export function Pill({
   label,
   tone = 'accent',
+  size = 'compact',
 }: {
   label: string;
   tone?: 'accent' | 'neutral' | 'record';
+  /** `regular` is the pill design page 05 draws on Library rows. */
+  size?: 'compact' | 'regular';
 }) {
   const { c } = useTheme();
   const bg = tone === 'accent' ? c.accentSoft : tone === 'record' ? c.recordSoft : c.surfaceRaised;
@@ -72,8 +75,8 @@ export function Pill({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        paddingVertical: 3,
-        paddingHorizontal: 8,
+        paddingVertical: size === 'regular' ? tokens.pill.regular.paddingVertical : 3,
+        paddingHorizontal: size === 'regular' ? tokens.pill.regular.paddingHorizontal : 8,
         borderRadius: tokens.radius.rung,
         backgroundColor: bg,
       }}

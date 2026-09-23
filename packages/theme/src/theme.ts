@@ -176,6 +176,8 @@ const typeExtra = {
   serifPanelTitle: { size: 22, lineHeight: 28, weight: 500 },
   serifRowTitle: { size: 20, lineHeight: 26, weight: 500 },
   serifListTitle: { size: 19, lineHeight: 25, weight: 500 },
+  // Library's row name: cap height matched to page 05's 10.9pt, on its 22pt line.
+  serifRowName: { size: 17, lineHeight: 22, weight: 500 },
   serifProseSmall: { size: 17, lineHeight: 26, weight: 400 },
   // Sans
   buttonLabel: { size: 17, lineHeight: 22, weight: 600, tracking: -0.01 },
@@ -204,6 +206,12 @@ const typeExtra = {
 } as const;
 
 // Font families as @expo-google-fonts exports them.
+// The status pill as design page 05 draws it: 62.6 x 27.4pt around an 11pt
+// micro-caps label, read off the page at 300 dpi.
+const pill = {
+  regular: { paddingVertical: 7, paddingHorizontal: 9 },
+} as const;
+
 // Explore's template card, read off design page 04 rendered at 300 dpi
 // (1222px across a 390pt screen).
 const templateCard = {
@@ -232,6 +240,7 @@ export const theme = {
   rung,
   iconTile,
   templateCard,
+  pill,
 } as const;
 
 export type Theme = typeof theme;
