@@ -48,6 +48,10 @@ const config: ExpoConfig = {
     // template still uses the pre-scene launch path, which is deprecated at
     // our iOS 26 floor and asserts at launch on iOS 27.
     './plugins/with-scene-lifecycle',
+    // Expo's own deployment-target plugin only reaches the app target, so the
+    // PBXProject's configurations keep the template's floor. This puts
+    // `ios.deploymentTarget` on those too.
+    './plugins/with-project-deployment-target',
   ],
   experiments: {
     typedRoutes: true,
