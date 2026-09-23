@@ -11,6 +11,8 @@ import (
 	validation "github.com/pocketbase/ozzo-validation/v4"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
+
+	_ "alke/backend/migrations"
 )
 
 // The range a date of birth has to put an account in, in whole years.
