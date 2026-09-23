@@ -9,7 +9,7 @@
     "ios": "expo run:ios",
     "android": "expo run:android",
     "typecheck": "tsc --noEmit",
-    "figures": "node ./scripts/extract-figures.mjs"
+    "figures": "tsx ./scripts/extract-figures.ts"
   },
   "dependencies": {
     "@alke/theme": "workspace:*",
@@ -38,7 +38,10 @@
     "thinking-orbs": "0.3.1"
   },
   "devDependencies": {
+    "@expo/config-plugins": "^57.0.9",
+    "@types/node": "^26.6.2",
     "@types/react": "~19.2.2",
+    "tsx": "^4.23.15",
     "typescript": "~6.0.3"
   }
 }

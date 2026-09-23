@@ -44,6 +44,10 @@ const config: ExpoConfig = {
         imageWidth: 76,
       },
     ],
+    // Moves the generated app onto the UIScene life cycle. Expo's bare
+    // template still uses the pre-scene launch path, which is deprecated at
+    // our iOS 26 floor and asserts at launch on iOS 27.
+    './plugins/with-scene-lifecycle',
   ],
   experiments: {
     typedRoutes: true,
