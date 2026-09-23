@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '../../components/surfaces';
 import { ProgramCard } from '../../components/program-card';
@@ -15,10 +15,6 @@ import { listExercisesIn, type Exercise } from '../../backend/exercises';
  * A muscle category's exercises: every exercise whose main muscle it is, as
  * PocketBase holds them. Each is its own card, as programs are — the icon
  * drawn the way Progress draws the body, and the name.
- *
- * The native bar is hidden here: its frame takes every touch inside it
- * (react-native-screens `RNSScreenStack.mm`, hitTest), which left the top half
- * of the back bubble dead. The swipe back still works without it.
  *
  * OPEN: there is no exercise screen yet, so a card opens nothing.
  */
@@ -42,7 +38,6 @@ export default function CategoryScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <Stack.Screen options={{ headerShown: false }} />
       <ScrollView
         contentContainerStyle={{
           // Clears the back bubble, as Account does.
