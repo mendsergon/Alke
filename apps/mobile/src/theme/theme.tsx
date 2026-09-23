@@ -1,6 +1,5 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import { useColorScheme } from 'react-native';
-import * as SystemUI from 'expo-system-ui';
 import { theme as tokens } from '@alke/theme';
 
 export type Scheme = 'light' | 'dark';
@@ -47,13 +46,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const scheme: Scheme = preference === 'system' ? system : preference;
-
-  // The window behind the app. Left unset, expo-system-ui paints it white or
-  // black from the phone's own setting, not Alke's; iOS 26 rounds the corners
-  // of screens in a push and that colour shows round the edges.
-  useEffect(() => {
-    void SystemUI.setBackgroundColorAsync(tokens[scheme].bg);
-  }, [scheme]);
 
   const value = useMemo<Ctx>(
     () => ({
