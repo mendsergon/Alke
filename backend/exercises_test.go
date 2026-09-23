@@ -54,16 +54,36 @@ func TestMuscleCategoriesAreSeededInOrder(t *testing.T) {
 	}
 }
 
-func TestNoExercisesAreSeeded(t *testing.T) {
+// The catalog ships one exercise so far: Flat Bench Press.
+func TestTheCatalogIsSeeded(t *testing.T) {
 	app := newProgramsApp(t)
 	defer app.Cleanup()
 
-	n, err := app.CountRecords("exercises")
+	all, err := app.FindAllRecords("exercises")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if n != 0 {
-		t.Fatalf("exercises: got %d, want 0", n)
+	if len(all) != 1 {
+		t.Fatalf("exercises: got %d, want 1", len(all))
+	}
+	r := all[0]
+	if r.GetString("name") != "Flat Bench Press" || r.GetString("owner") != "" || r.GetString("icon") != "bench" {
+		t.Fatalf("got %q owner %q icon %q", r.GetString("name"), r.GetString("owner"), r.GetString("icon"))
+	}
+	if r.GetString("main_muscle") != category(t, app, "Chest") {
+		t.Fatal("main muscle is not Chest")
+	}
+	secondary := r.GetStringSlice("secondary_muscles")
+	want := []string{category(t, app, "Shoulders"), category(t, app, "Triceps")}
+	if strings.Join(secondary, ",") != strings.Join(want, ",") {
+		t.Fatalf("secondary muscles: got %v, want Shoulders, Triceps", secondary)
+	}
+	if r.GetString("type") != exerciseType(t, app, "Free weight") {
+		t.Fatal("type is not Free weight")
+	}
+	// Seeded before the validator is bound; held to it all the same.
+	if err := app.Validate(r); err != nil {
+		t.Fatalf("the seed fails validation: %v", err)
 	}
 }
 
@@ -138,7 +158,7 @@ func TestCatalogRules(t *testing.T) {
 			Method:          http.MethodGet,
 			URL:             "/api/collections/exercises/records",
 			ExpectedStatus:  200,
-			ExpectedContent: []string{`"totalItems":0`},
+			ExpectedContent: []string{`"totalItems":1`, `"name":"Flat Bench Press"`},
 		}
 	})
 	run(t, "a free user cannot add a catalog exercise", func(f *fixture) tests.ApiScenario {
@@ -366,7 +386,7 @@ func TestCustomExerciseRules(t *testing.T) {
 			URL:                "/api/collections/exercises/records",
 			Headers:            auth(f.aliceTok),
 			ExpectedStatus:     200,
-			ExpectedContent:    []string{`"totalItems":1`},
+			ExpectedContent:    []string{`"totalItems":2`},
 			NotExpectedContent: []string{mine.Id},
 		}
 	})
