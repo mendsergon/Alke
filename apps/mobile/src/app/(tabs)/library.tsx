@@ -1,9 +1,10 @@
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenHeader } from '../../components/screen';
-import { EmptyState, Pill, Segmented } from '../../components/surfaces';
+import { EmptyState, Pill } from '../../components/surfaces';
 import { MuscleCategories } from '../../components/muscle-categories';
 import { SwitchScreen } from '../../components/switch-screen';
+import { PagerSwitch } from '../../components/pager-switch';
 import { useState } from 'react';
 import { Icon } from '../../components/icon';
 import { GlassButton } from '../../components/glass-button';
@@ -37,7 +38,7 @@ export default function Library() {
       gap={tokens.space[16]}
       index={SIDES.indexOf(side)}
       onIndexChange={(i) => setSide(SIDES[i] ?? 'Programs')}
-      header={
+      header={(progress) =>
         <>
           {/* OPEN: the program builder is not designed yet (PLAN.md §3), so the + opens nothing. */}
           <ScreenHeader
@@ -46,7 +47,7 @@ export default function Library() {
             action={<GlassButton icon="plus" label="Create a program" />}
           />
           <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-            <Segmented options={SIDES} value={side} onChange={setSide} fit />
+            <PagerSwitch options={SIDES} value={side} onChange={setSide} progress={progress} />
           </View>
         </>
       }

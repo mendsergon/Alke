@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenHeader } from '../../components/screen';
-import { Card, EmptyState, Pill, PrimaryButton, Segmented } from '../../components/surfaces';
+import { Card, EmptyState, Pill, PrimaryButton } from '../../components/surfaces';
 import { MuscleCategories } from '../../components/muscle-categories';
 import { SwitchScreen } from '../../components/switch-screen';
+import { PagerSwitch } from '../../components/pager-switch';
 import { Icon } from '../../components/icon';
 import { MicroCaps, Txt } from '../../theme/text';
 import { tokens, useTheme } from '../../theme/theme';
@@ -231,10 +232,10 @@ export default function Explore() {
       headerGap={tokens.space[20] + 14}
       index={SIDES.indexOf(side)}
       onIndexChange={(i) => setSide(SIDES[i] ?? 'Programs')}
-      header={
+      header={(progress) =>
         <ScreenHeader
           title="Explore"
-          action={<Segmented options={SIDES} value={side} onChange={setSide} fit />}
+          action={<PagerSwitch options={SIDES} value={side} onChange={setSide} progress={progress} />}
         />
       }
       pages={[
