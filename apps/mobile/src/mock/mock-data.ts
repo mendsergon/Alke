@@ -112,9 +112,6 @@ export const GYM_MEMBERSHIPS: Gym[] = [];
 /** Exercises the person created themselves, on top of the catalog. */
 export const USER_CUSTOM_EXERCISES: ExerciseRow[] = [];
 
-/** Program templates the app offers. They are served, not shipped. */
-export const FEATURED_TEMPLATES: never[] = [];
-
 /** Programs other people have shared. Nothing until the social layer exists. */
 export const SHARED_PROGRAMS: SharedProgram[] = [];
 
