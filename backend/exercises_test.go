@@ -54,7 +54,6 @@ func TestMuscleCategoriesAreSeededInOrder(t *testing.T) {
 	}
 }
 
-// The catalog ships one exercise so far: Flat Bench Press.
 func TestTheCatalogIsSeeded(t *testing.T) {
 	app := newProgramsApp(t)
 	defer app.Cleanup()
