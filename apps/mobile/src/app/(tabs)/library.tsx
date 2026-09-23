@@ -1,7 +1,7 @@
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Screen, ScreenHeader } from '../../components/screen';
-import { Card, EmptyState, Pill, Row } from '../../components/surfaces';
+import { Card, EmptyState, Pill } from '../../components/surfaces';
 import { Rung } from '../../components/rung';
 import { Txt } from '../../theme/text';
 import { tokens, useTheme } from '../../theme/theme';
@@ -25,7 +25,7 @@ export default function Library() {
       <ScreenHeader title="Library" subtitle="Your programs" />
 
       {programs.length > 0 ? (
-        <Card>
+        <Card padding={0} style={{ paddingVertical: tokens.space[20], overflow: 'hidden' }}>
           {programs.map((p, i) => (
             <ProgramListRow key={p.id} program={p} first={i === 0} />
           ))}
@@ -49,10 +49,23 @@ function ProgramListRow({ program, first }: { program: ProgramRecord; first: boo
   const days = trainingDays(program);
   const status = program.active ? 'Active' : 'Saved';
   return (
-    <Row first={first}>
-      <View style={{ flexGrow: 1, flexShrink: 1 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
-          <Txt variant="rowLabel" weight={500} style={{ flexGrow: 1, flexShrink: 1 }}>
+    <View>
+      {first ? null : (
+        <View style={{ height: 1, backgroundColor: c.border, marginHorizontal: tokens.space[20] }} />
+      )}
+      {/* OPEN: there is no program screen yet, so the row presses and goes nowhere. */}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={program.name}
+        style={({ pressed }) => ({
+          paddingHorizontal: tokens.space[20],
+          paddingTop: tokens.space[16],
+          paddingBottom: tokens.space[12],
+          backgroundColor: pressed ? c.surfaceRaised : 'transparent',
+        })}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[8] }}>
+          <Txt variant="serifListTitle" family="serif" weight={500} style={{ flexGrow: 1, flexShrink: 1 }}>
             {program.name}
           </Txt>
           <Pill label={status} tone={program.active ? 'accent' : 'neutral'} />
@@ -64,7 +77,7 @@ function ProgramListRow({ program, first }: { program: ProgramRecord; first: boo
           {/* Nothing is logged yet, so none of this week's sessions are done. */}
           <Rung value={0} target={days} />
         </View>
-      </View>
-    </Row>
+      </Pressable>
+    </View>
   );
 }
