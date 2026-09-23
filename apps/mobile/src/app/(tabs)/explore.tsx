@@ -10,6 +10,7 @@ import { useAuth } from '../../auth/auth';
 import { useGym } from '../../gym/gym';
 import { useLibrary } from '../../library/library';
 import { listTemplates, trainingDays, type ProgramRecord } from '../../backend/programs';
+import { DayDots, ProgramCard, weekLine } from '../../components/program-card';
 import { GYM_PROGRAMS, SHARED_PROGRAMS } from '../../mock/mock-data';
 
 function SearchBar() {
@@ -28,31 +29,6 @@ function SearchBar() {
     >
       <Icon name="search" size={18} color={c.textSecondary} />
       <Txt color={c.textSecondary}>Search programs</Txt>
-    </View>
-  );
-}
-
-/**
- * Seven squares, Monday to Sunday in order. A training day is the accent, a
- * rest day the muted body tone; both are solid. The design fills the first N
- * as a count; this marks the actual days, on Stavros's instruction.
- */
-function DayDots({ schedule }: { schedule: ProgramRecord['schedule'] }) {
-  const { c } = useTheme();
-  const dot = tokens.templateCard.dayDot;
-  return (
-    <View style={{ flexDirection: 'row', gap: dot.gap, alignItems: 'center' }}>
-      {schedule.map((day, i) => (
-        <View
-          key={i}
-          style={{
-            width: dot.size,
-            height: dot.size,
-            borderRadius: dot.radius,
-            backgroundColor: day === 'training' ? c.accent : c.iconBody,
-          }}
-        />
-      ))}
     </View>
   );
 }
@@ -78,52 +54,28 @@ function MetaChip({ label }: { label: string }) {
   );
 }
 
-const WEEKDAY_SHORT: Record<string, string> = {
-  monday: 'Mon',
-  tuesday: 'Tue',
-  wednesday: 'Wed',
-  thursday: 'Thu',
-  friday: 'Fri',
-  saturday: 'Sat',
-  sunday: 'Sun',
-};
-
 function TemplateCard({ template }: { template: ProgramRecord }) {
   const { c } = useTheme();
   const { programs, save } = useLibrary();
   const [saving, setSaving] = useState(false);
-  const card = tokens.templateCard;
   const days = trainingDays(template);
   const restDays = template.schedule.length - days;
   const saved = programs.some((p) => p.copied_from === template.id);
-
   const chips = [...new Set(template.days.flatMap((d) => d.workouts.map((w) => w.name)))];
-  const week = template.days.map((d) => WEEKDAY_SHORT[d.weekday] ?? d.weekday).join(' · ');
 
   return (
-    // OPEN: there is no program detail screen yet, so pressing the card shows
-    // that it is pressable and goes nowhere.
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={template.name}
-      style={({ pressed }) => ({
-        backgroundColor: pressed ? c.surfaceRaised : c.surface,
-        borderRadius: tokens.radius.card,
-        borderWidth: 1,
-        borderColor: c.border,
-        padding: tokens.space[16],
-      })}
-    >
-      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: tokens.space[8] }}>
+    // OPEN: there is no program screen yet, so the card presses and goes nowhere.
+    <ProgramCard label={template.name}>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: tokens.space[12] }}>
         <View style={{ flexGrow: 1, flexShrink: 1 }}>
-          <Txt variant="serifListTitle" family="serif" weight={500} color={c.text}>
+          <Txt variant="serifCardTitle" family="serif" weight={500} color={c.text}>
             {template.name}
           </Txt>
-          <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: 1 }}>
-            {week}
+          <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: tokens.space[4] }}>
+            {weekLine(template)}
           </Txt>
         </View>
-        <Pill label="Featured" />
+        <Pill label="Featured" size="regular" />
       </View>
 
       <View
@@ -131,7 +83,7 @@ function TemplateCard({ template }: { template: ProgramRecord }) {
           flexDirection: 'row',
           alignItems: 'center',
           gap: tokens.space[8],
-          marginTop: tokens.space[12],
+          marginTop: tokens.space[16],
         }}
       >
         <DayDots schedule={template.schedule} />
@@ -140,7 +92,14 @@ function TemplateCard({ template }: { template: ProgramRecord }) {
         </Txt>
       </View>
 
-      <View style={{ flexDirection: 'row', gap: card.chipGap, flexWrap: 'wrap', marginTop: tokens.space[12] }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          gap: tokens.templateCard.chipGap,
+          flexWrap: 'wrap',
+          marginTop: tokens.space[16],
+        }}
+      >
         {chips.map((chip) => (
           <MetaChip key={chip} label={chip} />
         ))}
@@ -152,7 +111,7 @@ function TemplateCard({ template }: { template: ProgramRecord }) {
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: tokens.space[8],
-          marginTop: tokens.space[12],
+          marginTop: tokens.space[16],
         }}
       >
         <Txt variant="captionTight" color={c.textSecondary} tnum>
@@ -178,7 +137,7 @@ function TemplateCard({ template }: { template: ProgramRecord }) {
             borderWidth: saved ? 0 : 1,
             borderColor: c.border,
             // The accent is the person's own data, and a saved template is theirs.
-            backgroundColor: saved ? c.accentSoft : pressed ? c.surfaceRaised : 'transparent',
+            backgroundColor: saved ? c.accentSoft : pressed ? c.bg : 'transparent',
           })}
         >
           {saved ? <Icon name="check" size={15} color={c.accent} /> : null}
@@ -187,7 +146,7 @@ function TemplateCard({ template }: { template: ProgramRecord }) {
           </Txt>
         </Pressable>
       </View>
-    </Pressable>
+    </ProgramCard>
   );
 }
 
@@ -231,7 +190,12 @@ export default function Explore() {
 
       <MicroCaps>Featured</MicroCaps>
       {templates.length > 0 ? (
-        templates.map((t) => <TemplateCard key={t.id} template={t} />)
+        // Page 04 keeps 34pt of ground between cards; 32 is the nearest step.
+        <View style={{ gap: tokens.space[32] }}>
+          {templates.map((t) => (
+            <TemplateCard key={t.id} template={t} />
+          ))}
+        </View>
       ) : (
         <EmptyState line="No featured programs yet." />
       )}
