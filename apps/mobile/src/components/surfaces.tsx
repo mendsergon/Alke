@@ -238,10 +238,13 @@ export function Segmented<T extends string>({
   options,
   value,
   onChange,
+  fit = false,
 }: {
   options: readonly T[];
   value: T;
   onChange: (v: T) => void;
+  /** Each segment as wide as its label, rather than sharing the full width. */
+  fit?: boolean;
 }) {
   const { c } = useTheme();
   return (
@@ -262,8 +265,9 @@ export function Segmented<T extends string>({
             accessibilityRole="button"
             onPress={() => onChange(o)}
             style={{
-              flexGrow: 1,
-              flexBasis: 0,
+              flexGrow: fit ? 0 : 1,
+              flexBasis: fit ? 'auto' : 0,
+              paddingHorizontal: fit ? tokens.space[12] : 0,
               height: 36,
               borderRadius: tokens.radius.chip,
               alignItems: 'center',
