@@ -32,14 +32,6 @@ export type SessionPlan = {
 
 export type ReportTeaser = { eyebrow: string; week: string; line: string };
 
-export type ProgramRow = {
-  name: string;
-  status: 'Active' | 'Forked' | 'Draft' | 'Saved';
-  detail: string;
-  done: number;
-  target: number;
-};
-
 export type ExerciseRow = {
   name: string;
   /** The muscle this movement trains first. Exercises are grouped by it. */
@@ -116,9 +108,6 @@ export const CHECK_IN_SLIDERS = ['Sleep', 'Fatigue', 'Stress', 'Sore', 'Mood'];
 /** No gym joined. The chip and the Profile card both read this. */
 export const ACTIVE_GYM: Gym | null = null;
 export const GYM_MEMBERSHIPS: Gym[] = [];
-
-/** Programs the person has added from a template. Empty until they add one. */
-export const USER_PROGRAMS: ProgramRow[] = [];
 
 /** Exercises the person created themselves, on top of the catalog. */
 export const USER_CUSTOM_EXERCISES: ExerciseRow[] = [];

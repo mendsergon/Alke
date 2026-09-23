@@ -6,7 +6,7 @@ import { Rung } from '../../components/rung';
 import { Txt } from '../../theme/text';
 import { tokens, useTheme } from '../../theme/theme';
 import { useLibrary } from '../../library/library';
-import type { ProgramRow } from '../../mock/mock-data';
+import { trainingDays, type ProgramRecord } from '../../backend/programs';
 
 /**
  * Library is the user's own programs — created, forked, saved — and nothing
@@ -27,7 +27,7 @@ export default function Library() {
       {programs.length > 0 ? (
         <Card>
           {programs.map((p, i) => (
-            <ProgramListRow key={p.name} program={p} first={i === 0} />
+            <ProgramListRow key={p.id} program={p} first={i === 0} />
           ))}
         </Card>
       ) : (
@@ -44,8 +44,10 @@ export default function Library() {
   );
 }
 
-function ProgramListRow({ program, first }: { program: ProgramRow; first: boolean }) {
+function ProgramListRow({ program, first }: { program: ProgramRecord; first: boolean }) {
   const { c } = useTheme();
+  const days = trainingDays(program);
+  const status = program.active ? 'Active' : 'Saved';
   return (
     <Row first={first}>
       <View style={{ flexGrow: 1, flexShrink: 1 }}>
@@ -53,13 +55,14 @@ function ProgramListRow({ program, first }: { program: ProgramRow; first: boolea
           <Txt variant="rowLabel" weight={500} style={{ flexGrow: 1, flexShrink: 1 }}>
             {program.name}
           </Txt>
-          <Pill label={program.status} tone={program.status === 'Active' ? 'accent' : 'neutral'} />
+          <Pill label={status} tone={program.active ? 'accent' : 'neutral'} />
         </View>
         <Txt variant="captionTight" color={c.textSecondary} tnum style={{ marginTop: 1 }}>
-          {program.detail}
+          {days} days
         </Txt>
         <View style={{ marginTop: tokens.space[8] }}>
-          <Rung value={program.done} target={program.target} />
+          {/* Nothing is logged yet, so none of this week's sessions are done. */}
+          <Rung value={0} target={days} />
         </View>
       </View>
     </Row>
