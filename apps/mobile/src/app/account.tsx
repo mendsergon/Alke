@@ -119,9 +119,14 @@ export default function AccountScreen() {
 
             {/* The address is not like the others — it is the way in. */}
             <Card tone="accentSoft" style={{ marginTop: tokens.space[24] }}>
-              <MicroCaps color={c.accent}>How you sign in</MicroCaps>
-              <Txt variant="bodySmall" style={{ marginTop: tokens.space[8] }}>
-                With {account.email}. Alke never asks you for a password.
+              <MicroCaps color={c.accent}>Signs in with</MicroCaps>
+              <Txt
+                variant="dataValue"
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={{ marginTop: tokens.space[8] }}
+              >
+                {account.email}
               </Txt>
             </Card>
 
