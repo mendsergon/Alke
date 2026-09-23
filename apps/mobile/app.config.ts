@@ -18,6 +18,9 @@ const config: ExpoConfig = {
   ios: {
     bundleIdentifier: 'com.stavroskaloumenos.alke',
     supportsTablet: false,
+    // The lowest iOS a device can have to install Alke. Liquid Glass
+    // (`UIGlassEffect`) is iOS 26, and the app is built on it.
+    deploymentTarget: '26.0',
   },
   android: {
     package: 'com.stavroskaloumenos.alke',
