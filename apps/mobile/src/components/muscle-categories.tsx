@@ -11,9 +11,10 @@ import { GroupIcon, MUSCLE_GROUPS } from '../figure/muscle-groups';
  * drawn the way Progress draws it (`components/body-map.tsx`) — every muscle
  * seamed and visible — with the group's muscles lit, over its name.
  *
- * OPEN: there is no exercise list yet, so a tile presses and opens nothing.
+ * On Explore a tile opens the category's exercises; in Library, where
+ * favorites have no data yet, it opens nothing.
  */
-export function MuscleCategories() {
+export function MuscleCategories({ onOpen }: { onOpen?: (category: MuscleCategory) => void } = {}) {
   const { c } = useTheme();
   const [categories, setCategories] = useState<MuscleCategory[]>([]);
 
@@ -41,7 +42,11 @@ export function MuscleCategories() {
         return (
             // Three to a row; the space between them is what the three leave over.
           <View key={category.id} style={{ width: '31.5%' }}>
-            <ProgramCard label={category.name} padding={tokens.space[12]}>
+            <ProgramCard
+              label={category.name}
+              padding={tokens.space[12]}
+              onPress={onOpen ? () => onOpen(category) : undefined}
+            >
               <View style={{ alignItems: 'center', gap: tokens.space[8] }}>
                 {group ? (
                   <GroupIcon
