@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Screen, ScreenHeader } from '../../components/screen';
 import { EmptyState, Pill } from '../../components/surfaces';
@@ -25,7 +25,7 @@ export default function Library() {
 
   return (
     <Screen gap={tokens.space[16]}>
-      <ScreenHeader title="Library" subtitle="Your programs" />
+      <ScreenHeader title="Library" subtitle="Your programs" action={<CreateProgram />} />
 
       {programs.length > 0 ? (
         // Each program is its own card, on page 04's spacing between cards.
@@ -45,6 +45,33 @@ export default function Library() {
         />
       )}
     </Screen>
+  );
+}
+
+/**
+ * Create your own: the "+" page 05 draws top right of Library.
+ *
+ * OPEN: PLAN.md §3 lists the program builder as not yet designed, so there is
+ * nothing for it to open yet.
+ */
+function CreateProgram() {
+  const { c } = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Create a program"
+      hitSlop={tokens.space[4]}
+      style={({ pressed }) => ({
+        width: tokens.sizing.tapTarget.ios,
+        height: tokens.sizing.tapTarget.ios,
+        borderRadius: tokens.radius.rung,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: pressed ? c.accentSoft : 'transparent',
+      })}
+    >
+      <Icon name="plus" size={22} color={c.accent} width={1.75} />
+    </Pressable>
   );
 }
 
