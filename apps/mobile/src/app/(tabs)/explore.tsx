@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Screen, ScreenHeader } from '../../components/screen';
 import { Card, EmptyState, Pill, PrimaryButton } from '../../components/surfaces';
@@ -13,8 +13,9 @@ import { listTemplates, trainingDays, type ProgramRecord } from '../../backend/p
 import { DayDots, ProgramCard, weekLine } from '../../components/program-card';
 import { GYM_PROGRAMS, SHARED_PROGRAMS } from '../../mock/mock-data';
 
-function SearchBar() {
+function SearchBar({ value, onChange }: { value: string; onChange: (next: string) => void }) {
   const { c } = useTheme();
+  const [focused, setFocused] = useState(false);
   return (
     <View
       style={{
@@ -24,13 +25,45 @@ function SearchBar() {
         height: 46,
         paddingHorizontal: 14,
         borderRadius: tokens.radius.button,
-        backgroundColor: c.surface,
+        // The design's input, focused and at rest (as on sign-in): raised with
+        // a 2px accent edge while typing, the plain surface otherwise.
+        backgroundColor: focused ? c.surfaceRaised : c.surface,
+        borderWidth: 2,
+        borderColor: focused ? c.accent : 'transparent',
       }}
     >
       <Icon name="search" size={18} color={c.textSecondary} />
-      <Txt color={c.textSecondary}>Search programs</Txt>
+      <TextInput
+        value={value}
+        onChangeText={onChange}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        placeholder="Search programs"
+        placeholderTextColor={c.textSecondary}
+        accessibilityLabel="Search programs"
+        autoCapitalize="none"
+        autoCorrect={false}
+        returnKeyType="search"
+        clearButtonMode="while-editing"
+        style={{
+          flexGrow: 1,
+          flexShrink: 1,
+          height: '100%',
+          color: c.text,
+          fontFamily: tokens.fontFamily.sansRegular,
+          fontSize: tokens.type.body.size,
+        }}
+      />
     </View>
   );
+}
+
+/** A template matches when its name or one of its workouts contains the query. */
+function matches(template: ProgramRecord, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (q === '') return true;
+  if (template.name.toLowerCase().includes(q)) return true;
+  return template.days.some((d) => d.workouts.some((w) => w.name.toLowerCase().includes(q)));
 }
 
 /** A meta chip: a small bordered pill on the page's background tone. */
@@ -171,6 +204,8 @@ export default function Explore() {
   const { gym } = useGym();
   const { token } = useAuth();
   const [templates, setTemplates] = useState<ProgramRecord[]>([]);
+  const [query, setQuery] = useState('');
+  const shown = templates.filter((t) => matches(t, query));
 
   useEffect(() => {
     let live = true;
@@ -186,18 +221,18 @@ export default function Explore() {
     <Screen gap={14}>
       <ScreenHeader title="Explore" subtitle="Programs from other lifters" />
       <BuildProgram />
-      <SearchBar />
+      <SearchBar value={query} onChange={setQuery} />
 
       <MicroCaps>Featured</MicroCaps>
-      {templates.length > 0 ? (
+      {shown.length > 0 ? (
         // Page 04 keeps 34pt of ground between cards; 32 is the nearest step.
         <View style={{ gap: tokens.space[32] }}>
-          {templates.map((t) => (
+          {shown.map((t) => (
             <TemplateCard key={t.id} template={t} />
           ))}
         </View>
       ) : (
-        <EmptyState line="No featured programs yet." />
+        <EmptyState line={templates.length > 0 ? 'No programs match.' : 'No featured programs yet.'} />
       )}
 
       <View style={{ height: 4 }} />
