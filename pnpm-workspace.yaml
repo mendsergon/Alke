@@ -6,3 +6,4 @@ packages:
 # PLAN.md §4 already picks Skia for the charts and body map.
 allowBuilds:
   '@shopify/react-native-skia': true
+  esbuild: set this to true or false
