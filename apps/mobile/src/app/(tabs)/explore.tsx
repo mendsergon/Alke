@@ -148,7 +148,7 @@ function TemplateCard({ template }: { template: ProgramRecord }) {
         }}
       >
         <Txt variant="captionTight" color={c.textSecondary} tnum>
-          {restDays} rest days
+          {restDays} {restDays === 1 ? 'rest day' : 'rest days'}
         </Txt>
         <Pressable
           accessibilityRole="button"
