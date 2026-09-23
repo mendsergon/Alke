@@ -33,10 +33,6 @@ const SLIDE_MS = 180;
  *
  * The switch's slide is driven here rather than by `scrollTo({ animated })`,
  * whose duration is UIKit's own (about 0.3s) and cannot be set.
- *
- * The root stack hides its native bar while a two-sided tab is focused
- * (`app/_layout.tsx`): nothing scrolls under it here, and its frame would take
- * the touches meant for the header's controls.
  */
 export function SwitchScreen({
   header,
@@ -58,7 +54,6 @@ export function SwitchScreen({
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-
   const pager = useAnimatedRef<Animated.ScrollView>();
   const offset = useScrollOffset(pager);
   const target = useSharedValue(index * width);
