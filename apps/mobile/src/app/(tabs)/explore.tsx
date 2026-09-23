@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Screen, ScreenHeader } from '../../components/screen';
-import { Card, EmptyState, Pill } from '../../components/surfaces';
+import { Card, Chip, EmptyState, Pill } from '../../components/surfaces';
 import { Icon } from '../../components/icon';
 import { MicroCaps, Txt } from '../../theme/text';
 import { tokens, useTheme } from '../../theme/theme';
@@ -53,12 +53,27 @@ function DayDots({ days }: { days: number }) {
   );
 }
 
+const WEEKDAY_SHORT: Record<string, string> = {
+  monday: 'Mon',
+  tuesday: 'Tue',
+  wednesday: 'Wed',
+  thursday: 'Thu',
+  friday: 'Fri',
+  saturday: 'Sat',
+  sunday: 'Sun',
+};
+
 function TemplateCard({ template }: { template: ProgramRecord }) {
   const { c } = useTheme();
-  const { save } = useLibrary();
+  const { programs, save } = useLibrary();
   const [saving, setSaving] = useState(false);
   const card = tokens.templateCard;
   const days = trainingDays(template);
+  const saved = programs.some((p) => p.copied_from === template.id);
+
+  const workouts = template.days.flatMap((d) => d.workouts);
+  const chips = [...new Set(workouts.map((w) => w.name))];
+  const week = template.days.map((d) => WEEKDAY_SHORT[d.weekday] ?? d.weekday).join(' · ');
 
   return (
     <Card padding={tokens.space[16]}>
@@ -72,9 +87,14 @@ function TemplateCard({ template }: { template: ProgramRecord }) {
               gap: tokens.space[8],
             }}
           >
-            <Txt variant="serifListTitle" family="serif" weight={500} style={{ flexShrink: 1 }}>
-              {template.name}
-            </Txt>
+            <View style={{ flexShrink: 1 }}>
+              <Txt variant="serifListTitle" family="serif" weight={500}>
+                {template.name}
+              </Txt>
+              <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: 1 }}>
+                {week}
+              </Txt>
+            </View>
             <Pill label="Featured" />
           </View>
           <View
@@ -92,28 +112,38 @@ function TemplateCard({ template }: { template: ProgramRecord }) {
           </View>
         </View>
       </View>
+      <View style={{ flexDirection: 'row', gap: card.chipGap, flexWrap: 'wrap', marginTop: tokens.space[12] }}>
+        {chips.map((chip) => (
+          <Chip key={chip}>{chip}</Chip>
+        ))}
+      </View>
       <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: tokens.space[12] }}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Save ${template.name}`}
-          accessibilityState={{ disabled: saving }}
-          disabled={saving}
+          accessibilityLabel={saved ? `${template.name} is saved` : `Save ${template.name}`}
+          accessibilityState={{ disabled: saved || saving }}
+          disabled={saved || saving}
           onPress={() => {
             setSaving(true);
             void save(template).finally(() => setSaving(false));
           }}
           style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: tokens.space[4],
             height: card.actionHeight,
             paddingHorizontal: tokens.space[16],
             borderRadius: tokens.radius.rung,
-            borderWidth: 1,
+            borderWidth: saved ? 0 : 1,
             borderColor: c.border,
-            alignItems: 'center',
+            // The accent is the person's own data, and a saved template is theirs.
+            backgroundColor: saved ? c.accentSoft : undefined,
             justifyContent: 'center',
           }}
         >
-          <Txt variant="captionTight" weight={600}>
-            Save
+          {saved ? <Icon name="check" size={15} color={c.accent} /> : null}
+          <Txt variant="captionTight" weight={600} color={saved ? c.accent : undefined}>
+            {saved ? 'Saved' : 'Save'}
           </Txt>
         </Pressable>
       </View>
