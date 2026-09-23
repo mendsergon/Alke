@@ -54,6 +54,11 @@ const WEEKDAY_SHORT: Record<string, string> = {
   sunday: 'Sun',
 };
 
+const PILL_OVERHANG =
+  (tokens.type.serifRowName.lineHeight -
+    (tokens.type.microCaps.lineHeight + 2 * tokens.pill.regular.paddingVertical)) /
+  2;
+
 function ProgramListRow({ program, first }: { program: ProgramRecord; first: boolean }) {
   const { c } = useTheme();
   const days = trainingDays(program);
@@ -76,10 +81,14 @@ function ProgramListRow({ program, first }: { program: ProgramRecord; first: boo
         })}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[8] }}>
-          <Txt variant="serifListTitle" family="serif" weight={500} style={{ flexGrow: 1, flexShrink: 1 }}>
+          <Txt variant="serifRowName" family="serif" weight={500} style={{ flexGrow: 1, flexShrink: 1 }}>
             {program.name}
           </Txt>
-          <Pill label={status} tone={program.active ? 'accent' : 'neutral'} />
+          {/* Page 05 centres the pill on the name line and lets it overhang,
+              so the pill does not set the row's height. */}
+          <View style={{ marginVertical: PILL_OVERHANG }}>
+            <Pill label={status} tone={program.active ? 'accent' : 'neutral'} size="regular" />
+          </View>
         </View>
         <Txt variant="captionTight" color={c.textSecondary} tnum style={{ marginTop: 1 }}>
           {week} · {days} days
