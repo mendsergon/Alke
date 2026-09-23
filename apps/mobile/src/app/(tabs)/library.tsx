@@ -5,7 +5,6 @@ import { EmptyState, Pill } from '../../components/surfaces';
 import { Icon } from '../../components/icon';
 import { GlassButton } from '../../components/glass-button';
 import { DayDots, ProgramCard, weekLine } from '../../components/program-card';
-import { Rung } from '../../components/rung';
 import { Txt } from '../../theme/text';
 import { tokens, useTheme } from '../../theme/theme';
 import { useLibrary } from '../../library/library';
@@ -92,10 +91,6 @@ function LibraryCard({ program }: { program: ProgramRecord }) {
             </Txt>
           </View>
 
-          <View style={{ marginTop: tokens.space[16] }}>
-            {/* The week it trains: training days out of the seven. */}
-            <Rung value={days} target={program.schedule.length} />
-          </View>
         </View>
         <Icon name="chevronRight" size={20} color={c.textSecondary} />
       </View>
