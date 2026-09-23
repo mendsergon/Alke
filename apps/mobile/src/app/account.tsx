@@ -2,7 +2,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Card } from '../components/surfaces';
-import { Icon, type IconName } from '../components/icon';
+import { Icon } from '../components/icon';
 import { MicroCaps, Txt } from '../theme/text';
 import { tokens, useTheme } from '../theme/theme';
 import { useAuth } from '../auth/auth';
@@ -12,11 +12,14 @@ import { readableDate } from '../account/account-fields';
  * The account, after it exists: every column of the person's row in `users`,
  * shown exactly as the server holds it.
  *
- * Drawn the way `design/rungs-ui.pdf` draws a settings screen (page 13, page
- * 27): the person on a card of their own at the top, then one card per group
- * of columns, each opened by a micro-caps eyebrow, each row carrying its mark
- * in the 40pt tile the design gives the gym row, the column's name quiet and
- * what is in it heavier.
+ * `design/rungs-ui.pdf` page 29 states the rule this screen has to clear —
+ * "no screen in the app is a stack of undifferentiated rows on an
+ * undifferentiated background" — and page 01 gives the devices that clear it:
+ * a hero card with the name set in the serif, bands of labelled values
+ * standing on the bare ground with no surface under them at all, and an
+ * accent-soft card for the one thing that is not like the others. Same page
+ * says nothing in the app needs a stock icon set, so there are none here; the
+ * micro-caps label is what names a value.
  *
  * It reads and never writes. These are settled at registration, where every
  * rule `users` enforces is checked.
@@ -35,7 +38,9 @@ export default function AccountScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <View style={{ paddingTop: insets.top + tokens.space[20], paddingHorizontal: tokens.space[20] }}>
+      <View
+        style={{ paddingTop: insets.top + tokens.space[20], paddingHorizontal: tokens.space[20] }}
+      >
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Back"
@@ -52,24 +57,28 @@ export default function AccountScreen() {
           paddingTop: tokens.space[12],
           paddingHorizontal: tokens.space[24],
           paddingBottom: Math.max(tokens.space[24], insets.bottom),
-          gap: tokens.space[12],
         }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ marginBottom: tokens.space[4] }}>
-          <Txt variant="screenTitle" family="serif" weight={500} style={{ lineHeight: 36 }}>
-            Account
-          </Txt>
-          <Txt variant="bodySmall" color={c.textSecondary} style={{ marginTop: tokens.space[8] }}>
-            What Alke knows about you. A gym never sees any of it.
-          </Txt>
-        </View>
+        <Txt variant="screenTitle" family="serif" weight={500} style={{ lineHeight: 36 }}>
+          Account
+        </Txt>
+        <Txt variant="bodySmall" color={c.textSecondary} style={{ marginTop: tokens.space[8] }}>
+          What Alke knows about you. A gym never sees any of it.
+        </Txt>
 
         {account ? (
           <>
-            {/* The person, as their own card. */}
-            <Card>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[16] }}>
+            {/* The hero: the person, named in the serif, the way page 01
+                names the session it is about. */}
+            <Card style={{ marginTop: tokens.space[20] }}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: tokens.space[16],
+                }}
+              >
                 <View
                   style={{
                     width: AVATAR,
@@ -85,44 +94,47 @@ export default function AccountScreen() {
                       {initials}
                     </Txt>
                   ) : (
-                    <Icon name="person" size={22} color={c.textSecondary} />
+                    <Icon name="person" size={24} color={c.textSecondary} />
                   )}
                 </View>
                 <View style={{ flexGrow: 1, flexShrink: 1 }}>
-                  <Txt variant="nameTitle">{fullName || 'Account'}</Txt>
-                  <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: 2 }}>
-                    {account.username}
+                  <Txt variant="section" family="serif" weight={500} numberOfLines={1}>
+                    {fullName || 'Account'}
                   </Txt>
                 </View>
               </View>
             </Card>
 
-            <Group eyebrow="Name">
-              <StoredRow icon="person" label="Name" value={account.name} first />
-              <StoredRow icon="users" label="Surname" value={account.surname} />
-              <StoredRow icon="at" label="Username" value={account.username} />
-            </Group>
+            {/* Page 01's stat band: labelled values standing on the ground,
+                with nothing drawn under them. */}
+            <Band>
+              <Value label="Name" value={account.name} />
+              <Value label="Surname" value={account.surname} />
+              <Value label="Username" value={account.username} />
+            </Band>
+            <Band>
+              <Value label="Born" value={readableDate(account.date_of_birth) ?? ''} tnum />
+              <Value label="Gender" value={account.gender} />
+            </Band>
 
-            <Group eyebrow="About you">
-              <StoredRow
-                icon="calendar"
-                label="Date of birth"
-                value={readableDate(account.date_of_birth) ?? ''}
-                first
-              />
-              <StoredRow icon="body" label="Gender" value={account.gender} />
-            </Group>
+            {/* The address is not like the others — it is the way in. */}
+            <Card tone="accentSoft" style={{ marginTop: tokens.space[24] }}>
+              <MicroCaps color={c.accent}>How you sign in</MicroCaps>
+              <Txt variant="bodySmall" style={{ marginTop: tokens.space[8] }}>
+                With {account.email}. Alke never asks you for a password.
+              </Txt>
+            </Card>
 
-            <Group eyebrow="Sign-in">
-              <StoredRow icon="mail" label="Email" value={account.email} first />
-            </Group>
-
-            <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: tokens.space[4] }}>
+            <Txt
+              variant="captionTight"
+              color={c.textSecondary}
+              style={{ marginTop: tokens.space[16] }}
+            >
               Set when you registered. They cannot be changed here.
             </Txt>
           </>
         ) : (
-          <Card>
+          <Card style={{ marginTop: tokens.space[20] }}>
             <Txt variant="bodySmall" color={c.textSecondary}>
               This device is not signed in to an account.
             </Txt>
@@ -133,75 +145,36 @@ export default function AccountScreen() {
   );
 }
 
-/** The design's avatar on page 13, one step up because this screen is its own. */
+/** The design's avatar disc, one step up because this screen is the account. */
 const AVATAR = 56;
 
-/** The mark's tile, as page 13 sets the gym's: 40pt, the button radius, `bg`. */
-const TILE = 40;
-
-/** Tile to text. Everything a row says lines up on this column. */
-const GUTTER = tokens.space[16];
-
-/** A card of rows under a micro-caps eyebrow, the way page 13 opens a group. */
-function Group({ eyebrow, children }: { eyebrow: string; children: React.ReactNode }) {
-  return (
-    <Card>
-      <MicroCaps>{eyebrow}</MicroCaps>
-      <View style={{ marginTop: tokens.space[12] }}>{children}</View>
-    </Card>
-  );
-}
-
-/**
- * One column: its mark, its name quiet on the left, and what is stored in it
- * heavier on the right. An empty column keeps its line and says nothing.
- */
-function StoredRow({
-  icon,
-  label,
-  value,
-  first,
-}: {
-  icon: IconName;
-  label: string;
-  value: string;
-  first?: boolean;
-}) {
-  const { c } = useTheme();
+/** A row of values on the bare ground, as page 01 sets "THIS WEEK". */
+function Band({ children }: { children: React.ReactNode }) {
   return (
     <View
       style={{
         flexDirection: 'row',
-        alignItems: 'center',
-        gap: GUTTER,
-        paddingTop: first ? 0 : tokens.space[12],
-        marginTop: first ? 0 : tokens.space[12],
-        borderTopWidth: first ? 0 : 1,
-        borderTopColor: c.border,
+        alignItems: 'flex-start',
+        gap: tokens.space[20],
+        marginTop: tokens.space[20],
       }}
     >
-      <View
-        style={{
-          width: TILE,
-          height: TILE,
-          borderRadius: tokens.radius.button,
-          backgroundColor: c.bg,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Icon name={icon} size={20} color={c.textSecondary} />
-      </View>
-      <Txt variant="captionTight" color={c.textSecondary}>
-        {label}
-      </Txt>
+      {children}
+    </View>
+  );
+}
+
+/** One labelled value: the micro-caps name of it, then the thing itself. */
+function Value({ label, value, tnum }: { label: string; value: string; tnum?: boolean }) {
+  return (
+    <View style={{ flexGrow: 1, flexBasis: 0 }}>
+      <MicroCaps>{label}</MicroCaps>
       <Txt
-        variant="rowTitle"
-        weight={600}
-        tracking={0}
+        variant="dataValue"
+        tnum={tnum}
         numberOfLines={1}
         ellipsizeMode="tail"
-        style={{ flexGrow: 1, flexShrink: 1, textAlign: 'right' }}
+        style={{ marginTop: tokens.space[8] }}
       >
         {value}
       </Txt>
