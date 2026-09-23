@@ -15,6 +15,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { BlurView } from 'expo-blur';
 import { GlassView, isGlassEffectAPIAvailable } from 'expo-glass-effect';
 import { Stack } from 'expo-router';
+import { getFocusedRouteNameFromRoute } from 'expo-router/react-navigation';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -319,6 +320,9 @@ function Gate() {
   );
 }
 
+/** Tabs that draw their own fixed header, with controls in it. */
+const BARLESS_TABS = new Set(['explore', 'library']);
+
 function Navigator() {
   const { c } = useTheme();
   return (
@@ -354,7 +358,18 @@ function Navigator() {
           contentStyle: { backgroundColor: c.bg },
         }}
       >
-        <Stack.Screen name="(tabs)" />
+        {/* The two-sided tabs keep a fixed header and nothing scrolls under the
+            bar there, so the bar only takes the touches meant for the
+            header's controls: its frame claims every touch inside it
+            (react-native-screens `RNSScreenStack.mm`, hitTest). It stays on
+            every other tab for the scroll edge. Worked out from the focused
+            tab, so moving between Explore and Library changes nothing. */}
+        <Stack.Screen
+          name="(tabs)"
+          options={({ route }) => ({
+            headerShown: !BARLESS_TABS.has(getFocusedRouteNameFromRoute(route) ?? 'index'),
+          })}
+        />
         <Stack.Screen name="session" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="account" />
         <Stack.Screen name="join-gym" />
