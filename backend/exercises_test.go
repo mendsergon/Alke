@@ -543,8 +543,6 @@ func TestDeletingAUserDeletesTheirExercises(t *testing.T) {
 	}
 }
 
-// Each category carries the tile icon the app draws for it, so a category
-// added in PocketBase needs no app change.
 var wantCategoryIcons = map[string]struct {
 	icon    string
 	muscles []string

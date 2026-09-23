@@ -10,7 +10,6 @@ export type MuscleCategory = {
   name: string;
   position: number;
   muscles: string[];
-  /** The tile icon: its crop, the muscles it lights and an optional viewBox. */
   icon: ExerciseIconKey;
   icon_muscles: string[];
   icon_crop: string;

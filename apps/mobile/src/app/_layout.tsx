@@ -320,9 +320,6 @@ function Gate() {
 
 function Navigator() {
   const { c, scheme } = useTheme();
-  // The native stack paints its container with the navigation theme's
-  // background, and that container shows at the screen's edges while a
-  // screen is pushed. Without a theme it is React Navigation's light grey.
   const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
   const navigationTheme = { ...base, colors: { ...base.colors, background: c.bg } };
   return (
