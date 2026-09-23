@@ -235,9 +235,14 @@ export default function Explore() {
         <Segmented options={SIDES} value={side} onChange={setSide} fit />
       </View>
 
-      {side === 'Exercises' ? (
+      {/* The category figures stay mounted and are only hidden, so they are
+          drawn once, not again on every switch. The programs side mounts when
+          shown: its orb is Skia, and a Skia canvas does not come back from
+          display none. */}
+      <View style={{ display: side === 'Exercises' ? 'flex' : 'none' }}>
         <MuscleCategories />
-      ) : (
+      </View>
+      {side === 'Programs' ? (
         <>
         <BuildProgram />
         <SearchBar value={query} onChange={setQuery} />
@@ -274,7 +279,7 @@ export default function Explore() {
           />
         )}
         </>
-      )}
+      ) : null}
     </Screen>
   );
 }

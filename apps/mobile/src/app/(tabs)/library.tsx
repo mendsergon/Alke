@@ -42,9 +42,12 @@ export default function Library() {
         <Segmented options={SIDES} value={side} onChange={setSide} fit />
       </View>
 
-      {side === 'Favorite exercises' ? (
+      {/* The category figures stay mounted and are only hidden, so they are
+          drawn once, not again on every switch. */}
+      <View style={{ display: side === 'Favorite exercises' ? 'flex' : 'none' }}>
         <MuscleCategories />
-      ) : programs.length > 0 ? (
+      </View>
+      {side !== 'Programs' ? null : programs.length > 0 ? (
         // Each program is its own card, on page 04's spacing between cards.
         <View style={{ gap: tokens.space[32] }}>
           {programs.map((p) => (
