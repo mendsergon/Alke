@@ -164,7 +164,6 @@ const FIELD_NAMES: Record<string, keyof Account | 'email'> = {
   username: 'username',
   date_of_birth: 'dateOfBirth',
   gender: 'gender',
-  subscription_status: 'subscriptionStatus',
   email: 'email',
 };
 
@@ -186,7 +185,6 @@ export async function createAccount(
     username: account.username.trim(),
     date_of_birth: toIsoDate(account.dateOfBirth),
     gender: account.gender,
-    subscription_status: account.subscriptionStatus,
     units: 'kg',
     theme: 'system',
   };

@@ -9,7 +9,9 @@
  *   username               text,   required, English, unique index idx_users_username
  *   date_of_birth          date,   required, a real date, 15 to 100 today
  *   gender                 select, required, GENDER_OPTIONS
- *   subscription_status    select, required, SUBSCRIPTION_OPTIONS
+ *
+ * `subscription_status` is not among them: only the server writes it, and a
+ * new account starts free (`backend/users.go`).
  *
  * Uniqueness of `username` is the one rule the app cannot decide on its own —
  * only the server knows the other rows — so it is checked there and its error
@@ -81,14 +83,11 @@ export function yearOptions(today = new Date()): readonly string[] {
 
 export const GENDER_OPTIONS = ['Male', 'Female', PREFER_NOT_TO_SAY] as const;
 
-export const SUBSCRIPTION_OPTIONS = ['free', 'premium'] as const;
-
 /** Weights are always stored in kg; this is only how they are shown (§1.3). */
 export const UNIT_OPTIONS = ['kg', 'lb'] as const;
 export const THEME_OPTIONS = ['light', 'dark', 'system'] as const;
 
 export type Gender = (typeof GENDER_OPTIONS)[number];
-export type SubscriptionStatus = (typeof SUBSCRIPTION_OPTIONS)[number];
 export type Units = (typeof UNIT_OPTIONS)[number];
 export type ThemePreference = (typeof THEME_OPTIONS)[number];
 
@@ -101,7 +100,6 @@ export type Account = {
   username: string;
   dateOfBirth: DateOfBirth;
   gender: Gender | '';
-  subscriptionStatus: SubscriptionStatus;
 };
 
 export const EMPTY_ACCOUNT: Account = {
@@ -110,7 +108,6 @@ export const EMPTY_ACCOUNT: Account = {
   username: '',
   dateOfBirth: { day: '', month: '', year: '' },
   gender: '',
-  subscriptionStatus: 'free',
 };
 
 /** A person-name field: required, letters only. `label` names it in the message. */
@@ -212,13 +209,6 @@ export function checkGender(value: string): string | null {
   return null;
 }
 
-export function checkSubscriptionStatus(value: string): string | null {
-  if (!(SUBSCRIPTION_OPTIONS as readonly string[]).includes(value)) {
-    return 'Subscription status is free or premium.';
-  }
-  return null;
-}
-
 export type AccountErrors = Partial<Record<keyof Account, string>>;
 
 /** Every rule at once, for the moment Continue is pressed. */
@@ -230,7 +220,6 @@ export function checkAccount(a: Account): AccountErrors {
     ['username', checkUsername(a.username)],
     ['dateOfBirth', checkDateOfBirth(a.dateOfBirth)],
     ['gender', checkGender(a.gender)],
-    ['subscriptionStatus', checkSubscriptionStatus(a.subscriptionStatus)],
   ];
   for (const [key, message] of pairs) {
     if (message !== null) errors[key] = message;
