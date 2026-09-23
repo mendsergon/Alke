@@ -52,6 +52,9 @@ const config: ExpoConfig = {
     // PBXProject's configurations keep the template's floor. This puts
     // `ios.deploymentTarget` on those too.
     './plugins/with-project-deployment-target',
+    // Expo writes UIRequiresFullScreen unconditionally; Xcode 26 deprecates it
+    // and it governs nothing on an iPhone-only app.
+    './plugins/with-drop-requires-full-screen',
   ],
   experiments: {
     typedRoutes: true,
