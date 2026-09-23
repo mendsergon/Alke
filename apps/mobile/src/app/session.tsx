@@ -1,5 +1,5 @@
 import { Pressable, ScrollView, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useBack } from '../navigation/use-back';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PrimaryButton, SecondaryButton } from '../components/surfaces';
 import { Icon } from '../components/icon';
@@ -95,13 +95,13 @@ function SetCard({ set }: { set: SessionSet }) {
 export default function Session() {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
-  const router = useRouter();
+  const back = useBack('/');
   const session = useSession();
   const s = MOCK_SESSION;
 
   const minimise = () => {
     session.minimise();
-    router.back();
+    back();
   };
 
   return (
@@ -207,7 +207,7 @@ export default function Session() {
               return;
             }
             session.end();
-            router.back();
+            back();
           }}
         />
       </View>

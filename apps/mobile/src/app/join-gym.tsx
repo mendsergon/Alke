@@ -1,5 +1,5 @@
 import { Pressable, ScrollView, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useBack } from '../navigation/use-back';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Card, PrimaryButton, SecondaryButton } from '../components/surfaces';
 import { Icon } from '../components/icon';
@@ -44,7 +44,7 @@ function CodeBoxes() {
 export default function JoinGym() {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
-  const router = useRouter();
+  const back = useBack('/explore');
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
@@ -52,7 +52,7 @@ export default function JoinGym() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Back"
-          onPress={() => router.back()}
+          onPress={back}
           style={{ width: 44, height: 44, justifyContent: 'center' }}
         >
           <Icon name="chevronLeft" size={24} color={c.textSecondary} width={1.5} />

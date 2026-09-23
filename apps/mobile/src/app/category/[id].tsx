@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+import { useBack } from '../../navigation/use-back';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '../../components/surfaces';
 import { ProgramCard } from '../../components/program-card';
@@ -21,7 +22,7 @@ import { listExercisesIn, type Exercise } from '../../backend/exercises';
 export default function CategoryScreen() {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
-  const router = useRouter();
+  const back = useBack('/explore');
   const { token } = useAuth();
   const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
   const [exercises, setExercises] = useState<Exercise[] | null>(null);
@@ -72,7 +73,7 @@ export default function CategoryScreen() {
       </ScrollView>
 
       <View style={{ position: 'absolute', top: insets.top + tokens.space[20], left: tokens.space[20] }}>
-        <GlassButton icon="chevronLeft" label="Back" onPress={() => router.back()} />
+        <GlassButton icon="chevronLeft" label="Back" onPress={back} />
       </View>
     </View>
   );

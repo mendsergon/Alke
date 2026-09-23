@@ -1,6 +1,6 @@
 import { Pressable, ScrollView, View } from 'react-native';
 import { GlassView } from 'expo-glass-effect';
-import { useRouter } from 'expo-router';
+import { useBack } from '../navigation/use-back';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Card } from '../components/surfaces';
 import { Icon } from '../components/icon';
@@ -28,7 +28,7 @@ import { readableDate } from '../account/account-fields';
 export default function AccountScreen() {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
-  const router = useRouter();
+  const back = useBack('/profile');
   const { account } = useAuth();
 
   const fullName = [account?.name, account?.surname].filter(Boolean).join(' ');
@@ -140,7 +140,7 @@ export default function AccountScreen() {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Back"
-        onPress={() => router.back()}
+        onPress={back}
         style={{
           position: 'absolute',
           top: insets.top + tokens.space[20],
