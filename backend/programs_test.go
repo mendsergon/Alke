@@ -509,8 +509,7 @@ func TestWriteRules(t *testing.T) {
 	})
 }
 
-// A copy is its own row. Editing the template's week afterwards leaves the
-// copy's week alone; only the name follows (TestRenamingATemplateRenamesItsCopies).
+// A copy is its own row. Editing the template afterwards leaves it alone.
 func TestEditingTheTemplateLeavesTheCopy(t *testing.T) {
 	f := newFixture(t)
 	defer f.app.Cleanup()
@@ -527,8 +526,8 @@ func TestEditingTheTemplateLeavesTheCopy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.GetString("days") != before {
-		t.Fatalf("the copy's days changed with the template: %s", got.GetString("days"))
+	if got.GetString("name") != "Full Body" || got.GetString("days") != before {
+		t.Fatalf("the copy changed with the template: %s / %s", got.GetString("name"), got.GetString("days"))
 	}
 }
 
@@ -667,30 +666,3 @@ func TestShapeValidation(t *testing.T) {
 }
 
 func urlq(s string) string { return url.QueryEscape(s) }
-
-// Renaming a template renames its copies with it, on its own. A copy the person
-// renamed themselves keeps its name.
-func TestRenamingATemplateRenamesItsCopies(t *testing.T) {
-	f := newFixture(t)
-	defer f.app.Cleanup()
-
-	own := saveCopy(t, f.app, f.template, f.alice)
-	own.Set("name", "My week")
-	if err := f.app.Save(own); err != nil {
-		t.Fatal(err)
-	}
-
-	f.template.Set("name", "Full Body Plus")
-	if err := f.app.Save(f.template); err != nil {
-		t.Fatal(err)
-	}
-
-	got, _ := f.app.FindRecordById("programs", f.bobsCopy.Id)
-	if got.GetString("name") != "Full Body Plus" {
-		t.Fatalf("copy did not follow the template: got %q", got.GetString("name"))
-	}
-	got, _ = f.app.FindRecordById("programs", own.Id)
-	if got.GetString("name") != "My week" {
-		t.Fatalf("a copy the person renamed changed: got %q", got.GetString("name"))
-	}
-}
