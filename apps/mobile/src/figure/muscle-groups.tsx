@@ -61,11 +61,14 @@ export function GroupIcon({
   muscles,
   size,
   viewBox,
+  seamAll = false,
 }: {
   base: ExerciseIconKey;
   muscles: string[];
   size: number;
   viewBox?: string;
+  /** Every muscle seamed and visible, the way Progress draws the body. */
+  seamAll?: boolean;
 }) {
   const { c } = useTheme();
   const def = EXERCISE_ICONS[base];
@@ -96,6 +99,7 @@ export function GroupIcon({
         width={inner}
         height={inner}
         strokeWidth={def.strokeWidth}
+        seamAll={seamAll}
       />
     </View>
   );
