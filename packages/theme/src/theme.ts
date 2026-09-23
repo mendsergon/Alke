@@ -204,6 +204,13 @@ const typeExtra = {
 } as const;
 
 // Font families as @expo-google-fonts exports them.
+// Explore's template card, read off design page 04 rendered at 300 dpi
+// (1222px across a 390pt screen).
+const templateCard = {
+  dayDot: { size: 6, radius: 2, gap: 3 },
+  actionHeight: 34,
+} as const;
+
 const fontFamily = {
   serifMedium: 'Newsreader_500Medium',
   sansRegular: 'Geist_400Regular',
@@ -224,6 +231,7 @@ export const theme = {
   sizing,
   rung,
   iconTile,
+  templateCard,
 } as const;
 
 export type Theme = typeof theme;
