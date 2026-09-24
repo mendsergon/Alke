@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
 import { ScrollView, View, useWindowDimensions } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { useBack } from '../../navigation/use-back';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '../../components/surfaces';
 import { ProgramCard } from '../../components/program-card';
-import { GlassButton } from '../../components/glass-button';
 import { SearchBar } from '../../components/search-bar';
 import { ExerciseIcon } from '../../figure/figure';
 import { Txt } from '../../theme/text';
@@ -20,6 +19,14 @@ import { listExercisesIn, type Exercise } from '../../backend/exercises';
  *
  * OPEN: there is no exercise screen yet, so a card opens nothing.
  */
+// The back, list and grid icons (components/icon.tsx), as images for the
+// native bar buttons.
+const BACK_ICON = require('../../../assets/images/back.png');
+const VIEW_ICON = {
+  list: require('../../../assets/images/view-list.png'),
+  grid: require('../../../assets/images/view-grid.png'),
+};
+
 export default function CategoryScreen() {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
@@ -52,8 +59,9 @@ export default function CategoryScreen() {
       <ScrollView
         style={{ flexGrow: 1 }}
         contentContainerStyle={{
-          // Clears the back bubble, as Account does.
-          paddingTop: insets.top + tokens.space[20] + tokens.sizing.tapTarget.ios + tokens.space[16],
+          // Clears the native bar's buttons, which sit in the 44pt under the
+          // status bar.
+          paddingTop: insets.top + tokens.sizing.tapTarget.ios + tokens.space[16],
           paddingHorizontal: tokens.space[24],
           paddingBottom: Math.max(tokens.space[24], insets.bottom),
           gap: tokens.space[16],
@@ -117,17 +125,42 @@ export default function CategoryScreen() {
         )}
       </ScrollView>
 
-      <View style={{ position: 'absolute', top: insets.top + tokens.space[20], left: tokens.space[20] }}>
-        <GlassButton icon="chevronLeft" label="Back" onPress={back} />
-      </View>
+      <Stack.Toolbar placement="left">
+        <Stack.Toolbar.Button
+          icon={BACK_ICON}
+          iconRenderingMode="template"
+          tintColor={c.text}
+          accessibilityLabel="Back"
+          onPress={back}
+        />
+      </Stack.Toolbar>
       {exercises !== null && exercises.length > 0 ? (
-        <View style={{ position: 'absolute', top: insets.top + tokens.space[20], right: tokens.space[20] }}>
-          <GlassButton
-            icon={view}
-            label={view === 'list' ? 'List view, switch to grid' : 'Grid view, switch to list'}
-            onPress={() => setView(view === 'list' ? 'grid' : 'list')}
-          />
-        </View>
+        // A native bar button: on iOS 26 its menu opens out of the glass.
+        <Stack.Toolbar placement="right">
+          <Stack.Toolbar.Menu
+            icon={VIEW_ICON[view]}
+            iconRenderingMode="template"
+            tintColor={c.text}
+            accessibilityLabel="View"
+          >
+            <Stack.Toolbar.MenuAction
+              icon={VIEW_ICON.list}
+              iconRenderingMode="template"
+              isOn={view === 'list'}
+              onPress={() => setView('list')}
+            >
+              List
+            </Stack.Toolbar.MenuAction>
+            <Stack.Toolbar.MenuAction
+              icon={VIEW_ICON.grid}
+              iconRenderingMode="template"
+              isOn={view === 'grid'}
+              onPress={() => setView('grid')}
+            >
+              Grid
+            </Stack.Toolbar.MenuAction>
+          </Stack.Toolbar.Menu>
+        </Stack.Toolbar>
       ) : null}
     </View>
   );
