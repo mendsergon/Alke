@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, View, useWindowDimensions } from 'react-native';
-import { Stack, useLocalSearchParams, useNavigation, type NativeStackNavigationProp } from 'expo-router';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { useBack } from '../../navigation/use-back';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '../../components/surfaces';
@@ -11,7 +10,7 @@ import { ExerciseIcon } from '../../figure/figure';
 import { Txt } from '../../theme/text';
 import { tokens, useTheme } from '../../theme/theme';
 import { useAuth } from '../../auth/auth';
-import { listExercisesIn, type Exercise } from '../../backend/exercises';
+import { cachedExercisesIn, listExercisesIn, type Exercise } from '../../backend/exercises';
 import backIcon from '../../../assets/images/back.png';
 import viewListIcon from '../../../assets/images/view-list.png';
 import viewGridIcon from '../../../assets/images/view-grid.png';
@@ -27,39 +26,17 @@ import viewGridIcon from '../../../assets/images/view-grid.png';
 // native bar buttons.
 const VIEW_ICON = { list: viewListIcon, grid: viewGridIcon };
 
-// A category's exercises once fetched, so coming back to it opens full.
-const loaded = new Map<string, Exercise[]>();
-
 export default function CategoryScreen() {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
   const back = useBack('/explore');
   const { token } = useAuth();
   const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
-  const [exercises, setExercises] = useState<Exercise[] | null>(() => loaded.get(id) ?? null);
-  // Fetched after the screen opened: the list fades in rather than popping.
-  const [fadeIn] = useState(() => !loaded.has(id));
-  const navigation = useNavigation<NativeStackNavigationProp<Record<string, object | undefined>>>();
+  // Explore fetches every category's list before one is opened, so the list is
+  // normally here in the first frame.
+  const [exercises, setExercises] = useState<Exercise[] | null>(() => cachedExercisesIn(id) ?? null);
   const [query, setQuery] = useState('');
   const [view, setView] = useState<'list' | 'grid'>('list');
-  // The header's icon and ticks follow a frame behind the content: rebuilding
-  // the native menu in the same commit held the new view back.
-  const [menuView, setMenuView] = useState(view);
-  // The view on screen is drawn first; the other is built once the screen has
-  // finished sliding in, so the slide never waits on figures nobody can see
-  // and a switch later finds them already drawn.
-  const [both, setBoth] = useState(false);
-  useEffect(
-    () =>
-      navigation.addListener('transitionEnd', (e) => {
-        if (!e.data.closing) setBoth(true);
-      }),
-    [navigation],
-  );
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => setMenuView(view));
-    return () => cancelAnimationFrame(frame);
-  }, [view]);
   const { width } = useWindowDimensions();
   // Two columns across the page's content width; the icon fills its card
   // inside the card's padding and 1px border.
@@ -71,8 +48,7 @@ export default function CategoryScreen() {
     [exercises, q],
   );
 
-  // Drawn once per result set, so switching the view only flips which of the
-  // two is shown.
+  // Built once per result set and search, not on every render.
   const listItems = useMemo(
     () =>
       shown.map((e) => (
@@ -118,8 +94,9 @@ export default function CategoryScreen() {
     let live = true;
     void listExercisesIn(id, token).then((items) => {
       if (!live) return;
-      if (items) loaded.set(id, items);
-      setExercises(items ?? []);
+      // The list Explore fetched is normally this one; replacing it with an
+      // equal copy would redraw every card while the screen slides in.
+      setExercises((prev) => (items === null ? (prev ?? []) : prev !== null && same(prev, items) ? prev : items));
     });
     return () => {
       live = false;
@@ -153,28 +130,14 @@ export default function CategoryScreen() {
           <EmptyState line="No exercises yet." />
         ) : shown.length === 0 ? (
           <EmptyState line="No exercises match." />
+        ) : view === 'list' ? (
+          <View style={{ gap: tokens.space[12] }}>{listItems}</View>
         ) : (
-          // Both views stay mounted and the other is hidden, so a switch shows
-          // what is already drawn instead of drawing every figure again.
-          <Animated.View entering={fadeIn ? FadeIn : undefined} style={{ gap: tokens.space[16] }}>
-          <View style={{ gap: tokens.space[12], display: view === 'list' ? 'flex' : 'none' }}>
-            {view === 'list' || both ? listItems : null}
-          </View>
-          {/* A card on the page with the raised icon tile inside it (design
-              page 29, surfaces), then the name held to two lines and the type,
-              as the exercise set on page 31 labels them. Every card is the same
-              height, so the rows line up. */}
-          <View
-            style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              gap: tokens.space[12],
-              display: view === 'grid' ? 'flex' : 'none',
-            }}
-          >
-            {view === 'grid' || both ? gridItems : null}
-          </View>
-          </Animated.View>
+          // A card on the page with the raised icon tile inside it (design
+          // page 29, surfaces), then the name held to two lines and the type,
+          // as the exercise set on page 31 labels them. Every card is the same
+          // height, so the rows line up.
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space[12] }}>{gridItems}</View>
         )}
       </ScrollView>
 
@@ -191,7 +154,7 @@ export default function CategoryScreen() {
         // A native bar button: on iOS 26 its menu opens out of the glass.
         <Stack.Toolbar placement="right">
           <Stack.Toolbar.Menu
-            icon={VIEW_ICON[menuView]}
+            icon={VIEW_ICON[view]}
             iconRenderingMode="template"
             tintColor={c.text}
             accessibilityLabel="View"
@@ -199,7 +162,7 @@ export default function CategoryScreen() {
             <Stack.Toolbar.MenuAction
               icon={VIEW_ICON.list}
               iconRenderingMode="template"
-              isOn={menuView === 'list'}
+              isOn={view === 'list'}
               onPress={() => setView('list')}
             >
               List
@@ -207,7 +170,7 @@ export default function CategoryScreen() {
             <Stack.Toolbar.MenuAction
               icon={VIEW_ICON.grid}
               iconRenderingMode="template"
-              isOn={menuView === 'grid'}
+              isOn={view === 'grid'}
               onPress={() => setView('grid')}
             >
               Grid
@@ -216,5 +179,12 @@ export default function CategoryScreen() {
         </Stack.Toolbar>
       ) : null}
     </View>
+  );
+}
+
+function same(a: readonly Exercise[], b: readonly Exercise[]) {
+  return (
+    a.length === b.length &&
+    a.every((e, i) => e.id === b[i].id && e.name === b[i].name && e.icon === b[i].icon && e.type === b[i].type)
   );
 }
