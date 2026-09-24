@@ -7,12 +7,14 @@ import Animated, {
   useAnimatedReaction,
   useAnimatedRef,
   useAnimatedStyle,
+  useDerivedValue,
   useScrollOffset,
   useSharedValue,
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
+import { Canvas, RoundedRect } from '@shopify/react-native-skia';
 import { Stack, useLocalSearchParams, useNavigation, type NativeStackNavigationProp } from 'expo-router';
 import { useBack } from '../../navigation/use-back';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -121,25 +123,13 @@ export default function CategoryScreen() {
   // nothing is laid out again while it moves; the two views' contents
   // cross-fade on top of that.
   const progress = useSharedValue(0);
-  // The view being switched to fades in on top of the one being left, which
-  // stays fully drawn underneath until the move ends: the cards never dim
-  // through the page halfway.
-  const target = useSharedValue(0);
+  // The cards under both views stay drawn the whole way, so only what is on
+  // them cross-fades, and nothing dims through the page.
   const listStyle = useAnimatedStyle(() => ({
-    opacity:
-      target.value === 0
-        ? interpolate(progress.value, [1, 0.3], [0, 1], 'clamp')
-        : progress.value < 1
-          ? 1
-          : 0,
+    opacity: interpolate(progress.value, [0, 0.6], [1, 0], 'clamp'),
   }));
   const gridStyle = useAnimatedStyle(() => ({
-    opacity:
-      target.value === 1
-        ? interpolate(progress.value, [0, 0.7], [0, 1], 'clamp')
-        : progress.value > 0
-          ? 1
-          : 0,
+    opacity: interpolate(progress.value, [0.4, 1], [0, 1], 'clamp'),
   }));
 
   // While the cards travel, the page scrolls with the exercise that was at the
@@ -185,7 +175,6 @@ export default function CategoryScreen() {
     }
     // The view in the page's flow changes once the move has finished.
     setSwitching(true);
-    target.value = next === 'grid' ? 1 : 0;
     progress.value = withTiming(
       next === 'grid' ? 1 : 0,
       { duration: MORPH_MS, easing: Easing.out(Easing.cubic) },
@@ -245,10 +234,11 @@ export default function CategoryScreen() {
           <EmptyState line={exercises.length === 0 ? 'No exercises yet.' : 'No exercises match.'} />
         ) : (
           <View style={switching ? { minHeight: tallest } : undefined}>
+            <Surfaces count={shown.length} g={g} height={tallest} progress={progress} />
             {view === 'list' || showing === 'list' || both ? (
               <Animated.View
                 pointerEvents={view === 'list' ? 'auto' : 'none'}
-                style={[{ gap: tokens.space[12], zIndex: view === 'list' ? 1 : 0 }, layer('list'), listStyle]}
+                style={[{ gap: tokens.space[12] }, layer('list'), listStyle]}
               >
                 <ListRows exercises={shown} g={g} progress={progress} />
               </Animated.View>
@@ -256,11 +246,7 @@ export default function CategoryScreen() {
             {view === 'grid' || showing === 'grid' || both ? (
               <Animated.View
                 pointerEvents={view === 'grid' ? 'auto' : 'none'}
-                style={[
-                  { flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space[12], zIndex: view === 'grid' ? 1 : 0 },
-                  layer('grid'),
-                  gridStyle,
-                ]}
+                style={[{ flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space[12] }, layer('grid'), gridStyle]}
               >
                 <GridCards exercises={shown} g={g} tile={tile} progress={progress} />
               </Animated.View>
@@ -311,13 +297,10 @@ export default function CategoryScreen() {
 }
 
 /**
- * One card carried between views, from its place in the list to its place in
- * the grid. The card itself — its surface, border and rounded corners — is
- * resized to each in-between shape, so its corners stay round; what is on it
- * moves and scales evenly, so nothing on it stretches. The same exercise's
- * card in the other view takes the same path, so the two travel as one.
- *
- * The card is drawn as ProgramCard draws it (components/program-card.tsx).
+ * What is on one card — icon and name — carried between views, from the card's
+ * place in the list to its place in the grid, by translation and scale only,
+ * so nothing is laid out while it moves. The card under it is drawn by
+ * `Surfaces`. The same exercise in the other view takes the same path.
  */
 function Travel({
   as,
@@ -336,21 +319,8 @@ function Travel({
   padding: number;
   children: ReactNode;
 }) {
-  const { c } = useTheme();
   const own = frameIn(as, g, index);
-  const surface = useAnimatedStyle(() => {
-    const p = progress.value;
-    const a = frameIn('list', g, index);
-    const b = frameIn('grid', g, index);
-    const o = as === 'list' ? a : b;
-    return {
-      left: a.x + (b.x - a.x) * p - o.x,
-      top: a.y + (b.y - a.y) * p - o.y,
-      width: a.w + (b.w - a.w) * p,
-      height: a.h + (b.h - a.h) * p,
-    };
-  });
-  const contents = useAnimatedStyle(() => {
+  const style = useAnimatedStyle(() => {
     const p = progress.value;
     const a = frameIn('list', g, index);
     const b = frameIn('grid', g, index);
@@ -361,30 +331,89 @@ function Travel({
       transform: [
         { translateX: a.x + (b.x - a.x) * p + w / 2 - (o.x + o.w / 2) },
         { translateY: a.y + (b.y - a.y) * p + h / 2 - (o.y + o.h / 2) },
-        { scale: Math.min(w / o.w, h / o.h) },
+        { scaleX: w / o.w },
+        { scaleY: h / o.h },
       ],
     };
   });
   return (
-    <View style={{ width: own.w, height: own.h }}>
-      <Animated.View
-        style={[
-          {
-            position: 'absolute',
-            backgroundColor: c.surface,
-            borderRadius: tokens.radius.card,
-            borderWidth: 1,
-            borderColor: c.border,
-          },
-          surface,
-        ]}
-      />
-      <Animated.View style={[{ flex: 1 }, contents]}>
-        <Pressable accessibilityRole="button" accessibilityLabel={label} style={{ flex: 1, padding: padding + 1 }}>
-          {children}
-        </Pressable>
-      </Animated.View>
-    </View>
+    <Animated.View style={[{ width: own.w, height: own.h }, style]}>
+      {/* The card's 1pt border is drawn by Surfaces; the padding sits inside it. */}
+      <Pressable accessibilityRole="button" accessibilityLabel={label} style={{ flex: 1, padding: padding + 1 }}>
+        {children}
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+/**
+ * Every card's surface, border and rounded corners, drawn in one canvas under
+ * both views as ProgramCard draws them (components/program-card.tsx). On a
+ * switch each is redrawn at its in-between size, so a card changes shape with
+ * its corners round, and none is laid out.
+ */
+function Surfaces({
+  count,
+  g,
+  height,
+  progress,
+}: {
+  count: number;
+  g: Geometry;
+  height: number;
+  progress: SharedValue<number>;
+}) {
+  // Read here: the canvas draws its children in its own tree, which the app's
+  // theme does not reach.
+  const { c } = useTheme();
+  return (
+    <Canvas pointerEvents="none" style={{ position: 'absolute', left: 0, top: 0, width: g.content, height }}>
+      {Array.from({ length: count }, (_, i) => (
+        <Surface key={i} index={i} g={g} progress={progress} fill={c.surface} line={c.border} />
+      ))}
+    </Canvas>
+  );
+}
+
+function Surface({
+  index,
+  g,
+  progress,
+  fill,
+  line,
+}: {
+  index: number;
+  g: Geometry;
+  progress: SharedValue<number>;
+  fill: string;
+  line: string;
+}) {
+  const r = tokens.radius.card;
+  const card = useDerivedValue(() => {
+    const a = frameIn('list', g, index);
+    const b = frameIn('grid', g, index);
+    const p = progress.value;
+    return {
+      rect: {
+        x: a.x + (b.x - a.x) * p,
+        y: a.y + (b.y - a.y) * p,
+        width: a.w + (b.w - a.w) * p,
+        height: a.h + (b.h - a.h) * p,
+      },
+      rx: r,
+      ry: r,
+    };
+  });
+  // The border runs on the card's edge, half a point in, as a 1pt border does.
+  const edge = useDerivedValue(() => {
+    const { x, y, width, height } = card.value.rect;
+    return { rect: { x: x + 0.5, y: y + 0.5, width: width - 1, height: height - 1 }, rx: r - 0.5, ry: r - 0.5 };
+  });
+  return (
+    <>
+      <RoundedRect rect={card} color={fill} />
+      <RoundedRect rect={edge} color={line} style="stroke" strokeWidth={1} />
+    </>
   );
 }
 
