@@ -2,6 +2,17 @@ import { useRef } from 'react';
 import { View } from 'react-native';
 import Svg, { ClipPath, Defs, G, Path } from 'react-native-svg';
 import {
+  Canvas,
+  ClipOp,
+  FillType,
+  PaintStyle,
+  Picture,
+  Skia,
+  createPicture,
+  type SkPath,
+  type SkPicture,
+} from '@shopify/react-native-skia';
+import {
   EXERCISE_ICONS,
   FIGURE,
   REGION_TRANSLATE,
@@ -144,6 +155,71 @@ export function Figure({
   );
 }
 
+// Every figure path parsed once, the regions already moved into place.
+const skPaths = new Map<string, SkPath>();
+function skPath(key: string, d: string, tx: number, ty: number, evenOdd: boolean): SkPath {
+  let path = skPaths.get(key);
+  if (!path) {
+    path = Skia.Path.MakeFromSVGString(d) ?? Skia.Path.Make();
+    path.offset(tx, ty);
+    if (evenOdd) path.setFillType(FillType.EvenOdd);
+    skPaths.set(key, path);
+  }
+  return path;
+}
+
+// Each icon drawn once per size and palette, then replayed. A list of the same
+// exercise icon is one recording shown many times, not many drawings.
+const pictures = new Map<string, SkPicture>();
+function iconPicture(
+  icon: ExerciseIconKey,
+  size: number,
+  seamAll: boolean,
+  colors: { accent: string; body: string; recess: string },
+): SkPicture {
+  const key = `${icon}|${size}|${seamAll}|${colors.accent}|${colors.body}|${colors.recess}`;
+  let picture = pictures.get(key);
+  if (!picture) {
+    const def = EXERCISE_ICONS[icon];
+    const figure = FIGURE[def.view];
+    const [tx, ty] = REGION_TRANSLATE.split(',').map(Number);
+    const [vx, vy, vw, vh] = def.viewBox.split(' ').map(Number);
+    // The viewBox fitted and centred, as SVG's default xMidYMid meet does.
+    const scale = Math.min(size / vw, size / vh);
+    const accentSet = new Set(def.accent);
+    const silhouette = skPath(`${def.view}:silhouette`, figure.silhouette, 0, 0, true);
+    const fill = Skia.Paint();
+    fill.setAntiAlias(true);
+    const stroke = Skia.Paint();
+    stroke.setAntiAlias(true);
+    stroke.setStyle(PaintStyle.Stroke);
+    stroke.setStrokeWidth(def.strokeWidth);
+    picture = createPicture((canvas) => {
+      canvas.translate((size - vw * scale) / 2 - vx * scale, (size - vh * scale) / 2 - vy * scale);
+      canvas.scale(scale, scale);
+      fill.setColor(Skia.Color(seamAll ? colors.recess : colors.body));
+      canvas.drawPath(silhouette, fill);
+      canvas.save();
+      canvas.clipPath(silhouette, ClipOp.Intersect, true);
+      for (const r of def.paint) {
+        const [x0, y0, x1, y1] = regionBounds(def.view, r, figure.regions[r], tx, ty);
+        if (x1 < vx || x0 > vx + vw || y1 < vy || y0 > vy + vh) continue;
+        const path = skPath(`${def.view}:${r}`, figure.regions[r], tx, ty, false);
+        const lit = accentSet.has(r);
+        fill.setColor(Skia.Color(lit ? colors.accent : colors.body));
+        canvas.drawPath(path, fill);
+        if (seamAll || lit) {
+          stroke.setColor(Skia.Color(seamAll ? colors.recess : colors.body));
+          canvas.drawPath(path, stroke);
+        }
+      }
+      canvas.restore();
+    }, Skia.XYWHRect(0, 0, size, size));
+    pictures.set(key, picture);
+  }
+  return picture;
+}
+
 /** The tile an exercise icon sits in: surface-raised, radius 12 (16 over 56). */
 export function ExerciseIcon({
   icon,
@@ -156,8 +232,12 @@ export function ExerciseIcon({
   seamAll?: boolean;
 }) {
   const { c } = useTheme();
-  const def = EXERCISE_ICONS[icon];
   const inner = size - (size > 56 ? 4 : 3);
+  const picture = iconPicture(icon, inner, seamAll, {
+    accent: c.accent,
+    body: c.iconBody,
+    recess: mix(c.iconBody, c.bg, 0.45),
+  });
   return (
     <View
       style={{
@@ -170,16 +250,9 @@ export function ExerciseIcon({
         overflow: 'hidden',
       }}
     >
-      <Figure
-        view={def.view}
-        viewBox={def.viewBox}
-        paint={def.paint}
-        accent={def.accent}
-        width={inner}
-        height={inner}
-        strokeWidth={def.strokeWidth}
-        seamAll={seamAll}
-      />
+      <Canvas style={{ width: inner, height: inner }}>
+        <Picture picture={picture} />
+      </Canvas>
     </View>
   );
 }
