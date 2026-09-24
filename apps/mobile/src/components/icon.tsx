@@ -82,23 +82,19 @@ const PATHS: Record<string, (p: { s: string; w: number }) => ReactNode> = {
       <Path d="m16 16 4 4" stroke={s} strokeWidth={w} />
     </>
   ),
-  // Not in the design's set; drawn to its rules (24x24, stroked, round caps).
-  // Three rows, each a lead square and a line: the list of exercise rows.
+  // Not in the design's set; drawn to its rules and on the calendar's frame.
+  // The frame cut into three rows: the list of exercises.
   list: ({ s, w }) => (
     <>
-      <Rect x={3.5} y={4.5} width={4} height={4} rx={1} stroke={s} strokeWidth={w} />
-      <Rect x={3.5} y={10} width={4} height={4} rx={1} stroke={s} strokeWidth={w} />
-      <Rect x={3.5} y={15.5} width={4} height={4} rx={1} stroke={s} strokeWidth={w} />
-      <Path d="M11 6.5h9.5M11 12h9.5M11 17.5h9.5" stroke={s} strokeWidth={w} />
+      <Rect x={4} y={4} width={16} height={16} rx={2.5} stroke={s} strokeWidth={w} />
+      <Path d="M4 9.33h16M4 14.67h16" stroke={s} strokeWidth={w} />
     </>
   ),
-  // Four tiles, two by two: the exercise grid.
+  // The frame cut into four: the exercise grid.
   grid: ({ s, w }) => (
     <>
-      <Rect x={4} y={4} width={6.5} height={6.5} rx={1.5} stroke={s} strokeWidth={w} />
-      <Rect x={13.5} y={4} width={6.5} height={6.5} rx={1.5} stroke={s} strokeWidth={w} />
-      <Rect x={4} y={13.5} width={6.5} height={6.5} rx={1.5} stroke={s} strokeWidth={w} />
-      <Rect x={13.5} y={13.5} width={6.5} height={6.5} rx={1.5} stroke={s} strokeWidth={w} />
+      <Rect x={4} y={4} width={16} height={16} rx={2.5} stroke={s} strokeWidth={w} />
+      <Path d="M12 4v16M4 12h16" stroke={s} strokeWidth={w} />
     </>
   ),
   users: ({ s, w }) => (
