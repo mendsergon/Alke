@@ -13,6 +13,30 @@ import { mix } from '../components/heat';
 
 let seq = 0;
 
+// Each region's bounds in figure space, from its path's points (control points
+// included, so the box always contains the curve). Worked out once per region.
+const bounds = new Map<string, readonly [number, number, number, number]>();
+function regionBounds(view: FigureView, r: number, d: string, tx: number, ty: number) {
+  const key = `${view}:${r}`;
+  let b = bounds.get(key);
+  if (!b) {
+    const n = (d.match(/-?\d*\.?\d+/g) ?? []).map(Number);
+    let x0 = Infinity;
+    let y0 = Infinity;
+    let x1 = -Infinity;
+    let y1 = -Infinity;
+    for (let i = 0; i + 1 < n.length; i += 2) {
+      x0 = Math.min(x0, n[i]);
+      x1 = Math.max(x1, n[i]);
+      y0 = Math.min(y0, n[i + 1]);
+      y1 = Math.max(y1, n[i + 1]);
+    }
+    b = [x0 + tx, y0 + ty, x1 + tx, y1 + ty];
+    bounds.set(key, b);
+  }
+  return b;
+}
+
 /**
  * The layered body figure: one silhouette in the icon-body tone, with every
  * muscle drawn as its own region on top of it, clipped to the silhouette.
@@ -75,6 +99,13 @@ export function Figure({
   const figure = FIGURE[view];
   const accentSet = new Set(accent);
   const [tx, ty] = REGION_TRANSLATE.split(',').map(Number);
+  // Only the regions that fall inside the crop are drawn: an exercise icon
+  // shows a corner of the body, and the rest would be drawn and never seen.
+  const [vx, vy, vw, vh] = viewBox.split(' ').map(Number);
+  const visible = paint.filter((r) => {
+    const [x0, y0, x1, y1] = regionBounds(view, r, figure.regions[r], tx, ty);
+    return x1 >= vx && x0 <= vx + vw && y1 >= vy && y0 <= vy + vh;
+  });
 
   return (
     <Svg width={width} height={height} viewBox={viewBox}>
@@ -89,7 +120,7 @@ export function Figure({
         fillRule="evenodd"
       />
       <G clipPath={`url(#${id})`}>
-        {paint.map((r, i) => {
+        {visible.map((r, i) => {
           const custom = fillFor?.(r);
           // Lit = carrying the accent, or given its own colour by a heat map.
           // Only those are seamed; the rest are the body, and the body is one
