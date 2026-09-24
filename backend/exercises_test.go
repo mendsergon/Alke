@@ -54,6 +54,31 @@ func TestMuscleCategoriesAreSeededInOrder(t *testing.T) {
 	}
 }
 
+// Every catalog exercise: name, secondary muscles in order, type. All train
+// the chest first and use the chest icon.
+var wantCatalog = []struct {
+	name      string
+	secondary []string
+	kind      string
+}{
+	{"Flat Bench Press", []string{"Shoulders", "Triceps"}, "Free weight"},
+	{"Flat Barbell Chest Press", []string{"Shoulders", "Triceps"}, "Free weight"},
+	{"Incline Barbell Chest Press", []string{"Shoulders", "Triceps"}, "Free weight"},
+	{"Decline Barbell Chest Press", []string{"Shoulders", "Triceps"}, "Free weight"},
+	{"Flat Dumbbell Chest Press", []string{"Shoulders", "Triceps"}, "Free weight"},
+	{"Incline Dumbbell Chest Press", []string{"Shoulders", "Triceps"}, "Free weight"},
+	{"Decline Dumbbell Chest Press", []string{"Shoulders", "Triceps"}, "Free weight"},
+	{"Flat Smith Chest Press", []string{"Shoulders", "Triceps"}, "Machine"},
+	{"Incline Smith Chest Press", []string{"Shoulders", "Triceps"}, "Machine"},
+	{"Decline Smith Chest Press", []string{"Shoulders", "Triceps"}, "Machine"},
+	{"Chest Press Machine", []string{"Shoulders", "Triceps"}, "Machine"},
+	{"Dip", []string{"Triceps", "Shoulders"}, "Free weight"},
+	{"Push-up", []string{"Triceps", "Shoulders"}, "Free weight"},
+	{"Cable Fly", []string{"Shoulders"}, "Cable"},
+	{"Pec Deck", []string{"Shoulders"}, "Machine"},
+	{"Dumbbell Fly", []string{"Shoulders"}, "Free weight"},
+}
+
 func TestTheCatalogIsSeeded(t *testing.T) {
 	app := newProgramsApp(t)
 	defer app.Cleanup()
@@ -62,27 +87,34 @@ func TestTheCatalogIsSeeded(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(all) != 1 {
-		t.Fatalf("exercises: got %d, want 1", len(all))
+	if len(all) != len(wantCatalog) {
+		t.Fatalf("exercises: got %d, want %d", len(all), len(wantCatalog))
 	}
-	r := all[0]
-	if r.GetString("name") != "Flat Bench Press" || r.GetString("owner") != "" || r.GetString("icon") != "bench" {
-		t.Fatalf("got %q owner %q icon %q", r.GetString("name"), r.GetString("owner"), r.GetString("icon"))
-	}
-	if r.GetString("main_muscle") != category(t, app, "Chest") {
-		t.Fatal("main muscle is not Chest")
-	}
-	secondary := r.GetStringSlice("secondary_muscles")
-	want := []string{category(t, app, "Shoulders"), category(t, app, "Triceps")}
-	if strings.Join(secondary, ",") != strings.Join(want, ",") {
-		t.Fatalf("secondary muscles: got %v, want Shoulders, Triceps", secondary)
-	}
-	if r.GetString("type") != exerciseType(t, app, "Free weight") {
-		t.Fatal("type is not Free weight")
-	}
-	// Seeded before the validator is bound; held to it all the same.
-	if err := app.Validate(r); err != nil {
-		t.Fatalf("the seed fails validation: %v", err)
+	for _, w := range wantCatalog {
+		r, err := app.FindFirstRecordByFilter("exercises", "name = {:n}", dbx.Params{"n": w.name})
+		if err != nil {
+			t.Fatalf("%s: %v", w.name, err)
+		}
+		if r.GetString("owner") != "" || r.GetString("icon") != "bench" {
+			t.Fatalf("%s: owner %q icon %q", w.name, r.GetString("owner"), r.GetString("icon"))
+		}
+		if r.GetString("main_muscle") != category(t, app, "Chest") {
+			t.Fatalf("%s: main muscle is not Chest", w.name)
+		}
+		want := make([]string, len(w.secondary))
+		for i, s := range w.secondary {
+			want[i] = category(t, app, s)
+		}
+		if got := r.GetStringSlice("secondary_muscles"); strings.Join(got, ",") != strings.Join(want, ",") {
+			t.Fatalf("%s: secondary muscles: got %v, want %v", w.name, got, w.secondary)
+		}
+		if r.GetString("type") != exerciseType(t, app, w.kind) {
+			t.Fatalf("%s: type is not %s", w.name, w.kind)
+		}
+		// Seeded before the validator is bound; held to it all the same.
+		if err := app.Validate(r); err != nil {
+			t.Fatalf("%s: the seed fails validation: %v", w.name, err)
+		}
 	}
 }
 
@@ -157,7 +189,7 @@ func TestCatalogRules(t *testing.T) {
 			Method:          http.MethodGet,
 			URL:             "/api/collections/exercises/records",
 			ExpectedStatus:  200,
-			ExpectedContent: []string{`"totalItems":1`, `"name":"Flat Bench Press"`},
+			ExpectedContent: []string{`"totalItems":16`, `"name":"Flat Bench Press"`, `"name":"Dumbbell Fly"`},
 		}
 	})
 	run(t, "a free user cannot add a catalog exercise", func(f *fixture) tests.ApiScenario {
@@ -385,7 +417,7 @@ func TestCustomExerciseRules(t *testing.T) {
 			URL:                "/api/collections/exercises/records",
 			Headers:            auth(f.aliceTok),
 			ExpectedStatus:     200,
-			ExpectedContent:    []string{`"totalItems":2`},
+			ExpectedContent:    []string{`"totalItems":17`},
 			NotExpectedContent: []string{mine.Id},
 		}
 	})
