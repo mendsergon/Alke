@@ -1,12 +1,24 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, View, useWindowDimensions, type ListRenderItem } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Image, View, useWindowDimensions } from 'react-native';
+import Animated, {
+  Easing,
+  interpolate,
+  scrollTo,
+  useAnimatedReaction,
+  useAnimatedRef,
+  useAnimatedStyle,
+  useScrollOffset,
+  useSharedValue,
+  withTiming,
+  type SharedValue,
+} from 'react-native-reanimated';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useBack } from '../../navigation/use-back';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '../../components/surfaces';
 import { ProgramCard } from '../../components/program-card';
 import { SearchBar } from '../../components/search-bar';
-import { ExerciseIcon } from '../../figure/figure';
+import { useExerciseIconUri } from '../../figure/figure';
 import { Txt } from '../../theme/text';
 import { tokens, useTheme } from '../../theme/theme';
 import { useAuth } from '../../auth/auth';
@@ -26,6 +38,40 @@ import viewGridIcon from '../../../assets/images/view-grid.png';
 // native bar buttons.
 const VIEW_ICON = { list: viewListIcon, grid: viewGridIcon };
 
+type View_ = 'list' | 'grid';
+
+// How long the cards take to restack, about UIKit's own animated scroll.
+const RESTACK_MS = 300;
+
+/**
+ * Where everything sits in each view. Every card in a view is the same size,
+ * so all of it is known without measuring: a list row is the card's border
+ * and padding around the icon (taller than two lines of name); a grid card is
+ * the tile over the name's two lines and the type.
+ */
+type Geometry = {
+  content: number;
+  card: number;
+  tile: number;
+  listRow: number;
+  gridRow: number;
+};
+
+function listFrame(g: Geometry, i: number) {
+  'worklet';
+  return { x: 0, y: i * (g.listRow + tokens.space[12]), w: g.content, h: g.listRow };
+}
+
+function gridFrame(g: Geometry, i: number) {
+  'worklet';
+  return {
+    x: (i % 2) * (g.card + tokens.space[12]),
+    y: Math.floor(i / 2) * (g.gridRow + tokens.space[12]),
+    w: g.card,
+    h: g.gridRow,
+  };
+}
+
 export default function CategoryScreen() {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
@@ -36,108 +82,104 @@ export default function CategoryScreen() {
   // normally here in the first frame.
   const [exercises, setExercises] = useState<Exercise[] | null>(() => cachedExercisesIn(id) ?? null);
   const [query, setQuery] = useState('');
-  const [view, setView] = useState<'list' | 'grid'>('list');
+  const [view, setView] = useState<View_>('list');
   const { width, height } = useWindowDimensions();
-  // Two columns across the page's content width; the icon fills its card
-  // inside the card's padding and 1px border.
-  const card = (width - 2 * tokens.space[24] - tokens.space[12]) / 2;
-  const tile = card - 2 * tokens.space[12] - 2;
   const q = query.trim().toLowerCase();
   const shown = useMemo(
     () => exercises?.filter((e) => e.name.toLowerCase().includes(q)) ?? [],
     [exercises, q],
   );
 
-  const renderRow = useCallback<ListRenderItem<Exercise>>(
-    ({ item: e }) => (
-      <ProgramCard label={e.name} padding={tokens.space[16]}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[16] }}>
-          <ExerciseIcon icon={e.icon} size={tokens.iconTile.size.sessionHeader} seamAll />
-          <Txt variant="serifListTitle" family="serif" weight={500} color={c.text} style={{ flexShrink: 1 }}>
-            {e.name}
-          </Txt>
-        </View>
-      </ProgramCard>
-    ),
-    [c],
-  );
-  // A card on the page with the raised icon tile inside it (design page 29,
-  // surfaces), then the name held to two lines and the type, as the exercise
-  // set on page 31 labels them. Every card is the same height, so rows line up.
-  const renderTile = useCallback<ListRenderItem<Exercise>>(
-    ({ item: e }) => (
-      <View style={{ width: card }}>
-        <ProgramCard label={e.name} padding={tokens.space[12]}>
-          <View style={{ gap: tokens.space[12] }}>
-            <ExerciseIcon icon={e.icon} size={tile} seamAll />
-            <View style={{ gap: tokens.space[4] }}>
-              <Txt
-                variant="rowTitle"
-                color={c.text}
-                numberOfLines={2}
-                style={{ minHeight: 2 * tokens.type.rowTitle.lineHeight }}
-              >
-                {e.name}
-              </Txt>
-              <Txt variant="captionTight" color={c.textSecondary} numberOfLines={1}>
-                {e.type}
-              </Txt>
-            </View>
-          </View>
-        </ProgramCard>
-      </View>
-    ),
-    [c, card, tile],
-  );
-  // Every row of a view is the same height, so where any exercise sits is
-  // known without drawing it: a list row is the card's border and padding
-  // around the icon (taller than two lines of name); a grid row is the tile
-  // over the name's two lines and the type.
-  const rowLength = (v: 'list' | 'grid') =>
-    v === 'list'
-      ? 2 + 2 * tokens.space[16] + tokens.iconTile.size.sessionHeader
-      : 2 + 2 * tokens.space[12] + tile + tokens.space[12] + 2 * tokens.type.rowTitle.lineHeight +
-        tokens.space[4] + tokens.type.captionTight.lineHeight;
-  const columns = (v: 'list' | 'grid') => (v === 'list' ? 1 : 2);
-  const padTop = insets.top + tokens.sizing.tapTarget.ios + tokens.space[16];
-  // The title and search, measured; the rows start under them.
-  const [headerLength, setHeaderLength] = useState(0);
-  const rowStart = padTop + headerLength;
-  const perRow = columns(view);
-  const step = rowLength(view) + tokens.space[12];
-  // Only what fits on the screen is drawn before the screen shows; the rows
-  // under it are filled in straight after, out of sight.
-  const firstBatch = (Math.ceil(height / step) + 1) * perRow;
-  const getItemLayout = useCallback(
-    (_: unknown, index: number) => ({ length: rowLength(view), offset: rowStart + index * step, index }),
-    [view, rowStart, step],
-  );
+  const g = useMemo<Geometry>(() => {
+    const content = width - 2 * tokens.space[24];
+    // Two columns across the content width; the icon fills its card inside
+    // the card's padding and 1px border.
+    const card = (content - tokens.space[12]) / 2;
+    const tile = card - 2 * tokens.space[12] - 2;
+    return {
+      content,
+      card,
+      tile,
+      listRow: 2 + 2 * tokens.space[16] + tokens.iconTile.size.sessionHeader,
+      gridRow:
+        2 + 2 * tokens.space[12] + tile + tokens.space[12] + 2 * tokens.type.rowTitle.lineHeight +
+        tokens.space[4] + tokens.type.captionTight.lineHeight,
+    };
+  }, [width]);
 
-  // Switching view keeps the exercise at the top of the screen where it was:
-  // the new view opens on that exercise's row, at the same height on screen.
-  const scrollY = useRef(0);
+  const padTop = insets.top + tokens.sizing.tapTarget.ios + tokens.space[16];
+  // The title and search, measured; the cards start under them.
+  const [headerLength, setHeaderLength] = useState(0);
+  const cardsTop = padTop + headerLength;
+
+  // What fits on the screen is drawn before the screen shows; the cards under
+  // it are added straight after, out of sight.
+  const firstBatch = Math.ceil(height / (g.listRow + tokens.space[12])) * 2 + 2;
+  const [all, setAll] = useState(false);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setAll(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
+  const drawn = all ? shown : shown.slice(0, firstBatch);
+
+  // 0 is the list, 1 the grid. Every card, icon and label reads its place from
+  // this one value, so a switch moves them all together, on the UI thread.
+  const progress = useSharedValue(0);
+  const count = shown.length;
+  const stack = useAnimatedStyle(() => ({
+    height: interpolate(
+      progress.value,
+      [0, 1],
+      [
+        Math.max(0, count * (g.listRow + tokens.space[12]) - tokens.space[12]),
+        Math.max(0, Math.ceil(count / 2) * (g.gridRow + tokens.space[12]) - tokens.space[12]),
+      ],
+    ),
+  }));
+
+  // While the cards restack, the page scrolls with the exercise that was at the
+  // top of the screen, so it stays exactly where it was.
+  const scroller = useAnimatedRef<Animated.ScrollView>();
+  const scrollY = useScrollOffset(scroller);
+  const following = useSharedValue(false);
+  const anchorList = useSharedValue(0);
+  const anchorGrid = useSharedValue(0);
+  const anchorOnScreen = useSharedValue(0);
+  useAnimatedReaction(
+    () => progress.value,
+    (p) => {
+      if (!following.value) return;
+      const y = interpolate(p, [0, 1], [anchorList.value, anchorGrid.value]) - anchorOnScreen.value;
+      scrollTo(scroller, 0, Math.max(0, y), false);
+    },
+  );
   const anchor = useRef(0);
-  const [startAt, setStartAt] = useState({ row: 0, y: 0 });
-  const switchView = (next: 'list' | 'grid') => {
+
+  const switchView = (next: View_) => {
     if (next === view) return;
-    const y = scrollY.current;
+    const frame = view === 'list' ? listFrame : gridFrame;
+    const perRow = view === 'list' ? 1 : 2;
+    const step = (view === 'list' ? g.listRow : g.gridRow) + tokens.space[12];
     // The first row whose top edge is at or under the bar.
-    const under = y + insets.top + tokens.sizing.tapTarget.ios - rowStart;
-    let target = { row: 0, y };
-    if (headerLength > 0 && under > 0) {
-      const row = Math.floor(under / step);
-      const into = y - (rowStart + row * step);
-      // The exercise at the top: a grid row holds two, so coming back to the
-      // list returns to the one it left from when that one is still in the row.
+    const under = scrollY.value + insets.top + tokens.sizing.tapTarget.ios - cardsTop;
+    if (headerLength > 0 && under > 0 && count > 0) {
+      const row = Math.min(Math.floor(under / step), Math.ceil(count / perRow) - 1);
+      // A grid row holds two, so coming back to the list returns to the one it
+      // left from when that one is still in the row.
       const inRow = anchor.current >= row * perRow && anchor.current < (row + 1) * perRow;
-      const first = inRow ? anchor.current : row * perRow;
-      anchor.current = first;
-      const nextRow = Math.floor(first / columns(next));
-      const nextStep = rowLength(next) + tokens.space[12];
-      target = { row: nextRow, y: Math.max(0, rowStart + nextRow * nextStep + into) };
+      anchor.current = inRow ? anchor.current : row * perRow;
+      anchorList.value = cardsTop + listFrame(g, anchor.current).y;
+      anchorGrid.value = cardsTop + gridFrame(g, anchor.current).y;
+      anchorOnScreen.value = cardsTop + frame(g, anchor.current).y - scrollY.value;
+      following.value = true;
     }
-    scrollY.current = target.y;
-    setStartAt(target);
+    progress.value = withTiming(
+      next === 'grid' ? 1 : 0,
+      { duration: RESTACK_MS, easing: Easing.out(Easing.cubic) },
+      () => {
+        following.value = false;
+      },
+    );
     setView(next);
   };
 
@@ -156,53 +198,41 @@ export default function CategoryScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <FlatList
-        // Two columns cannot be set on a list already laid out in one.
-        key={view}
-        data={exercises === null ? [] : shown}
-        keyExtractor={(e) => e.id}
-        renderItem={view === 'list' ? renderRow : renderTile}
-        numColumns={perRow}
-        columnWrapperStyle={perRow > 1 ? { gap: tokens.space[12] } : undefined}
-        ItemSeparatorComponent={Gap}
-        initialNumToRender={firstBatch}
-        maxToRenderPerBatch={firstBatch}
-        getItemLayout={getItemLayout}
-        initialScrollIndex={startAt.row}
-        contentOffset={{ x: 0, y: startAt.y }}
-        onScroll={(e) => {
-          scrollY.current = e.nativeEvent.contentOffset.y;
-        }}
-        scrollEventThrottle={16}
+      <Animated.ScrollView
+        ref={scroller}
         style={{ flexGrow: 1 }}
         contentContainerStyle={{
           // Clears the native bar's buttons, which sit in the 44pt under the
           // status bar.
-          paddingTop: insets.top + tokens.sizing.tapTarget.ios + tokens.space[16],
+          paddingTop: padTop,
           paddingHorizontal: tokens.space[24],
           paddingBottom: Math.max(tokens.space[24], insets.bottom),
         }}
         showsVerticalScrollIndicator={false}
-        ListHeaderComponent={
-          <View
-            style={{ gap: tokens.space[16], paddingBottom: tokens.space[16] }}
-            onLayout={(e) => setHeaderLength(e.nativeEvent.layout.height)}
-          >
-            <Txt variant="screenTitle" family="serif" weight={500}>
-              {name ?? ''}
-            </Txt>
-            {/* Laid out from the first frame, so the list arriving pushes nothing. */}
-            {exercises === null || exercises.length > 0 ? (
-              <SearchBar value={query} onChange={setQuery} label="Search exercises" />
-            ) : null}
-          </View>
-        }
-        ListEmptyComponent={
-          exercises === null ? null : (
-            <EmptyState line={exercises.length === 0 ? 'No exercises yet.' : 'No exercises match.'} />
-          )
-        }
-      />
+      >
+        <View
+          style={{ gap: tokens.space[16], paddingBottom: tokens.space[16] }}
+          onLayout={(e) => setHeaderLength(e.nativeEvent.layout.height)}
+        >
+          <Txt variant="screenTitle" family="serif" weight={500}>
+            {name ?? ''}
+          </Txt>
+          {/* Laid out from the first frame, so the list arriving pushes nothing. */}
+          {exercises === null || exercises.length > 0 ? (
+            <SearchBar value={query} onChange={setQuery} label="Search exercises" />
+          ) : null}
+        </View>
+
+        {exercises === null ? null : shown.length === 0 ? (
+          <EmptyState line={exercises.length === 0 ? 'No exercises yet.' : 'No exercises match.'} />
+        ) : (
+          <Animated.View style={stack}>
+            {drawn.map((e, i) => (
+              <ExerciseCard key={e.id} exercise={e} index={i} g={g} progress={progress} />
+            ))}
+          </Animated.View>
+        )}
+      </Animated.ScrollView>
 
       <Stack.Toolbar placement="left">
         <Stack.Toolbar.Button
@@ -245,13 +275,124 @@ export default function CategoryScreen() {
   );
 }
 
+/**
+ * One exercise, the same card in both views, carried from one place to the
+ * other. In the list it is a row: the icon beside the name. In the grid it is
+ * the card design page 29 puts on a page — the raised icon tile inside it —
+ * with the name held to two lines and the type under it, as the exercise set
+ * on page 31 labels them. The name is set in each view's own face, so the two
+ * labels hand over while the card and its icon move.
+ */
+function ExerciseCard({
+  exercise: e,
+  index,
+  g,
+  progress,
+}: {
+  exercise: Exercise;
+  index: number;
+  g: Geometry;
+  progress: SharedValue<number>;
+}) {
+  const { c } = useTheme();
+  // Drawn at the grid's size once and shown smaller in the list.
+  const uri = useExerciseIconUri(e.icon, g.tile - 4, true);
+  const small = tokens.iconTile.size.sessionHeader;
+
+  const frame = useAnimatedStyle(() => {
+    const a = listFrame(g, index);
+    const b = gridFrame(g, index);
+    const p = progress.value;
+    return {
+      left: interpolate(p, [0, 1], [a.x, b.x]),
+      top: interpolate(p, [0, 1], [a.y, b.y]),
+      width: interpolate(p, [0, 1], [a.w, b.w]),
+    };
+  });
+  const inner = useAnimatedStyle(() => ({
+    height: interpolate(progress.value, [0, 1], [g.listRow - 2, g.gridRow - 2]),
+  }));
+  const icon = useAnimatedStyle(() => {
+    const p = progress.value;
+    const size = interpolate(p, [0, 1], [small, g.tile]);
+    return {
+      left: interpolate(p, [0, 1], [tokens.space[16], tokens.space[12]]),
+      top: interpolate(p, [0, 1], [tokens.space[16], tokens.space[12]]),
+      width: size,
+      height: size,
+      borderRadius: interpolate(p, [0, 1], [tokens.iconTile.radius, tokens.iconTile.radiusAbove56]),
+    };
+  });
+  const listLabel = useAnimatedStyle(() => ({
+    opacity: interpolate(progress.value, [0, 0.5], [1, 0], 'clamp'),
+  }));
+  const gridLabel = useAnimatedStyle(() => ({
+    opacity: interpolate(progress.value, [0.5, 1], [0, 1], 'clamp'),
+  }));
+
+  return (
+    <Animated.View style={[{ position: 'absolute' }, frame]}>
+      <ProgramCard label={e.name} padding={0}>
+        {/* Clipped to the card, so labels never show outside it mid-move. */}
+        <Animated.View style={[{ overflow: 'hidden', borderRadius: tokens.radius.card }, inner]}>
+          <Animated.View
+            style={[
+              { position: 'absolute', padding: 2, backgroundColor: c.surfaceRaised, overflow: 'hidden' },
+              icon,
+            ]}
+          >
+            <Image source={{ uri }} style={{ flex: 1 }} />
+          </Animated.View>
+          <Animated.View
+            style={[
+              {
+                position: 'absolute',
+                left: tokens.space[16] + small + tokens.space[16],
+                right: tokens.space[16],
+                top: 0,
+                bottom: 0,
+                justifyContent: 'center',
+              },
+              listLabel,
+            ]}
+          >
+            <Txt variant="serifListTitle" family="serif" weight={500} color={c.text}>
+              {e.name}
+            </Txt>
+          </Animated.View>
+          <Animated.View
+            style={[
+              {
+                position: 'absolute',
+                left: tokens.space[12],
+                right: tokens.space[12],
+                top: tokens.space[12] + g.tile + tokens.space[12],
+                gap: tokens.space[4],
+              },
+              gridLabel,
+            ]}
+          >
+            <Txt
+              variant="rowTitle"
+              color={c.text}
+              numberOfLines={2}
+              style={{ minHeight: 2 * tokens.type.rowTitle.lineHeight }}
+            >
+              {e.name}
+            </Txt>
+            <Txt variant="captionTight" color={c.textSecondary} numberOfLines={1}>
+              {e.type}
+            </Txt>
+          </Animated.View>
+        </Animated.View>
+      </ProgramCard>
+    </Animated.View>
+  );
+}
+
 function same(a: readonly Exercise[], b: readonly Exercise[]) {
   return (
     a.length === b.length &&
     a.every((e, i) => e.id === b[i].id && e.name === b[i].name && e.icon === b[i].icon && e.type === b[i].type)
   );
-}
-
-function Gap() {
-  return <View style={{ height: tokens.space[12] }} />;
 }
