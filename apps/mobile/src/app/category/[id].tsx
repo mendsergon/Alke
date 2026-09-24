@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useBack } from '../../navigation/use-back';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { EmptyState, Segmented } from '../../components/surfaces';
+import { EmptyState } from '../../components/surfaces';
 import { ProgramCard } from '../../components/program-card';
 import { GlassButton } from '../../components/glass-button';
 import { SearchBar } from '../../components/search-bar';
@@ -20,8 +20,6 @@ import { listExercisesIn, type Exercise } from '../../backend/exercises';
  *
  * OPEN: there is no exercise screen yet, so a card opens nothing.
  */
-const VIEWS = ['List', 'Grid'] as const;
-
 export default function CategoryScreen() {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
@@ -30,7 +28,10 @@ export default function CategoryScreen() {
   const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
   const [exercises, setExercises] = useState<Exercise[] | null>(null);
   const [query, setQuery] = useState('');
-  const [view, setView] = useState<(typeof VIEWS)[number]>('List');
+  const [view, setView] = useState<'list' | 'grid'>('list');
+  const { width } = useWindowDimensions();
+  // Two columns across the page's content width.
+  const tile = (width - 2 * tokens.space[24] - tokens.space[16]) / 2;
   const q = query.trim().toLowerCase();
   const shown = exercises?.filter((e) => e.name.toLowerCase().includes(q)) ?? [];
 
@@ -62,17 +63,14 @@ export default function CategoryScreen() {
         </Txt>
 
         {exercises !== null && exercises.length > 0 ? (
-          <>
-            <SearchBar value={query} onChange={setQuery} label="Search exercises" />
-            <Segmented options={VIEWS} value={view} onChange={setView} />
-          </>
+          <SearchBar value={query} onChange={setQuery} label="Search exercises" />
         ) : null}
 
         {exercises === null ? null : exercises.length === 0 ? (
           <EmptyState line="No exercises yet." />
         ) : shown.length === 0 ? (
           <EmptyState line="No exercises match." />
-        ) : view === 'List' ? (
+        ) : view === 'list' ? (
           <View style={{ gap: tokens.space[12] }}>
             {shown.map((e) => (
               <ProgramCard key={e.id} label={e.name} padding={tokens.space[16]}>
@@ -86,22 +84,16 @@ export default function CategoryScreen() {
             ))}
           </View>
         ) : (
-          <View style={{ gap: tokens.space[12] }}>
-            {pairs(shown).map((row) => (
-              <View key={row[0].id} style={{ flexDirection: 'row', gap: tokens.space[12] }}>
-                {row.map((e) => (
-                  <ProgramCard key={e.id} label={e.name} padding={tokens.space[16]} grow>
-                    <View style={{ gap: tokens.space[12] }}>
-                      <ExerciseIcon icon={e.icon} size={tokens.iconTile.size.sessionHeader} seamAll />
-                      <Txt variant="serifListTitle" family="serif" weight={500} color={c.text}>
-                        {e.name}
-                      </Txt>
-                    </View>
-                  </ProgramCard>
-                ))}
-                {/* A lone last card keeps its half. */}
-                {row.length === 1 ? <View style={{ flex: 1 }} /> : null}
-              </View>
+          // The design's exercise set (page 31): the tile itself is the
+          // surface, the name sits under it on the page.
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: tokens.space[16], rowGap: tokens.space[24] }}>
+            {shown.map((e) => (
+              <Pressable key={e.id} accessibilityRole="button" accessibilityLabel={e.name} style={{ width: tile, gap: tokens.space[8] }}>
+                <ExerciseIcon icon={e.icon} size={tile} seamAll />
+                <Txt variant="rowTitle" color={c.text}>
+                  {e.name}
+                </Txt>
+              </Pressable>
             ))}
           </View>
         )}
@@ -110,12 +102,15 @@ export default function CategoryScreen() {
       <View style={{ position: 'absolute', top: insets.top + tokens.space[20], left: tokens.space[20] }}>
         <GlassButton icon="chevronLeft" label="Back" onPress={back} />
       </View>
+      {exercises !== null && exercises.length > 0 ? (
+        <View style={{ position: 'absolute', top: insets.top + tokens.space[20], right: tokens.space[20] }}>
+          <GlassButton
+            icon={view === 'list' ? 'grid' : 'list'}
+            label={view === 'list' ? 'Show as grid' : 'Show as list'}
+            onPress={() => setView(view === 'list' ? 'grid' : 'list')}
+          />
+        </View>
+      ) : null}
     </View>
   );
-}
-
-function pairs<T>(items: T[]): T[][] {
-  const rows: T[][] = [];
-  for (let i = 0; i < items.length; i += 2) rows.push(items.slice(i, i + 2));
-  return rows;
 }
