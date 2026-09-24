@@ -45,6 +45,12 @@ type View_ = 'list' | 'grid';
 // How long a switch takes, about UIKit's own animated scroll.
 const MORPH_MS = 300;
 
+// Whether switching view animates. Off, the other view is shown at once, in
+// the same frame, with the exercise at the top of the screen kept in place: the
+// switch as it was before it animated. A user setting will drive this, for
+// devices the animation is heavy on (PLAN.md, 1.9).
+const ANIMATE_VIEW_SWITCH = true;
+
 /** Where every card sits in each view; all cards in a view are one size. */
 type Geometry = { content: number; card: number; listStep: number; gridStep: number };
 
@@ -177,6 +183,11 @@ export default function CategoryScreen() {
     // view, the header's menu, the page held at its taller height); the move
     // itself is started by the layout effect below, after that commit, so no
     // React work lands while the cards are moving.
+    if (!ANIMATE_VIEW_SWITCH) {
+      setShowing(next);
+      setView(next);
+      return;
+    }
     setSwitching(true);
     setView(next);
   };
@@ -191,6 +202,17 @@ export default function CategoryScreen() {
     if (started.current === view) return;
     started.current = view;
     const next = view;
+    if (!ANIMATE_VIEW_SWITCH) {
+      // The other view is in place in this same commit; show it and move the
+      // page to where the exercise at the top of the screen now sits.
+      progress.value = next === 'grid' ? 1 : 0;
+      if (following.value) {
+        following.value = false;
+        const y = (next === 'grid' ? anchorGrid.value : anchorList.value) - anchorOnScreen.value;
+        scroller.current?.scrollTo({ y: Math.max(0, y), animated: false });
+      }
+      return;
+    }
     // A frame after the commit has been applied, so the move's first frame is
     // not the one that pays for it.
     const frame = requestAnimationFrame(() => {
