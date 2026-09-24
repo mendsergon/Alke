@@ -122,11 +122,25 @@ export default function CategoryScreen() {
   // nothing is laid out again while it moves; the two views' contents
   // cross-fade on top of that.
   const progress = useSharedValue(0);
+  // The view being switched to fades in on top of the one being left, which
+  // stays fully drawn underneath until the move ends: the cards never dim
+  // through the page halfway.
+  const target = useSharedValue(0);
   const listStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0, 0.6], [1, 0], 'clamp'),
+    opacity:
+      target.value === 0
+        ? interpolate(progress.value, [1, 0.3], [0, 1], 'clamp')
+        : progress.value < 1
+          ? 1
+          : 0,
   }));
   const gridStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0.4, 1], [0, 1], 'clamp'),
+    opacity:
+      target.value === 1
+        ? interpolate(progress.value, [0, 0.7], [0, 1], 'clamp')
+        : progress.value > 0
+          ? 1
+          : 0,
   }));
 
   // While the cards travel, the page scrolls with the exercise that was at the
@@ -172,6 +186,7 @@ export default function CategoryScreen() {
     }
     // The view in the page's flow changes once the move has finished.
     setSwitching(true);
+    target.value = next === 'grid' ? 1 : 0;
     progress.value = withTiming(
       next === 'grid' ? 1 : 0,
       { duration: MORPH_MS, easing: Easing.out(Easing.cubic) },
@@ -234,7 +249,7 @@ export default function CategoryScreen() {
             {view === 'list' || showing === 'list' || both ? (
               <Animated.View
                 pointerEvents={view === 'list' ? 'auto' : 'none'}
-                style={[{ gap: tokens.space[12] }, layer('list'), listStyle]}
+                style={[{ gap: tokens.space[12], zIndex: view === 'list' ? 1 : 0 }, layer('list'), listStyle]}
               >
                 <ListRows exercises={shown} g={g} progress={progress} />
               </Animated.View>
@@ -242,7 +257,11 @@ export default function CategoryScreen() {
             {view === 'grid' || showing === 'grid' || both ? (
               <Animated.View
                 pointerEvents={view === 'grid' ? 'auto' : 'none'}
-                style={[{ flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space[12] }, layer('grid'), gridStyle]}
+                style={[
+                  { flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space[12], zIndex: view === 'grid' ? 1 : 0 },
+                  layer('grid'),
+                  gridStyle,
+                ]}
               >
                 <GridCards exercises={shown} g={g} tile={tile} progress={progress} />
               </Animated.View>
