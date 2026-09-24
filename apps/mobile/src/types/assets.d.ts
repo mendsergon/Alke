@@ -3,3 +3,9 @@ declare module '*.ttf' {
   const asset: number;
   export default asset;
 }
+
+/** Images resolve the same way. */
+declare module '*.png' {
+  const asset: number;
+  export default asset;
+}
