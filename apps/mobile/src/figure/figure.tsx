@@ -245,6 +245,19 @@ function iconBitmap(
   return uri;
 }
 
+/**
+ * An exercise icon's bitmap drawn at `size`, for a tile that changes size:
+ * shown smaller it is scaled down, never blurred up.
+ */
+export function useExerciseIconUri(icon: ExerciseIconKey, size: number, seamAll = false): string {
+  const { c } = useTheme();
+  return iconBitmap(icon, size, seamAll, {
+    accent: c.accent,
+    body: c.iconBody,
+    recess: mix(c.iconBody, c.bg, 0.45),
+  });
+}
+
 /** The tile an exercise icon sits in: surface-raised, radius 12 (16 over 56). */
 export function ExerciseIcon({
   icon,
