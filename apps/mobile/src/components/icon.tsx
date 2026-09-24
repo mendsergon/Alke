@@ -82,6 +82,25 @@ const PATHS: Record<string, (p: { s: string; w: number }) => ReactNode> = {
       <Path d="m16 16 4 4" stroke={s} strokeWidth={w} />
     </>
   ),
+  // Not in the design's set; drawn to its rules (24x24, stroked, round caps).
+  // Three rows, each a lead square and a line: the list of exercise rows.
+  list: ({ s, w }) => (
+    <>
+      <Rect x={3.5} y={4.5} width={4} height={4} rx={1} stroke={s} strokeWidth={w} />
+      <Rect x={3.5} y={10} width={4} height={4} rx={1} stroke={s} strokeWidth={w} />
+      <Rect x={3.5} y={15.5} width={4} height={4} rx={1} stroke={s} strokeWidth={w} />
+      <Path d="M11 6.5h9.5M11 12h9.5M11 17.5h9.5" stroke={s} strokeWidth={w} />
+    </>
+  ),
+  // Four tiles, two by two: the exercise grid.
+  grid: ({ s, w }) => (
+    <>
+      <Rect x={4} y={4} width={6.5} height={6.5} rx={1.5} stroke={s} strokeWidth={w} />
+      <Rect x={13.5} y={4} width={6.5} height={6.5} rx={1.5} stroke={s} strokeWidth={w} />
+      <Rect x={4} y={13.5} width={6.5} height={6.5} rx={1.5} stroke={s} strokeWidth={w} />
+      <Rect x={13.5} y={13.5} width={6.5} height={6.5} rx={1.5} stroke={s} strokeWidth={w} />
+    </>
+  ),
   users: ({ s, w }) => (
     <>
       <Circle cx={7} cy={6} r={2.2} stroke={s} strokeWidth={w} />
