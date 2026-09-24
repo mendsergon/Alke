@@ -12,11 +12,14 @@ export function ProgramCard({
   label,
   onPress,
   padding = tokens.space[20],
+  grow = false,
   children,
 }: {
   label: string;
   onPress?: () => void;
   padding?: number;
+  /** Takes an equal share of its row, and the row's full height. */
+  grow?: boolean;
   children: ReactNode;
 }) {
   const { c } = useTheme();
@@ -33,6 +36,7 @@ export function ProgramCard({
         borderWidth: 1,
         borderColor: c.border,
         padding,
+        flex: grow ? 1 : undefined,
       })}
     >
       {children}
