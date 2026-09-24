@@ -6,7 +6,11 @@ export type Exercise = {
   id: string;
   name: string;
   icon: ExerciseIconKey;
+  /** The exercise type's name: Free weight, Cable, Machine. */
+  type: string;
 };
+
+type ExerciseRow = Omit<Exercise, 'type'> & { expand?: { type?: { name: string } } };
 
 /**
  * The exercises whose main muscle is this category, by name. The list rule
@@ -16,11 +20,12 @@ export async function listExercisesIn(categoryId: string, token: string | null):
   const filter = encodeURIComponent(`main_muscle = "${categoryId}"`);
   try {
     const response = await fetch(
-      `${POCKETBASE_URL}/api/collections/exercises/records?perPage=200&sort=name&fields=id,name,icon&filter=${filter}`,
+      `${POCKETBASE_URL}/api/collections/exercises/records?perPage=200&sort=name&expand=type&fields=id,name,icon,expand.type.name&filter=${filter}`,
       { headers: token ? { Authorization: token } : {} },
     );
     if (!response.ok) return null;
-    return ((await response.json()) as { items: Exercise[] }).items;
+    const { items } = (await response.json()) as { items: ExerciseRow[] };
+    return items.map((r) => ({ id: r.id, name: r.name, icon: r.icon, type: r.expand?.type?.name ?? '' }));
   } catch {
     return null;
   }
