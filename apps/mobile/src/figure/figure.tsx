@@ -158,9 +158,10 @@ const skPaths = new Map<string, SkPath>();
 function skPath(key: string, d: string, tx: number, ty: number, evenOdd: boolean): SkPath {
   let path = skPaths.get(key);
   if (!path) {
-    path = Skia.Path.MakeFromSVGString(d) ?? Skia.Path.Make();
-    path.offset(tx, ty);
-    if (evenOdd) path.setFillType(FillType.EvenOdd);
+    const builder = Skia.PathBuilder.MakeFromPath(Skia.Path.MakeFromSVGString(d) ?? Skia.Path.Make());
+    builder.offset(tx, ty);
+    if (evenOdd) builder.setFillType(FillType.EvenOdd);
+    path = builder.build();
     skPaths.set(key, path);
   }
   return path;
