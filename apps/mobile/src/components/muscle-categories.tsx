@@ -3,6 +3,8 @@ import { View } from 'react-native';
 import { Txt } from '../theme/text';
 import { tokens, useTheme } from '../theme/theme';
 import { listMuscleCategories, type MuscleCategory } from '../backend/muscles';
+import { prefetchExercises } from '../backend/exercises';
+import { useAuth } from '../auth/auth';
 import { ProgramCard } from './program-card';
 import { GroupIcon } from '../figure/muscle-groups';
 
@@ -17,16 +19,20 @@ import { GroupIcon } from '../figure/muscle-groups';
 export function MuscleCategories({ onOpen }: { onOpen?: (category: MuscleCategory) => void } = {}) {
   const { c } = useTheme();
   const [categories, setCategories] = useState<MuscleCategory[]>([]);
+  const { token } = useAuth();
+  const opens = onOpen !== undefined;
 
   useEffect(() => {
     let live = true;
     void listMuscleCategories().then((items) => {
       if (live && items) setCategories(items);
+      // Where a tile opens its exercises, have them before it is tapped.
+      if (items && opens) void prefetchExercises(items.map((category) => category.id), token);
     });
     return () => {
       live = false;
     };
-  }, []);
+  }, [opens, token]);
 
   return (
     <View

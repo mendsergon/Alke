@@ -10,7 +10,41 @@ export type Exercise = {
   type: string;
 };
 
-type ExerciseRow = Omit<Exercise, 'type'> & { expand?: { type?: { name: string } } };
+type ExerciseRow = Omit<Exercise, 'type'> & { main_muscle?: string; expand?: { type?: { name: string } } };
+
+const toExercise = (r: ExerciseRow): Exercise => ({ id: r.id, name: r.name, icon: r.icon, type: r.expand?.type?.name ?? '' });
+
+// Each category's exercises as last fetched, so a category screen can open
+// with its list already in the first frame.
+const byCategory = new Map<string, Exercise[]>();
+
+/** A category's exercises from the last fetch, if there has been one. */
+export function cachedExercisesIn(categoryId: string): Exercise[] | undefined {
+  return byCategory.get(categoryId);
+}
+
+/**
+ * Every exercise the caller can see, fetched once and filed by main muscle.
+ * Called where the categories are listed, before one is opened.
+ */
+export async function prefetchExercises(categoryIds: readonly string[], token: string | null): Promise<void> {
+  try {
+    const response = await fetch(
+      `${POCKETBASE_URL}/api/collections/exercises/records?perPage=1000&sort=name&expand=type&fields=id,name,icon,main_muscle,expand.type.name`,
+      { headers: token ? { Authorization: token } : {} },
+    );
+    if (!response.ok) return;
+    const { items } = (await response.json()) as { items: ExerciseRow[] };
+    for (const id of categoryIds) {
+      byCategory.set(
+        id,
+        items.filter((r) => r.main_muscle === id).map(toExercise),
+      );
+    }
+  } catch {
+    // The category screen fetches its own list; this only saves it the wait.
+  }
+}
 
 /**
  * The exercises whose main muscle is this category, by name. The list rule
@@ -25,7 +59,9 @@ export async function listExercisesIn(categoryId: string, token: string | null):
     );
     if (!response.ok) return null;
     const { items } = (await response.json()) as { items: ExerciseRow[] };
-    return items.map((r) => ({ id: r.id, name: r.name, icon: r.icon, type: r.expand?.type?.name ?? '' }));
+    const exercises = items.map(toExercise);
+    byCategory.set(categoryId, exercises);
+    return exercises;
   } catch {
     return null;
   }
