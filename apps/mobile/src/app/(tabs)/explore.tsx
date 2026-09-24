@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, TextInput, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenHeader } from '../../components/screen';
 import { Card, EmptyState, Pill, PrimaryButton } from '../../components/surfaces';
@@ -7,6 +7,7 @@ import { MuscleCategories } from '../../components/muscle-categories';
 import { SwitchScreen } from '../../components/switch-screen';
 import { PagerSwitch } from '../../components/pager-switch';
 import { Icon } from '../../components/icon';
+import { SearchBar } from '../../components/search-bar';
 import { MicroCaps, Txt } from '../../theme/text';
 import { tokens, useTheme } from '../../theme/theme';
 import { useAuth } from '../../auth/auth';
@@ -15,51 +16,6 @@ import { useLibrary } from '../../library/library';
 import { listTemplates, trainingDays, type ProgramRecord } from '../../backend/programs';
 import { DayDots, ProgramCard, weekLine } from '../../components/program-card';
 import { GYM_PROGRAMS, SHARED_PROGRAMS } from '../../mock/mock-data';
-
-function SearchBar({ value, onChange }: { value: string; onChange: (next: string) => void }) {
-  const { c } = useTheme();
-  const [focused, setFocused] = useState(false);
-  return (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-        height: 46,
-        paddingHorizontal: 14,
-        borderRadius: tokens.radius.button,
-        // The design's input, focused and at rest (as on sign-in): raised with
-        // a 2px accent edge while typing, the plain surface otherwise.
-        backgroundColor: focused ? c.surfaceRaised : c.surface,
-        borderWidth: 2,
-        borderColor: focused ? c.accent : 'transparent',
-      }}
-    >
-      <Icon name="search" size={18} color={c.textSecondary} />
-      <TextInput
-        value={value}
-        onChangeText={onChange}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        placeholder="Search programs"
-        placeholderTextColor={c.textSecondary}
-        accessibilityLabel="Search programs"
-        autoCapitalize="none"
-        autoCorrect={false}
-        returnKeyType="search"
-        clearButtonMode="while-editing"
-        style={{
-          flexGrow: 1,
-          flexShrink: 1,
-          height: '100%',
-          color: c.text,
-          fontFamily: tokens.fontFamily.sansRegular,
-          fontSize: tokens.type.body.size,
-        }}
-      />
-    </View>
-  );
-}
 
 /** A template matches when its name or one of its workouts contains the query. */
 function matches(template: ProgramRecord, query: string): boolean {
@@ -241,7 +197,7 @@ export default function Explore() {
       pages={[
         <>
       <BuildProgram />
-      <SearchBar value={query} onChange={setQuery} />
+      <SearchBar value={query} onChange={setQuery} label="Search programs" />
 
       <MicroCaps>Featured</MicroCaps>
       {shown.length > 0 ? (
