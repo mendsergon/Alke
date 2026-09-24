@@ -1,6 +1,7 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { View, useWindowDimensions } from 'react-native';
 import Animated, {
+  Easing,
   interpolate,
   scrollTo,
   useAnimatedReaction,
@@ -9,6 +10,7 @@ import Animated, {
   useScrollOffset,
   useSharedValue,
   withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import { Stack, useLocalSearchParams, useNavigation, type NativeStackNavigationProp } from 'expo-router';
@@ -39,8 +41,23 @@ const VIEW_ICON = { list: viewListIcon, grid: viewGridIcon };
 
 type View_ = 'list' | 'grid';
 
-// One view fades out, the page moves while neither shows, the other fades in.
-const HALF_MS = 100;
+// How long a switch takes, about UIKit's own animated scroll.
+const MORPH_MS = 300;
+
+/** Where every card sits in each view; all cards in a view are one size. */
+type Geometry = { content: number; card: number; listStep: number; gridStep: number };
+
+function frameIn(v: View_, g: Geometry, i: number) {
+  'worklet';
+  return v === 'list'
+    ? { x: 0, y: i * g.listStep, w: g.content, h: g.listStep - tokens.space[12] }
+    : {
+        x: (i % 2) * (g.card + tokens.space[12]),
+        y: Math.floor(i / 2) * g.gridStep,
+        w: g.card,
+        h: g.gridStep - tokens.space[12],
+      };
+}
 
 export default function CategoryScreen() {
   const { c } = useTheme();
@@ -77,6 +94,12 @@ export default function CategoryScreen() {
       tokens.space[4] + tokens.type.captionTight.lineHeight + tokens.space[12],
   };
   const perRow = { list: 1, grid: 2 };
+  // Kept the same object while the sizes are the same, so the card lists,
+  // which are memoised on it, do not redraw on a switch.
+  const g = useMemo<Geometry>(
+    () => ({ content, card, listStep: step.list, gridStep: step.grid }),
+    [content, card, step.list, step.grid],
+  );
   const padTop = insets.top + tokens.sizing.tapTarget.ios + tokens.space[16];
   // The title and search, measured; the cards start under them.
   const [headerLength, setHeaderLength] = useState(0);
@@ -94,28 +117,32 @@ export default function CategoryScreen() {
     [navigation],
   );
 
-  // 0 is the list, 1 the grid. Both views read their opacity from it; the
-  // switch runs on the UI thread and touches nothing else.
+  // 0 is the list, 1 the grid. On a switch every card travels from its place
+  // in one view to its place in the other, carried by transforms alone, so
+  // nothing is laid out again while it moves; the two views' contents
+  // cross-fade on top of that.
   const progress = useSharedValue(0);
   const listStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(Math.abs(progress.value - 0), [0, 0.5], [1, 0], 'clamp'),
+    opacity: interpolate(progress.value, [0, 0.6], [1, 0], 'clamp'),
   }));
   const gridStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(Math.abs(progress.value - 1), [0, 0.5], [1, 0], 'clamp'),
+    opacity: interpolate(progress.value, [0.4, 1], [0, 1], 'clamp'),
   }));
 
-  // While neither view shows, the page moves so the exercise that was at the
-  // top of the screen sits where it was in the other view.
+  // While the cards travel, the page scrolls with the exercise that was at the
+  // top of the screen, so it stays exactly where it was.
   const scroller = useAnimatedRef<Animated.ScrollView>();
   const scrollY = useScrollOffset(scroller);
-  const jumpTo = useSharedValue(-1);
+  const following = useSharedValue(false);
+  const anchorList = useSharedValue(0);
+  const anchorGrid = useSharedValue(0);
+  const anchorOnScreen = useSharedValue(0);
   useAnimatedReaction(
-    () => progress.value > 0.25 && progress.value < 0.75,
-    (hidden, was) => {
-      if (hidden && !was && jumpTo.value >= 0) {
-        scrollTo(scroller, 0, jumpTo.value, false);
-        jumpTo.value = -1;
-      }
+    () => progress.value,
+    (p) => {
+      if (!following.value) return;
+      const y = anchorList.value + (anchorGrid.value - anchorList.value) * p - anchorOnScreen.value;
+      scrollTo(scroller, 0, Math.max(0, y), false);
     },
   );
   const anchor = useRef(0);
@@ -134,20 +161,26 @@ export default function CategoryScreen() {
     const under = scrollY.value + insets.top + tokens.sizing.tapTarget.ios - cardsTop;
     if (headerLength > 0 && under > 0 && shown.length > 0) {
       const row = Math.min(Math.floor(under / step[view]), Math.ceil(shown.length / perRow[view]) - 1);
-      const into = scrollY.value - (cardsTop + row * step[view]);
       // A grid row holds two, so coming back to the list returns to the one it
       // left from when that one is still in the row.
       const n = perRow[view];
       anchor.current = anchor.current >= row * n && anchor.current < (row + 1) * n ? anchor.current : row * n;
-      const nextRow = Math.floor(anchor.current / perRow[next]);
-      jumpTo.value = Math.max(0, cardsTop + nextRow * step[next] + into);
+      anchorList.value = cardsTop + frameIn('list', g, anchor.current).y;
+      anchorGrid.value = cardsTop + frameIn('grid', g, anchor.current).y;
+      anchorOnScreen.value = cardsTop + frameIn(view, g, anchor.current).y - scrollY.value;
+      following.value = true;
     }
-    // The view in the page's flow changes once the old one is out of sight.
+    // The view in the page's flow changes once the move has finished.
     setSwitching(true);
-    progress.value = withTiming(next === 'grid' ? 1 : 0, { duration: 2 * HALF_MS }, () => {
-      scheduleOnRN(setShowing, next);
-      scheduleOnRN(setSwitching, false);
-    });
+    progress.value = withTiming(
+      next === 'grid' ? 1 : 0,
+      { duration: MORPH_MS, easing: Easing.out(Easing.cubic) },
+      () => {
+        following.value = false;
+        scheduleOnRN(setShowing, next);
+        scheduleOnRN(setSwitching, false);
+      },
+    );
     setView(next);
   };
 
@@ -203,7 +236,7 @@ export default function CategoryScreen() {
                 pointerEvents={view === 'list' ? 'auto' : 'none'}
                 style={[{ gap: tokens.space[12] }, layer('list'), listStyle]}
               >
-                <ListRows exercises={shown} />
+                <ListRows exercises={shown} g={g} progress={progress} />
               </Animated.View>
             ) : null}
             {view === 'grid' || showing === 'grid' || both ? (
@@ -211,7 +244,7 @@ export default function CategoryScreen() {
                 pointerEvents={view === 'grid' ? 'auto' : 'none'}
                 style={[{ flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space[12] }, layer('grid'), gridStyle]}
               >
-                <GridCards exercises={shown} card={card} tile={tile} />
+                <GridCards exercises={shown} g={g} tile={tile} progress={progress} />
               </Animated.View>
             ) : null}
           </View>
@@ -259,19 +292,68 @@ export default function CategoryScreen() {
   );
 }
 
+/**
+ * One card carried between views: from its place in the list to its place in
+ * the grid, by translation and scale only. The same exercise's card in the
+ * other view is carried along the same path, so the two travel as one.
+ */
+function Travel({
+  as,
+  index,
+  g,
+  progress,
+  children,
+}: {
+  as: View_;
+  index: number;
+  g: Geometry;
+  progress: SharedValue<number>;
+  children: ReactNode;
+}) {
+  const style = useAnimatedStyle(() => {
+    const p = progress.value;
+    const a = frameIn('list', g, index);
+    const b = frameIn('grid', g, index);
+    const own = as === 'list' ? a : b;
+    const x = a.x + (b.x - a.x) * p;
+    const y = a.y + (b.y - a.y) * p;
+    const w = a.w + (b.w - a.w) * p;
+    const h = a.h + (b.h - a.h) * p;
+    return {
+      transform: [
+        { translateX: x + w / 2 - (own.x + own.w / 2) },
+        { translateY: y + h / 2 - (own.y + own.h / 2) },
+        { scaleX: w / own.w },
+        { scaleY: h / own.h },
+      ],
+    };
+  });
+  return <Animated.View style={[{ width: as === 'list' ? g.content : g.card }, style]}>{children}</Animated.View>;
+}
+
 // The rows and cards redraw only when the exercises shown change, never on a
 // switch.
-const ListRows = memo(function ListRows({ exercises }: { exercises: readonly Exercise[] }) {
+const ListRows = memo(function ListRows({
+  exercises,
+  g,
+  progress,
+}: {
+  exercises: readonly Exercise[];
+  g: Geometry;
+  progress: SharedValue<number>;
+}) {
   const { c } = useTheme();
-  return exercises.map((e) => (
-    <ProgramCard key={e.id} label={e.name} padding={tokens.space[16]}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[16] }}>
-        <ExerciseIcon icon={e.icon} size={tokens.iconTile.size.sessionHeader} seamAll />
-        <Txt variant="serifListTitle" family="serif" weight={500} color={c.text} style={{ flexShrink: 1 }}>
-          {e.name}
-        </Txt>
-      </View>
-    </ProgramCard>
+  return exercises.map((e, i) => (
+    <Travel key={e.id} as="list" index={i} g={g} progress={progress}>
+      <ProgramCard label={e.name} padding={tokens.space[16]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[16] }}>
+          <ExerciseIcon icon={e.icon} size={tokens.iconTile.size.sessionHeader} seamAll />
+          <Txt variant="serifListTitle" family="serif" weight={500} color={c.text} style={{ flexShrink: 1 }}>
+            {e.name}
+          </Txt>
+        </View>
+      </ProgramCard>
+    </Travel>
   ));
 });
 
@@ -280,16 +362,18 @@ const ListRows = memo(function ListRows({ exercises }: { exercises: readonly Exe
 // on page 31 labels them. Every card is the same height, so the rows line up.
 const GridCards = memo(function GridCards({
   exercises,
-  card,
+  g,
   tile,
+  progress,
 }: {
   exercises: readonly Exercise[];
-  card: number;
+  g: Geometry;
   tile: number;
+  progress: SharedValue<number>;
 }) {
   const { c } = useTheme();
-  return exercises.map((e) => (
-    <View key={e.id} style={{ width: card }}>
+  return exercises.map((e, i) => (
+    <Travel key={e.id} as="grid" index={i} g={g} progress={progress}>
       <ProgramCard label={e.name} padding={tokens.space[12]}>
         <View style={{ gap: tokens.space[12] }}>
           <ExerciseIcon icon={e.icon} size={tile} seamAll />
@@ -308,7 +392,7 @@ const GridCards = memo(function GridCards({
           </View>
         </View>
       </ProgramCard>
-    </View>
+    </Travel>
   ));
 });
 
