@@ -38,6 +38,9 @@ export default function CategoryScreen() {
   // The header's icon and ticks follow a frame behind the content: rebuilding
   // the native menu in the same commit held the new view back.
   const [menuView, setMenuView] = useState(view);
+  // The view on screen is drawn first; the other is built a frame later, so
+  // opening the screen pays for one set of figures and a switch pays for none.
+  const [both, setBoth] = useState(false);
   useEffect(() => {
     const frame = requestAnimationFrame(() => setMenuView(view));
     return () => cancelAnimationFrame(frame);
@@ -99,7 +102,11 @@ export default function CategoryScreen() {
   useEffect(() => {
     let live = true;
     void listExercisesIn(id, token).then((items) => {
-      if (live) setExercises(items ?? []);
+      if (!live) return;
+      setExercises(items ?? []);
+      requestAnimationFrame(() => {
+        if (live) setBoth(true);
+      });
     });
     return () => {
       live = false;
@@ -137,7 +144,7 @@ export default function CategoryScreen() {
           // what is already drawn instead of drawing every figure again.
           <>
           <View style={{ gap: tokens.space[12], display: view === 'list' ? 'flex' : 'none' }}>
-            {listItems}
+            {view === 'list' || both ? listItems : null}
           </View>
           {/* A card on the page with the raised icon tile inside it (design
               page 29, surfaces), then the name held to two lines and the type,
@@ -151,7 +158,7 @@ export default function CategoryScreen() {
               display: view === 'grid' ? 'flex' : 'none',
             }}
           >
-            {gridItems}
+            {view === 'grid' || both ? gridItems : null}
           </View>
           </>
         )}
