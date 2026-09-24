@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { View, useWindowDimensions } from 'react-native';
+import { Pressable, View, useWindowDimensions } from 'react-native';
 import Animated, {
   Easing,
   interpolate,
@@ -17,7 +17,6 @@ import { Stack, useLocalSearchParams, useNavigation, type NativeStackNavigationP
 import { useBack } from '../../navigation/use-back';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '../../components/surfaces';
-import { ProgramCard } from '../../components/program-card';
 import { SearchBar } from '../../components/search-bar';
 import { ExerciseIcon } from '../../figure/figure';
 import { Txt } from '../../theme/text';
@@ -312,42 +311,81 @@ export default function CategoryScreen() {
 }
 
 /**
- * One card carried between views: from its place in the list to its place in
- * the grid, by translation and scale only. The same exercise's card in the
- * other view is carried along the same path, so the two travel as one.
+ * One card carried between views, from its place in the list to its place in
+ * the grid. The card itself — its surface, border and rounded corners — is
+ * resized to each in-between shape, so its corners stay round; what is on it
+ * moves and scales evenly, so nothing on it stretches. The same exercise's
+ * card in the other view takes the same path, so the two travel as one.
+ *
+ * The card is drawn as ProgramCard draws it (components/program-card.tsx).
  */
 function Travel({
   as,
   index,
   g,
   progress,
+  label,
+  padding,
   children,
 }: {
   as: View_;
   index: number;
   g: Geometry;
   progress: SharedValue<number>;
+  label: string;
+  padding: number;
   children: ReactNode;
 }) {
-  const style = useAnimatedStyle(() => {
+  const { c } = useTheme();
+  const own = frameIn(as, g, index);
+  const surface = useAnimatedStyle(() => {
     const p = progress.value;
     const a = frameIn('list', g, index);
     const b = frameIn('grid', g, index);
-    const own = as === 'list' ? a : b;
-    const x = a.x + (b.x - a.x) * p;
-    const y = a.y + (b.y - a.y) * p;
+    const o = as === 'list' ? a : b;
+    return {
+      left: a.x + (b.x - a.x) * p - o.x,
+      top: a.y + (b.y - a.y) * p - o.y,
+      width: a.w + (b.w - a.w) * p,
+      height: a.h + (b.h - a.h) * p,
+    };
+  });
+  const contents = useAnimatedStyle(() => {
+    const p = progress.value;
+    const a = frameIn('list', g, index);
+    const b = frameIn('grid', g, index);
+    const o = as === 'list' ? a : b;
     const w = a.w + (b.w - a.w) * p;
     const h = a.h + (b.h - a.h) * p;
     return {
       transform: [
-        { translateX: x + w / 2 - (own.x + own.w / 2) },
-        { translateY: y + h / 2 - (own.y + own.h / 2) },
-        { scaleX: w / own.w },
-        { scaleY: h / own.h },
+        { translateX: a.x + (b.x - a.x) * p + w / 2 - (o.x + o.w / 2) },
+        { translateY: a.y + (b.y - a.y) * p + h / 2 - (o.y + o.h / 2) },
+        { scale: Math.min(w / o.w, h / o.h) },
       ],
     };
   });
-  return <Animated.View style={[{ width: as === 'list' ? g.content : g.card }, style]}>{children}</Animated.View>;
+  return (
+    <View style={{ width: own.w, height: own.h }}>
+      <Animated.View
+        style={[
+          {
+            position: 'absolute',
+            backgroundColor: c.surface,
+            borderRadius: tokens.radius.card,
+            borderWidth: 1,
+            borderColor: c.border,
+          },
+          surface,
+        ]}
+      />
+      <Animated.View style={[{ flex: 1 }, contents]}>
+        <Pressable accessibilityRole="button" accessibilityLabel={label} style={{ flex: 1, padding: padding + 1 }}>
+          {children}
+        </Pressable>
+      </Animated.View>
+    </View>
+  );
 }
 
 // The rows and cards redraw only when the exercises shown change, never on a
@@ -363,15 +401,13 @@ const ListRows = memo(function ListRows({
 }) {
   const { c } = useTheme();
   return exercises.map((e, i) => (
-    <Travel key={e.id} as="list" index={i} g={g} progress={progress}>
-      <ProgramCard label={e.name} padding={tokens.space[16]}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[16] }}>
-          <ExerciseIcon icon={e.icon} size={tokens.iconTile.size.sessionHeader} seamAll />
-          <Txt variant="serifListTitle" family="serif" weight={500} color={c.text} style={{ flexShrink: 1 }}>
-            {e.name}
-          </Txt>
-        </View>
-      </ProgramCard>
+    <Travel key={e.id} as="list" index={i} g={g} progress={progress} label={e.name} padding={tokens.space[16]}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[16] }}>
+        <ExerciseIcon icon={e.icon} size={tokens.iconTile.size.sessionHeader} seamAll />
+        <Txt variant="serifListTitle" family="serif" weight={500} color={c.text} style={{ flexShrink: 1 }}>
+          {e.name}
+        </Txt>
+      </View>
     </Travel>
   ));
 });
@@ -392,25 +428,23 @@ const GridCards = memo(function GridCards({
 }) {
   const { c } = useTheme();
   return exercises.map((e, i) => (
-    <Travel key={e.id} as="grid" index={i} g={g} progress={progress}>
-      <ProgramCard label={e.name} padding={tokens.space[12]}>
-        <View style={{ gap: tokens.space[12] }}>
-          <ExerciseIcon icon={e.icon} size={tile} seamAll />
-          <View style={{ gap: tokens.space[4] }}>
-            <Txt
-              variant="rowTitle"
-              color={c.text}
-              numberOfLines={2}
-              style={{ minHeight: 2 * tokens.type.rowTitle.lineHeight }}
-            >
-              {e.name}
-            </Txt>
-            <Txt variant="captionTight" color={c.textSecondary} numberOfLines={1}>
-              {e.type}
-            </Txt>
-          </View>
+    <Travel key={e.id} as="grid" index={i} g={g} progress={progress} label={e.name} padding={tokens.space[12]}>
+      <View style={{ gap: tokens.space[12] }}>
+        <ExerciseIcon icon={e.icon} size={tile} seamAll />
+        <View style={{ gap: tokens.space[4] }}>
+          <Txt
+            variant="rowTitle"
+            color={c.text}
+            numberOfLines={2}
+            style={{ minHeight: 2 * tokens.type.rowTitle.lineHeight }}
+          >
+            {e.name}
+          </Txt>
+          <Txt variant="captionTight" color={c.textSecondary} numberOfLines={1}>
+            {e.type}
+          </Txt>
         </View>
-      </ProgramCard>
+      </View>
     </Travel>
   ));
 });
