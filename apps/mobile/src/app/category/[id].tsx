@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, View, useWindowDimensions } from 'react-native';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams, useNavigation, type NativeStackNavigationProp } from 'expo-router';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useBack } from '../../navigation/use-back';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '../../components/surfaces';
@@ -26,21 +27,35 @@ import viewGridIcon from '../../../assets/images/view-grid.png';
 // native bar buttons.
 const VIEW_ICON = { list: viewListIcon, grid: viewGridIcon };
 
+// A category's exercises once fetched, so coming back to it opens full.
+const loaded = new Map<string, Exercise[]>();
+
 export default function CategoryScreen() {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
   const back = useBack('/explore');
   const { token } = useAuth();
   const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
-  const [exercises, setExercises] = useState<Exercise[] | null>(null);
+  const [exercises, setExercises] = useState<Exercise[] | null>(() => loaded.get(id) ?? null);
+  // Fetched after the screen opened: the list fades in rather than popping.
+  const [fadeIn] = useState(() => !loaded.has(id));
+  const navigation = useNavigation<NativeStackNavigationProp<Record<string, object | undefined>>>();
   const [query, setQuery] = useState('');
   const [view, setView] = useState<'list' | 'grid'>('list');
   // The header's icon and ticks follow a frame behind the content: rebuilding
   // the native menu in the same commit held the new view back.
   const [menuView, setMenuView] = useState(view);
-  // The view on screen is drawn first; the other is built a frame later, so
-  // opening the screen pays for one set of figures and a switch pays for none.
+  // The view on screen is drawn first; the other is built once the screen has
+  // finished sliding in, so the slide never waits on figures nobody can see
+  // and a switch later finds them already drawn.
   const [both, setBoth] = useState(false);
+  useEffect(
+    () =>
+      navigation.addListener('transitionEnd', (e) => {
+        if (!e.data.closing) setBoth(true);
+      }),
+    [navigation],
+  );
   useEffect(() => {
     const frame = requestAnimationFrame(() => setMenuView(view));
     return () => cancelAnimationFrame(frame);
@@ -103,10 +118,8 @@ export default function CategoryScreen() {
     let live = true;
     void listExercisesIn(id, token).then((items) => {
       if (!live) return;
+      if (items) loaded.set(id, items);
       setExercises(items ?? []);
-      requestAnimationFrame(() => {
-        if (live) setBoth(true);
-      });
     });
     return () => {
       live = false;
@@ -131,7 +144,8 @@ export default function CategoryScreen() {
           {name ?? ''}
         </Txt>
 
-        {exercises !== null && exercises.length > 0 ? (
+        {/* Laid out from the first frame, so the list arriving pushes nothing. */}
+        {exercises === null || exercises.length > 0 ? (
           <SearchBar value={query} onChange={setQuery} label="Search exercises" />
         ) : null}
 
@@ -142,7 +156,7 @@ export default function CategoryScreen() {
         ) : (
           // Both views stay mounted and the other is hidden, so a switch shows
           // what is already drawn instead of drawing every figure again.
-          <>
+          <Animated.View entering={fadeIn ? FadeIn : undefined} style={{ gap: tokens.space[16] }}>
           <View style={{ gap: tokens.space[12], display: view === 'list' ? 'flex' : 'none' }}>
             {view === 'list' || both ? listItems : null}
           </View>
@@ -160,7 +174,7 @@ export default function CategoryScreen() {
           >
             {view === 'grid' || both ? gridItems : null}
           </View>
-          </>
+          </Animated.View>
         )}
       </ScrollView>
 
