@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '../../components/surfaces';
 import { ProgramCard } from '../../components/program-card';
 import { GlassButton } from '../../components/glass-button';
+import { SearchBar } from '../../components/search-bar';
 import { ExerciseIcon } from '../../figure/figure';
 import { Txt } from '../../theme/text';
 import { tokens, useTheme } from '../../theme/theme';
@@ -26,6 +27,9 @@ export default function CategoryScreen() {
   const { token } = useAuth();
   const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
   const [exercises, setExercises] = useState<Exercise[] | null>(null);
+  const [query, setQuery] = useState('');
+  const q = query.trim().toLowerCase();
+  const shown = exercises?.filter((e) => e.name.toLowerCase().includes(q)) ?? [];
 
   useEffect(() => {
     let live = true;
@@ -54,11 +58,17 @@ export default function CategoryScreen() {
           {name ?? ''}
         </Txt>
 
+        {exercises !== null && exercises.length > 0 ? (
+          <SearchBar value={query} onChange={setQuery} label="Search exercises" />
+        ) : null}
+
         {exercises === null ? null : exercises.length === 0 ? (
           <EmptyState line="No exercises yet." />
+        ) : shown.length === 0 ? (
+          <EmptyState line="No exercises match." />
         ) : (
           <View style={{ gap: tokens.space[12] }}>
-            {exercises.map((e) => (
+            {shown.map((e) => (
               <ProgramCard key={e.id} label={e.name} padding={tokens.space[16]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[16] }}>
                   <ExerciseIcon icon={e.icon} size={tokens.iconTile.size.sessionHeader} seamAll />
