@@ -1,12 +1,10 @@
 import { useRef } from 'react';
-import { View } from 'react-native';
+import { Image, PixelRatio, View } from 'react-native';
 import Svg, { ClipPath, Defs, G, Path } from 'react-native-svg';
 import {
-  Canvas,
   ClipOp,
   FillType,
   PaintStyle,
-  Picture,
   Skia,
   createPicture,
   type SkPath,
@@ -220,6 +218,32 @@ function iconPicture(
   return picture;
 }
 
+// Each icon as a bitmap at the screen's pixel density, drawn once from its
+// picture. A plain image mounts as one view with nothing to set up, where a
+// Skia canvas per card cost several milliseconds each to mount.
+const bitmaps = new Map<string, string>();
+function iconBitmap(
+  icon: ExerciseIconKey,
+  size: number,
+  seamAll: boolean,
+  colors: { accent: string; body: string; recess: string },
+): string {
+  const scale = PixelRatio.get();
+  const key = `${icon}|${size}|${scale}|${seamAll}|${colors.accent}|${colors.body}|${colors.recess}`;
+  let uri = bitmaps.get(key);
+  if (!uri) {
+    const px = Math.round(size * scale);
+    const surface = Skia.Surface.Make(px, px);
+    if (!surface) return '';
+    const canvas = surface.getCanvas();
+    canvas.scale(px / size, px / size);
+    canvas.drawPicture(iconPicture(icon, size, seamAll, colors));
+    uri = `data:image/png;base64,${surface.makeImageSnapshot().encodeToBase64()}`;
+    bitmaps.set(key, uri);
+  }
+  return uri;
+}
+
 /** The tile an exercise icon sits in: surface-raised, radius 12 (16 over 56). */
 export function ExerciseIcon({
   icon,
@@ -233,7 +257,7 @@ export function ExerciseIcon({
 }) {
   const { c } = useTheme();
   const inner = size - (size > 56 ? 4 : 3);
-  const picture = iconPicture(icon, inner, seamAll, {
+  const uri = iconBitmap(icon, inner, seamAll, {
     accent: c.accent,
     body: c.iconBody,
     recess: mix(c.iconBody, c.bg, 0.45),
@@ -250,9 +274,7 @@ export function ExerciseIcon({
         overflow: 'hidden',
       }}
     >
-      <Canvas style={{ width: inner, height: inner }}>
-        <Picture picture={picture} />
-      </Canvas>
+      <Image source={{ uri }} style={{ width: inner, height: inner }} />
     </View>
   );
 }
