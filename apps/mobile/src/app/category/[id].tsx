@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, View, useWindowDimensions } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useBack } from '../../navigation/use-back';
@@ -11,6 +11,9 @@ import { Txt } from '../../theme/text';
 import { tokens, useTheme } from '../../theme/theme';
 import { useAuth } from '../../auth/auth';
 import { listExercisesIn, type Exercise } from '../../backend/exercises';
+import backIcon from '../../../assets/images/back.png';
+import viewListIcon from '../../../assets/images/view-list.png';
+import viewGridIcon from '../../../assets/images/view-grid.png';
 
 /**
  * A muscle category's exercises: every exercise whose main muscle it is, as
@@ -21,11 +24,7 @@ import { listExercisesIn, type Exercise } from '../../backend/exercises';
  */
 // The back, list and grid icons (components/icon.tsx), as images for the
 // native bar buttons.
-const BACK_ICON = require('../../../assets/images/back.png');
-const VIEW_ICON = {
-  list: require('../../../assets/images/view-list.png'),
-  grid: require('../../../assets/images/view-grid.png'),
-};
+const VIEW_ICON = { list: viewListIcon, grid: viewGridIcon };
 
 export default function CategoryScreen() {
   const { c } = useTheme();
@@ -42,7 +41,53 @@ export default function CategoryScreen() {
   const card = (width - 2 * tokens.space[24] - tokens.space[12]) / 2;
   const tile = card - 2 * tokens.space[12] - 2;
   const q = query.trim().toLowerCase();
-  const shown = exercises?.filter((e) => e.name.toLowerCase().includes(q)) ?? [];
+  const shown = useMemo(
+    () => exercises?.filter((e) => e.name.toLowerCase().includes(q)) ?? [],
+    [exercises, q],
+  );
+
+  // Drawn once per result set, so switching the view only flips which of the
+  // two is shown.
+  const listItems = useMemo(
+    () =>
+      shown.map((e) => (
+        <ProgramCard key={e.id} label={e.name} padding={tokens.space[16]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[16] }}>
+            <ExerciseIcon icon={e.icon} size={tokens.iconTile.size.sessionHeader} seamAll />
+            <Txt variant="serifListTitle" family="serif" weight={500} color={c.text} style={{ flexShrink: 1 }}>
+              {e.name}
+            </Txt>
+          </View>
+        </ProgramCard>
+      )),
+    [shown, c],
+  );
+  const gridItems = useMemo(
+    () =>
+      shown.map((e) => (
+        <View key={e.id} style={{ width: card }}>
+          <ProgramCard label={e.name} padding={tokens.space[12]}>
+            <View style={{ gap: tokens.space[12] }}>
+              <ExerciseIcon icon={e.icon} size={tile} seamAll />
+              <View style={{ gap: tokens.space[4] }}>
+                <Txt
+                  variant="rowTitle"
+                  color={c.text}
+                  numberOfLines={2}
+                  style={{ minHeight: 2 * tokens.type.rowTitle.lineHeight }}
+                >
+                  {e.name}
+                </Txt>
+                <Txt variant="captionTight" color={c.textSecondary} numberOfLines={1}>
+                  {e.type}
+                </Txt>
+              </View>
+            </View>
+          </ProgramCard>
+        </View>
+      )),
+    [shown, c, card, tile],
+  );
 
   useEffect(() => {
     let live = true;
@@ -80,54 +125,34 @@ export default function CategoryScreen() {
           <EmptyState line="No exercises yet." />
         ) : shown.length === 0 ? (
           <EmptyState line="No exercises match." />
-        ) : view === 'list' ? (
-          <View style={{ gap: tokens.space[12] }}>
-            {shown.map((e) => (
-              <ProgramCard key={e.id} label={e.name} padding={tokens.space[16]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[16] }}>
-                  <ExerciseIcon icon={e.icon} size={tokens.iconTile.size.sessionHeader} seamAll />
-                  <Txt variant="serifListTitle" family="serif" weight={500} color={c.text} style={{ flexShrink: 1 }}>
-                    {e.name}
-                  </Txt>
-                </View>
-              </ProgramCard>
-            ))}
-          </View>
         ) : (
-          // A card on the page with the raised icon tile inside it (design
-          // page 29, surfaces), then the name held to two lines and the type,
-          // as the exercise set on page 31 labels them. Every card is the same
-          // height, so the rows line up.
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space[12] }}>
-            {shown.map((e) => (
-              <View key={e.id} style={{ width: card }}>
-                <ProgramCard label={e.name} padding={tokens.space[12]}>
-                  <View style={{ gap: tokens.space[12] }}>
-                    <ExerciseIcon icon={e.icon} size={tile} seamAll />
-                    <View style={{ gap: tokens.space[4] }}>
-                      <Txt
-                        variant="rowTitle"
-                        color={c.text}
-                        numberOfLines={2}
-                        style={{ minHeight: 2 * tokens.type.rowTitle.lineHeight }}
-                      >
-                        {e.name}
-                      </Txt>
-                      <Txt variant="captionTight" color={c.textSecondary} numberOfLines={1}>
-                        {e.type}
-                      </Txt>
-                    </View>
-                  </View>
-                </ProgramCard>
-              </View>
-            ))}
+          // Both views stay mounted and the other is hidden, so a switch shows
+          // what is already drawn instead of drawing every figure again.
+          <>
+          <View style={{ gap: tokens.space[12], display: view === 'list' ? 'flex' : 'none' }}>
+            {listItems}
           </View>
+          {/* A card on the page with the raised icon tile inside it (design
+              page 29, surfaces), then the name held to two lines and the type,
+              as the exercise set on page 31 labels them. Every card is the same
+              height, so the rows line up. */}
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: tokens.space[12],
+              display: view === 'grid' ? 'flex' : 'none',
+            }}
+          >
+            {gridItems}
+          </View>
+          </>
         )}
       </ScrollView>
 
       <Stack.Toolbar placement="left">
         <Stack.Toolbar.Button
-          icon={BACK_ICON}
+          icon={backIcon}
           iconRenderingMode="template"
           tintColor={c.text}
           accessibilityLabel="Back"
@@ -143,22 +168,25 @@ export default function CategoryScreen() {
             tintColor={c.text}
             accessibilityLabel="View"
           >
-            <Stack.Toolbar.MenuAction
-              icon={VIEW_ICON.list}
-              iconRenderingMode="template"
-              isOn={view === 'list'}
-              onPress={() => setView('list')}
-            >
-              List
-            </Stack.Toolbar.MenuAction>
-            <Stack.Toolbar.MenuAction
-              icon={VIEW_ICON.grid}
-              iconRenderingMode="template"
-              isOn={view === 'grid'}
-              onPress={() => setView('grid')}
-            >
-              Grid
-            </Stack.Toolbar.MenuAction>
+            {/* One inline palette: the two views as a single row of icons. */}
+            <Stack.Toolbar.Menu inline palette>
+              <Stack.Toolbar.MenuAction
+                icon={VIEW_ICON.list}
+                iconRenderingMode="template"
+                isOn={view === 'list'}
+                onPress={() => setView('list')}
+              >
+                List
+              </Stack.Toolbar.MenuAction>
+              <Stack.Toolbar.MenuAction
+                icon={VIEW_ICON.grid}
+                iconRenderingMode="template"
+                isOn={view === 'grid'}
+                onPress={() => setView('grid')}
+              >
+                Grid
+              </Stack.Toolbar.MenuAction>
+            </Stack.Toolbar.Menu>
           </Stack.Toolbar.Menu>
         </Stack.Toolbar>
       ) : null}
