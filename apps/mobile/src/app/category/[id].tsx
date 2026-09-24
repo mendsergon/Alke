@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
+import { ScrollView, View, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useBack } from '../../navigation/use-back';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,8 +30,10 @@ export default function CategoryScreen() {
   const [query, setQuery] = useState('');
   const [view, setView] = useState<'list' | 'grid'>('list');
   const { width } = useWindowDimensions();
-  // Two columns across the page's content width.
-  const tile = (width - 2 * tokens.space[24] - tokens.space[16]) / 2;
+  // Two columns across the page's content width; the icon fills its card
+  // inside the card's padding and 1px border.
+  const card = (width - 2 * tokens.space[24] - tokens.space[12]) / 2;
+  const tile = card - 2 * tokens.space[12] - 2;
   const q = query.trim().toLowerCase();
   const shown = exercises?.filter((e) => e.name.toLowerCase().includes(q)) ?? [];
 
@@ -84,16 +86,32 @@ export default function CategoryScreen() {
             ))}
           </View>
         ) : (
-          // The design's exercise set (page 31): the tile itself is the
-          // surface, the name sits under it on the page.
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: tokens.space[16], rowGap: tokens.space[24] }}>
+          // A card on the page with the raised icon tile inside it (design
+          // page 29, surfaces), then the name held to two lines and the type,
+          // as the exercise set on page 31 labels them. Every card is the same
+          // height, so the rows line up.
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space[12] }}>
             {shown.map((e) => (
-              <Pressable key={e.id} accessibilityRole="button" accessibilityLabel={e.name} style={{ width: tile, gap: tokens.space[8] }}>
-                <ExerciseIcon icon={e.icon} size={tile} seamAll />
-                <Txt variant="rowTitle" color={c.text}>
-                  {e.name}
-                </Txt>
-              </Pressable>
+              <View key={e.id} style={{ width: card }}>
+                <ProgramCard label={e.name} padding={tokens.space[12]}>
+                  <View style={{ gap: tokens.space[12] }}>
+                    <ExerciseIcon icon={e.icon} size={tile} seamAll />
+                    <View style={{ gap: tokens.space[4] }}>
+                      <Txt
+                        variant="rowTitle"
+                        color={c.text}
+                        numberOfLines={2}
+                        style={{ minHeight: 2 * tokens.type.rowTitle.lineHeight }}
+                      >
+                        {e.name}
+                      </Txt>
+                      <Txt variant="captionTight" color={c.textSecondary} numberOfLines={1}>
+                        {e.type}
+                      </Txt>
+                    </View>
+                  </View>
+                </ProgramCard>
+              </View>
             ))}
           </View>
         )}
