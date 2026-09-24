@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Pressable, View, useWindowDimensions } from 'react-native';
 import Animated, {
   Easing,
@@ -173,19 +173,38 @@ export default function CategoryScreen() {
       anchorOnScreen.value = cardsTop + frameIn(view, g, anchor.current).y - scrollY.value;
       following.value = true;
     }
-    // The view in the page's flow changes once the move has finished.
+    // React commits everything that changes before the move starts (the
+    // view, the header's menu, the page held at its taller height); the move
+    // itself is started by the layout effect below, after that commit, so no
+    // React work lands while the cards are moving.
     setSwitching(true);
-    progress.value = withTiming(
-      next === 'grid' ? 1 : 0,
-      { duration: MORPH_MS, easing: Easing.out(Easing.cubic) },
-      () => {
-        following.value = false;
-        scheduleOnRN(setShowing, next);
-        scheduleOnRN(setSwitching, false);
-      },
-    );
     setView(next);
   };
+  // Whatever changes layout when the move ends, in one commit, once nothing
+  // is moving.
+  const settle = (next: View_) => {
+    setShowing(next);
+    setSwitching(false);
+  };
+  const started = useRef<View_>('list');
+  useLayoutEffect(() => {
+    if (started.current === view) return;
+    started.current = view;
+    const next = view;
+    // A frame after the commit has been applied, so the move's first frame is
+    // not the one that pays for it.
+    const frame = requestAnimationFrame(() => {
+      progress.value = withTiming(
+        next === 'grid' ? 1 : 0,
+        { duration: MORPH_MS, easing: Easing.out(Easing.cubic) },
+        () => {
+          following.value = false;
+          scheduleOnRN(settle, next);
+        },
+      );
+    });
+    return () => cancelAnimationFrame(frame);
+  });
 
   useEffect(() => {
     let live = true;
@@ -267,8 +286,10 @@ export default function CategoryScreen() {
       {exercises !== null && exercises.length > 0 ? (
         // A native bar button: on iOS 26 its menu opens out of the glass.
         <Stack.Toolbar placement="right">
+          {/* Rebuilding the native menu is kept out of the move: it follows
+              the view once the move has finished. */}
           <Stack.Toolbar.Menu
-            icon={VIEW_ICON[view]}
+            icon={VIEW_ICON[showing]}
             iconRenderingMode="template"
             tintColor={c.text}
             accessibilityLabel="View"
@@ -276,7 +297,7 @@ export default function CategoryScreen() {
             <Stack.Toolbar.MenuAction
               icon={VIEW_ICON.list}
               iconRenderingMode="template"
-              isOn={view === 'list'}
+              isOn={showing === 'list'}
               onPress={() => switchView('list')}
             >
               List
@@ -284,7 +305,7 @@ export default function CategoryScreen() {
             <Stack.Toolbar.MenuAction
               icon={VIEW_ICON.grid}
               iconRenderingMode="template"
-              isOn={view === 'grid'}
+              isOn={showing === 'grid'}
               onPress={() => switchView('grid')}
             >
               Grid
