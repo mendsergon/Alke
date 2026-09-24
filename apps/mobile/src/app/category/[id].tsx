@@ -105,8 +105,8 @@ export default function CategoryScreen() {
       {exercises !== null && exercises.length > 0 ? (
         <View style={{ position: 'absolute', top: insets.top + tokens.space[20], right: tokens.space[20] }}>
           <GlassButton
-            icon={view === 'list' ? 'grid' : 'list'}
-            label={view === 'list' ? 'Show as grid' : 'Show as list'}
+            icon={view}
+            label={view === 'list' ? 'List view, switch to grid' : 'Grid view, switch to list'}
             onPress={() => setView(view === 'list' ? 'grid' : 'list')}
           />
         </View>
