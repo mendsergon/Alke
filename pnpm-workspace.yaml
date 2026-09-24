@@ -10,3 +10,6 @@ allowBuilds:
   # platform binary that the optional dependency already provides, and `pnpm
   # figures` runs without it, so the script stays off.
   esbuild: false
+
+patchedDependencies:
+  react-native-screens@4.26.2: patches/react-native-screens@4.26.2.patch

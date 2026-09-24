@@ -1,0 +1,24 @@
+diff --git a/ios/RNSBarButtonItem.mm b/ios/RNSBarButtonItem.mm
+index 0eb1f09dee82edd99e3e614938233db5cdeaebfe..57fb3e27191798ddacd906376ba33c9100fee8c1 100644
+--- a/ios/RNSBarButtonItem.mm
++++ b/ios/RNSBarButtonItem.mm
+@@ -315,7 +315,6 @@ static UIMenuOptions RNSMakeUIMenuOptionsFromConfig(NSDictionary *config);
+   [self setTitleTextAttributes:attrs forState:UIControlStateNormal];
+   [self setTitleTextAttributes:attrs forState:UIControlStateHighlighted];
+   [self setTitleTextAttributes:attrs forState:UIControlStateDisabled];
+-  [self setTitleTextAttributes:attrs forState:UIControlStateSelected];
+   [self setTitleTextAttributes:attrs forState:UIControlStateFocused];
+ }
+ 
+diff --git a/ios/RNSScreenStackHeaderConfig.mm b/ios/RNSScreenStackHeaderConfig.mm
+index 1c844846a5c66e31cfa530ca462774d2fb6bbea1..aad2c2d3977948e1fb126cc5645d61be76ba05ca 100644
+--- a/ios/RNSScreenStackHeaderConfig.mm
++++ b/ios/RNSScreenStackHeaderConfig.mm
+@@ -273,7 +273,6 @@ RNS_IGNORE_SUPER_CALL_END
+   [button setTitleTextAttributes:attrs forState:UIControlStateNormal];
+   [button setTitleTextAttributes:attrs forState:UIControlStateHighlighted];
+   [button setTitleTextAttributes:attrs forState:UIControlStateDisabled];
+-  [button setTitleTextAttributes:attrs forState:UIControlStateSelected];
+   [button setTitleTextAttributes:attrs forState:UIControlStateFocused];
+ }
+ 
