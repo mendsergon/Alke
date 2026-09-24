@@ -3,7 +3,7 @@ import { ScrollView, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useBack } from '../../navigation/use-back';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { EmptyState } from '../../components/surfaces';
+import { EmptyState, Segmented } from '../../components/surfaces';
 import { ProgramCard } from '../../components/program-card';
 import { GlassButton } from '../../components/glass-button';
 import { SearchBar } from '../../components/search-bar';
@@ -20,6 +20,8 @@ import { listExercisesIn, type Exercise } from '../../backend/exercises';
  *
  * OPEN: there is no exercise screen yet, so a card opens nothing.
  */
+const VIEWS = ['List', 'Grid'] as const;
+
 export default function CategoryScreen() {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
@@ -28,6 +30,7 @@ export default function CategoryScreen() {
   const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
   const [exercises, setExercises] = useState<Exercise[] | null>(null);
   const [query, setQuery] = useState('');
+  const [view, setView] = useState<(typeof VIEWS)[number]>('List');
   const q = query.trim().toLowerCase();
   const shown = exercises?.filter((e) => e.name.toLowerCase().includes(q)) ?? [];
 
@@ -59,14 +62,17 @@ export default function CategoryScreen() {
         </Txt>
 
         {exercises !== null && exercises.length > 0 ? (
-          <SearchBar value={query} onChange={setQuery} label="Search exercises" />
+          <>
+            <SearchBar value={query} onChange={setQuery} label="Search exercises" />
+            <Segmented options={VIEWS} value={view} onChange={setView} />
+          </>
         ) : null}
 
         {exercises === null ? null : exercises.length === 0 ? (
           <EmptyState line="No exercises yet." />
         ) : shown.length === 0 ? (
           <EmptyState line="No exercises match." />
-        ) : (
+        ) : view === 'List' ? (
           <View style={{ gap: tokens.space[12] }}>
             {shown.map((e) => (
               <ProgramCard key={e.id} label={e.name} padding={tokens.space[16]}>
@@ -79,6 +85,25 @@ export default function CategoryScreen() {
               </ProgramCard>
             ))}
           </View>
+        ) : (
+          <View style={{ gap: tokens.space[12] }}>
+            {pairs(shown).map((row) => (
+              <View key={row[0].id} style={{ flexDirection: 'row', gap: tokens.space[12] }}>
+                {row.map((e) => (
+                  <ProgramCard key={e.id} label={e.name} padding={tokens.space[16]} grow>
+                    <View style={{ gap: tokens.space[12] }}>
+                      <ExerciseIcon icon={e.icon} size={tokens.iconTile.size.sessionHeader} seamAll />
+                      <Txt variant="serifListTitle" family="serif" weight={500} color={c.text}>
+                        {e.name}
+                      </Txt>
+                    </View>
+                  </ProgramCard>
+                ))}
+                {/* A lone last card keeps its half. */}
+                {row.length === 1 ? <View style={{ flex: 1 }} /> : null}
+              </View>
+            ))}
+          </View>
         )}
       </ScrollView>
 
@@ -87,4 +112,10 @@ export default function CategoryScreen() {
       </View>
     </View>
   );
+}
+
+function pairs<T>(items: T[]): T[][] {
+  const rows: T[][] = [];
+  for (let i = 0; i < items.length; i += 2) rows.push(items.slice(i, i + 2));
+  return rows;
 }
