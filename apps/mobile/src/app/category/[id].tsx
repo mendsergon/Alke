@@ -35,6 +35,13 @@ export default function CategoryScreen() {
   const [exercises, setExercises] = useState<Exercise[] | null>(null);
   const [query, setQuery] = useState('');
   const [view, setView] = useState<'list' | 'grid'>('list');
+  // The header's icon and ticks follow a frame behind the content: rebuilding
+  // the native menu in the same commit held the new view back.
+  const [menuView, setMenuView] = useState(view);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setMenuView(view));
+    return () => cancelAnimationFrame(frame);
+  }, [view]);
   const { width } = useWindowDimensions();
   // Two columns across the page's content width; the icon fills its card
   // inside the card's padding and 1px border.
@@ -163,30 +170,27 @@ export default function CategoryScreen() {
         // A native bar button: on iOS 26 its menu opens out of the glass.
         <Stack.Toolbar placement="right">
           <Stack.Toolbar.Menu
-            icon={VIEW_ICON[view]}
+            icon={VIEW_ICON[menuView]}
             iconRenderingMode="template"
             tintColor={c.text}
             accessibilityLabel="View"
           >
-            {/* One inline palette: the two views as a single row of icons. */}
-            <Stack.Toolbar.Menu inline palette>
-              <Stack.Toolbar.MenuAction
-                icon={VIEW_ICON.list}
-                iconRenderingMode="template"
-                isOn={view === 'list'}
-                onPress={() => setView('list')}
-              >
-                List
-              </Stack.Toolbar.MenuAction>
-              <Stack.Toolbar.MenuAction
-                icon={VIEW_ICON.grid}
-                iconRenderingMode="template"
-                isOn={view === 'grid'}
-                onPress={() => setView('grid')}
-              >
-                Grid
-              </Stack.Toolbar.MenuAction>
-            </Stack.Toolbar.Menu>
+            <Stack.Toolbar.MenuAction
+              icon={VIEW_ICON.list}
+              iconRenderingMode="template"
+              isOn={menuView === 'list'}
+              onPress={() => setView('list')}
+            >
+              List
+            </Stack.Toolbar.MenuAction>
+            <Stack.Toolbar.MenuAction
+              icon={VIEW_ICON.grid}
+              iconRenderingMode="template"
+              isOn={menuView === 'grid'}
+              onPress={() => setView('grid')}
+            >
+              Grid
+            </Stack.Toolbar.MenuAction>
           </Stack.Toolbar.Menu>
         </Stack.Toolbar>
       ) : null}
