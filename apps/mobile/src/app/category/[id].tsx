@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, View, useWindowDimensions } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { FlatList, View, useWindowDimensions, type ListRenderItem } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useBack } from '../../navigation/use-back';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -37,7 +37,7 @@ export default function CategoryScreen() {
   const [exercises, setExercises] = useState<Exercise[] | null>(() => cachedExercisesIn(id) ?? null);
   const [query, setQuery] = useState('');
   const [view, setView] = useState<'list' | 'grid'>('list');
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   // Two columns across the page's content width; the icon fills its card
   // inside the card's padding and 1px border.
   const card = (width - 2 * tokens.space[24] - tokens.space[12]) / 2;
@@ -48,47 +48,56 @@ export default function CategoryScreen() {
     [exercises, q],
   );
 
-  // Built once per result set and search, not on every render.
-  const listItems = useMemo(
-    () =>
-      shown.map((e) => (
-        <ProgramCard key={e.id} label={e.name} padding={tokens.space[16]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[16] }}>
-            <ExerciseIcon icon={e.icon} size={tokens.iconTile.size.sessionHeader} seamAll />
-            <Txt variant="serifListTitle" family="serif" weight={500} color={c.text} style={{ flexShrink: 1 }}>
-              {e.name}
-            </Txt>
+  const renderRow = useCallback<ListRenderItem<Exercise>>(
+    ({ item: e }) => (
+      <ProgramCard label={e.name} padding={tokens.space[16]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[16] }}>
+          <ExerciseIcon icon={e.icon} size={tokens.iconTile.size.sessionHeader} seamAll />
+          <Txt variant="serifListTitle" family="serif" weight={500} color={c.text} style={{ flexShrink: 1 }}>
+            {e.name}
+          </Txt>
+        </View>
+      </ProgramCard>
+    ),
+    [c],
+  );
+  // A card on the page with the raised icon tile inside it (design page 29,
+  // surfaces), then the name held to two lines and the type, as the exercise
+  // set on page 31 labels them. Every card is the same height, so rows line up.
+  const renderTile = useCallback<ListRenderItem<Exercise>>(
+    ({ item: e }) => (
+      <View style={{ width: card }}>
+        <ProgramCard label={e.name} padding={tokens.space[12]}>
+          <View style={{ gap: tokens.space[12] }}>
+            <ExerciseIcon icon={e.icon} size={tile} seamAll />
+            <View style={{ gap: tokens.space[4] }}>
+              <Txt
+                variant="rowTitle"
+                color={c.text}
+                numberOfLines={2}
+                style={{ minHeight: 2 * tokens.type.rowTitle.lineHeight }}
+              >
+                {e.name}
+              </Txt>
+              <Txt variant="captionTight" color={c.textSecondary} numberOfLines={1}>
+                {e.type}
+              </Txt>
+            </View>
           </View>
         </ProgramCard>
-      )),
-    [shown, c],
+      </View>
+    ),
+    [c, card, tile],
   );
-  const gridItems = useMemo(
-    () =>
-      shown.map((e) => (
-        <View key={e.id} style={{ width: card }}>
-          <ProgramCard label={e.name} padding={tokens.space[12]}>
-            <View style={{ gap: tokens.space[12] }}>
-              <ExerciseIcon icon={e.icon} size={tile} seamAll />
-              <View style={{ gap: tokens.space[4] }}>
-                <Txt
-                  variant="rowTitle"
-                  color={c.text}
-                  numberOfLines={2}
-                  style={{ minHeight: 2 * tokens.type.rowTitle.lineHeight }}
-                >
-                  {e.name}
-                </Txt>
-                <Txt variant="captionTight" color={c.textSecondary} numberOfLines={1}>
-                  {e.type}
-                </Txt>
-              </View>
-            </View>
-          </ProgramCard>
-        </View>
-      )),
-    [shown, c, card, tile],
-  );
+  // Only what fits on the screen is drawn before the screen shows; the rows
+  // under it are filled in straight after, out of sight.
+  const rowHeight =
+    view === 'list'
+      ? 2 * tokens.space[16] + tokens.iconTile.size.sessionHeader + 2 + tokens.space[12]
+      : 2 * tokens.space[12] + 2 + tile + tokens.space[12] + 2 * tokens.type.rowTitle.lineHeight +
+        tokens.space[4] + tokens.type.captionTight.lineHeight + tokens.space[12];
+  const perRow = view === 'list' ? 1 : 2;
+  const firstBatch = (Math.ceil(height / rowHeight) + 1) * perRow;
 
   useEffect(() => {
     let live = true;
@@ -105,7 +114,17 @@ export default function CategoryScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <ScrollView
+      <FlatList
+        // Two columns cannot be set on a list already laid out in one.
+        key={view}
+        data={exercises === null ? [] : shown}
+        keyExtractor={(e) => e.id}
+        renderItem={view === 'list' ? renderRow : renderTile}
+        numColumns={perRow}
+        columnWrapperStyle={perRow > 1 ? { gap: tokens.space[12] } : undefined}
+        ItemSeparatorComponent={Gap}
+        initialNumToRender={firstBatch}
+        maxToRenderPerBatch={firstBatch}
         style={{ flexGrow: 1 }}
         contentContainerStyle={{
           // Clears the native bar's buttons, which sit in the 44pt under the
@@ -113,33 +132,26 @@ export default function CategoryScreen() {
           paddingTop: insets.top + tokens.sizing.tapTarget.ios + tokens.space[16],
           paddingHorizontal: tokens.space[24],
           paddingBottom: Math.max(tokens.space[24], insets.bottom),
-          gap: tokens.space[16],
         }}
         showsVerticalScrollIndicator={false}
-      >
-        <Txt variant="screenTitle" family="serif" weight={500}>
-          {name ?? ''}
-        </Txt>
-
-        {/* Laid out from the first frame, so the list arriving pushes nothing. */}
-        {exercises === null || exercises.length > 0 ? (
-          <SearchBar value={query} onChange={setQuery} label="Search exercises" />
-        ) : null}
-
-        {exercises === null ? null : exercises.length === 0 ? (
-          <EmptyState line="No exercises yet." />
-        ) : shown.length === 0 ? (
-          <EmptyState line="No exercises match." />
-        ) : view === 'list' ? (
-          <View style={{ gap: tokens.space[12] }}>{listItems}</View>
-        ) : (
-          // A card on the page with the raised icon tile inside it (design
-          // page 29, surfaces), then the name held to two lines and the type,
-          // as the exercise set on page 31 labels them. Every card is the same
-          // height, so the rows line up.
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space[12] }}>{gridItems}</View>
-        )}
-      </ScrollView>
+        ListHeaderComponentStyle={{ gap: tokens.space[16], marginBottom: tokens.space[16] }}
+        ListHeaderComponent={
+          <>
+            <Txt variant="screenTitle" family="serif" weight={500}>
+              {name ?? ''}
+            </Txt>
+            {/* Laid out from the first frame, so the list arriving pushes nothing. */}
+            {exercises === null || exercises.length > 0 ? (
+              <SearchBar value={query} onChange={setQuery} label="Search exercises" />
+            ) : null}
+          </>
+        }
+        ListEmptyComponent={
+          exercises === null ? null : (
+            <EmptyState line={exercises.length === 0 ? 'No exercises yet.' : 'No exercises match.'} />
+          )
+        }
+      />
 
       <Stack.Toolbar placement="left">
         <Stack.Toolbar.Button
@@ -187,4 +199,8 @@ function same(a: readonly Exercise[], b: readonly Exercise[]) {
     a.length === b.length &&
     a.every((e, i) => e.id === b[i].id && e.name === b[i].name && e.icon === b[i].icon && e.type === b[i].type)
   );
+}
+
+function Gap() {
+  return <View style={{ height: tokens.space[12] }} />;
 }
