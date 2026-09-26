@@ -79,23 +79,22 @@ var wantCatalog = []struct {
 	{"Cable Fly", "bench", "Chest", []string{"Front delts"}, "Cable", "Chest"},
 	{"Pec Deck", "bench", "Chest", []string{"Front delts"}, "Machine", "Chest"},
 	{"Dumbbell Fly", "bench", "Chest", []string{"Front delts"}, "Free weight", "Chest"},
-	{"Wide-Grip Lat Pulldown", "row", "Lats", []string{"Biceps", "Rear delts", "Traps"}, "Cable", "Back"},
+	{"Wide-Grip Lat Pulldown", "row", "Lats", []string{"Biceps", "Traps"}, "Cable", "Back"},
 	{"Close-Grip Lat Pulldown", "row", "Lats", []string{"Biceps"}, "Cable", "Back"},
 	{"Neutral-Grip Machine Pulldown", "row", "Lats", []string{"Biceps"}, "Machine", "Back"},
-	{"Pull-up", "row", "Lats", []string{"Biceps", "Traps"}, "Free weight", "Back"},
-	{"Chin-up", "row", "Lats", []string{"Biceps"}, "Free weight", "Back"},
+	{"Pull-up", "row", "Lats", []string{"Biceps", "Traps", "Forearms"}, "Free weight", "Back"},
+	{"Chin-up", "row", "Lats", []string{"Biceps", "Forearms"}, "Free weight", "Back"},
 	{"Straight-Arm Pulldown", "row", "Lats", []string{"Triceps"}, "Cable", "Back"},
-	{"Barbell Row", "row", "Lats", []string{"Traps", "Rear delts", "Biceps"}, "Free weight", "Back"},
-	{"Pendlay Row", "row", "Lats", []string{"Traps", "Rear delts", "Biceps"}, "Free weight", "Back"},
-	{"Dumbbell Row", "row", "Lats", []string{"Traps", "Biceps"}, "Free weight", "Back"},
-	{"T-Bar Row", "row", "Lats", []string{"Traps", "Biceps"}, "Free weight", "Back"},
+	{"Barbell Row", "row", "Traps", []string{"Lats", "Rear delts", "Erectors", "Biceps", "Forearms"}, "Free weight", "Back"},
+	{"Pendlay Row", "row", "Traps", []string{"Lats", "Rear delts", "Erectors", "Biceps", "Forearms"}, "Free weight", "Back"},
+	{"Dumbbell Row", "row", "Traps", []string{"Lats", "Biceps", "Forearms"}, "Free weight", "Back"},
+	{"T-Bar Row", "row", "Traps", []string{"Lats", "Erectors", "Biceps", "Forearms"}, "Free weight", "Back"},
 	{"Chest-Supported Wide Row", "row", "Traps", []string{"Rear delts", "Lats", "Biceps"}, "Machine", "Back"},
 	{"Chest-Supported Close Row", "row", "Lats", []string{"Traps", "Biceps"}, "Machine", "Back"},
 	{"Close-Grip Seated Cable Row", "row", "Lats", []string{"Traps", "Biceps"}, "Cable", "Back"},
 	{"Wide-Grip Seated Cable Row", "row", "Traps", []string{"Rear delts", "Lats", "Biceps"}, "Cable", "Back"},
-	{"Inverted Row", "row", "Traps", []string{"Lats", "Biceps"}, "Free weight", "Back"},
-	{"Barbell Shrug", "row", "Traps", nil, "Free weight", "Back"},
-	{"Dumbbell Shrug", "row", "Traps", nil, "Free weight", "Back"},
+	{"Barbell Shrug", "row", "Traps", []string{"Forearms"}, "Free weight", "Back"},
+	{"Dumbbell Shrug", "row", "Traps", []string{"Forearms"}, "Free weight", "Back"},
 	{"Smith Shrug", "row", "Traps", nil, "Machine", "Back"},
 	{"Machine Shrug", "row", "Traps", nil, "Machine", "Back"},
 }
@@ -112,8 +111,8 @@ func TestTheCatalogIsSeeded(t *testing.T) {
 		t.Fatalf("exercises: got %d, want %d", len(all), len(wantCatalog))
 	}
 	// The two left over from before the naming convention are gone, and Face
-	// Pull is not in the catalog.
-	for _, old := range []string{"Flat Bench Press", "Incline Bench Press", "Face Pull"} {
+	// Pull and Inverted Row are not in the catalog.
+	for _, old := range []string{"Flat Bench Press", "Incline Bench Press", "Face Pull", "Inverted Row"} {
 		if _, err := app.FindFirstRecordByFilter("exercises", "name = {:n}", dbx.Params{"n": old}); err == nil {
 			t.Fatalf("%s is still in the catalog", old)
 		}
@@ -286,7 +285,7 @@ func TestCatalogRules(t *testing.T) {
 			Method:          http.MethodGet,
 			URL:             "/api/collections/exercises/records",
 			ExpectedStatus:  200,
-			ExpectedContent: []string{`"totalItems":34`, `"name":"Flat Barbell Chest Press"`, `"name":"Wide-Grip Lat Pulldown"`},
+			ExpectedContent: []string{`"totalItems":33`, `"name":"Flat Barbell Chest Press"`, `"name":"Wide-Grip Lat Pulldown"`},
 		}
 	})
 	run(t, "a free user cannot add a catalog exercise", func(f *fixture) tests.ApiScenario {
@@ -517,7 +516,7 @@ func TestCustomExerciseRules(t *testing.T) {
 			URL:                "/api/collections/exercises/records",
 			Headers:            auth(f.aliceTok),
 			ExpectedStatus:     200,
-			ExpectedContent:    []string{`"totalItems":35`},
+			ExpectedContent:    []string{`"totalItems":34`},
 			NotExpectedContent: []string{mine.Id},
 		}
 	})
