@@ -234,6 +234,39 @@ for (const [muscle, i] of byMuscle) {
 lines.push('};');
 lines.push('');
 
+// --- muscles that also show in the other view ------------------------------
+// An icon lights a muscle in one view, but some muscles show in both — the
+// triceps' outer edge shows from the front. A region no icon owns belongs to
+// the muscle whose colour it carries in both the light and the dark body map,
+// when that colour is that muscle's alone.
+const fillMap = (id: string, view: FigureView) => {
+  const svg = all.find((x) => x.id === id);
+  if (!svg) throw new Error(`body map ${id} not found`);
+  return new Map(regionsOf(svg.raw).map((r) => [indexOfRegion[view].get(r.d)!, r.fill.toUpperCase()]));
+};
+const fills: Record<FigureView, { light: Map<number, string>; dark: Map<number, string> }> = {
+  front: { light: fillMap('bm-lightfrontmap', 'front'), dark: fillMap('bm-darkfrontmap', 'front') },
+  back: { light: fillMap('bm-lightbackmap', 'back'), dark: fillMap('bm-darkbackmap', 'back') },
+};
+const owned: Record<FigureView, Set<number>> = { front: new Set(), back: new Set() };
+for (const i of byMuscle.values()) for (const r of i.accent) owned[i.view].add(r);
+const colourAt = (view: FigureView, r: number) => `${fills[view].light.get(r)}|${fills[view].dark.get(r)}`;
+const colourOf = (i: Icon) => colourAt(i.view, i.accent[0]!);
+const colourCount = new Map<string, number>();
+for (const i of byMuscle.values()) colourCount.set(colourOf(i), (colourCount.get(colourOf(i)) ?? 0) + 1);
+lines.push('/** Regions a muscle also covers in the view its icon does not use. */');
+lines.push('export const MUSCLE_ALSO: Record<string, { view: FigureView; regions: readonly number[] }> = {');
+for (const [muscle, i] of byMuscle) {
+  if (colourCount.get(colourOf(i)) !== 1) continue;
+  const other: FigureView = i.view === 'front' ? 'back' : 'front';
+  const extra = views[other].regions
+    .map((_, r) => r)
+    .filter((r) => !owned[other].has(r) && colourAt(other, r) === colourOf(i));
+  if (extra.length > 0) lines.push(`  ${q(muscle)}: { view: ${q(other)}, regions: [${extra.join(', ')}] },`);
+}
+lines.push('};');
+lines.push('');
+
 mkdirSync(dirname(target), { recursive: true });
 writeFileSync(target, lines.join('\n'), 'utf8');
 

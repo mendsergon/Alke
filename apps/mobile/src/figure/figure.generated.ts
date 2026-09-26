@@ -382,3 +382,16 @@ export const MUSCLE_REGIONS: Record<string, { view: FigureView; regions: readonl
   "Quads": { view: "front", regions: [41, 42, 43, 44, 45, 46] },
   "Forearms": { view: "front", regions: [35, 36, 37, 38] },
 };
+
+/** Regions a muscle also covers in the view its icon does not use. */
+export const MUSCLE_ALSO: Record<string, { view: FigureView; regions: readonly number[] }> = {
+  "Adductors": { view: "back", regions: [35, 36] },
+  "Calves": { view: "front", regions: [47, 48, 49, 50, 51, 52, 53, 54] },
+  "Brachialis": { view: "back", regions: [25, 26] },
+  "Neck": { view: "back", regions: [14, 49, 50, 51] },
+  "Obliques": { view: "back", regions: [41, 42] },
+  "Triceps": { view: "front", regions: [33, 34] },
+  "Traps": { view: "front", regions: [1, 2] },
+  "Quads": { view: "back", regions: [45, 46] },
+  "Forearms": { view: "back", regions: [27, 28, 29, 30] },
+};
