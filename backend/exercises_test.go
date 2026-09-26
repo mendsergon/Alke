@@ -94,7 +94,6 @@ var wantCatalog = []struct {
 	{"Close-Grip Seated Cable Row", "row", "Lats", []string{"Traps", "Biceps"}, "Cable", "Back"},
 	{"Wide-Grip Seated Cable Row", "row", "Traps", []string{"Rear delts", "Lats", "Biceps"}, "Cable", "Back"},
 	{"Inverted Row", "row", "Traps", []string{"Lats", "Biceps"}, "Free weight", "Back"},
-	{"Face Pull", "row", "Rear delts", []string{"Traps"}, "Cable", "Shoulders"},
 	{"Barbell Shrug", "row", "Traps", nil, "Free weight", "Back"},
 	{"Dumbbell Shrug", "row", "Traps", nil, "Free weight", "Back"},
 	{"Smith Shrug", "row", "Traps", nil, "Machine", "Back"},
@@ -112,8 +111,9 @@ func TestTheCatalogIsSeeded(t *testing.T) {
 	if len(all) != len(wantCatalog) {
 		t.Fatalf("exercises: got %d, want %d", len(all), len(wantCatalog))
 	}
-	// The two left over from before the naming convention are gone.
-	for _, old := range []string{"Flat Bench Press", "Incline Bench Press"} {
+	// The two left over from before the naming convention are gone, and Face
+	// Pull is not in the catalog.
+	for _, old := range []string{"Flat Bench Press", "Incline Bench Press", "Face Pull"} {
 		if _, err := app.FindFirstRecordByFilter("exercises", "name = {:n}", dbx.Params{"n": old}); err == nil {
 			t.Fatalf("%s is still in the catalog", old)
 		}
@@ -286,7 +286,7 @@ func TestCatalogRules(t *testing.T) {
 			Method:          http.MethodGet,
 			URL:             "/api/collections/exercises/records",
 			ExpectedStatus:  200,
-			ExpectedContent: []string{`"totalItems":35`, `"name":"Flat Barbell Chest Press"`, `"name":"Wide-Grip Lat Pulldown"`},
+			ExpectedContent: []string{`"totalItems":34`, `"name":"Flat Barbell Chest Press"`, `"name":"Wide-Grip Lat Pulldown"`},
 		}
 	})
 	run(t, "a free user cannot add a catalog exercise", func(f *fixture) tests.ApiScenario {
@@ -517,7 +517,7 @@ func TestCustomExerciseRules(t *testing.T) {
 			URL:                "/api/collections/exercises/records",
 			Headers:            auth(f.aliceTok),
 			ExpectedStatus:     200,
-			ExpectedContent:    []string{`"totalItems":36`},
+			ExpectedContent:    []string{`"totalItems":35`},
 			NotExpectedContent: []string{mine.Id},
 		}
 	})
