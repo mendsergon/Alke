@@ -13,8 +13,11 @@ export type Exercise = {
 };
 
 type ExerciseRow = Omit<Exercise, 'type' | 'secondary'> & {
-  main_muscle?: string;
-  expand?: { type?: { name: string }; secondary_muscles?: { muscles: string[] }[] };
+  expand?: {
+    type?: { name: string };
+    main_muscle?: { category: string };
+    secondary_muscles?: { figure: string }[];
+  };
 };
 
 const toExercise = (r: ExerciseRow): Exercise => ({
@@ -22,7 +25,7 @@ const toExercise = (r: ExerciseRow): Exercise => ({
   name: r.name,
   icon: r.icon,
   type: r.expand?.type?.name ?? '',
-  secondary: (r.expand?.secondary_muscles ?? []).flatMap((m) => m.muscles),
+  secondary: (r.expand?.secondary_muscles ?? []).map((m) => m.figure),
 });
 
 // Each category's exercises as last fetched, so a category screen can open
@@ -35,13 +38,14 @@ export function cachedExercisesIn(categoryId: string): Exercise[] | undefined {
 }
 
 /**
- * Every exercise the caller can see, fetched once and filed by main muscle.
+ * Every exercise the caller can see, fetched once and filed by the category its
+ * main muscle belongs to.
  * Called where the categories are listed, before one is opened.
  */
 export async function prefetchExercises(categoryIds: readonly string[], token: string | null): Promise<void> {
   try {
     const response = await fetch(
-      `${POCKETBASE_URL}/api/collections/exercises/records?perPage=1000&sort=name&expand=type,secondary_muscles&fields=id,name,icon,main_muscle,expand.type.name,expand.secondary_muscles.muscles`,
+      `${POCKETBASE_URL}/api/collections/exercises/records?perPage=1000&sort=name&expand=type,main_muscle,secondary_muscles&fields=id,name,icon,expand.type.name,expand.main_muscle.category,expand.secondary_muscles.figure`,
       { headers: token ? { Authorization: token } : {} },
     );
     if (!response.ok) return;
@@ -49,7 +53,7 @@ export async function prefetchExercises(categoryIds: readonly string[], token: s
     for (const id of categoryIds) {
       byCategory.set(
         id,
-        items.filter((r) => r.main_muscle === id).map(toExercise),
+        items.filter((r) => r.expand?.main_muscle?.category === id).map(toExercise),
       );
     }
   } catch {
@@ -58,14 +62,14 @@ export async function prefetchExercises(categoryIds: readonly string[], token: s
 }
 
 /**
- * The exercises whose main muscle is this category, by name. The list rule
+ * The exercises whose main muscle belongs to this category, by name. The list rule
  * shows the catalog and the caller's own; the token is sent when there is one.
  */
 export async function listExercisesIn(categoryId: string, token: string | null): Promise<Exercise[] | null> {
-  const filter = encodeURIComponent(`main_muscle = "${categoryId}"`);
+  const filter = encodeURIComponent(`main_muscle.category = "${categoryId}"`);
   try {
     const response = await fetch(
-      `${POCKETBASE_URL}/api/collections/exercises/records?perPage=200&sort=name&expand=type,secondary_muscles&fields=id,name,icon,expand.type.name,expand.secondary_muscles.muscles&filter=${filter}`,
+      `${POCKETBASE_URL}/api/collections/exercises/records?perPage=200&sort=name&expand=type,secondary_muscles&fields=id,name,icon,expand.type.name,expand.secondary_muscles.figure&filter=${filter}`,
       { headers: token ? { Authorization: token } : {} },
     );
     if (!response.ok) return null;
