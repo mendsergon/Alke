@@ -13,6 +13,8 @@ import {
 import {
   EXERCISE_ICONS,
   FIGURE,
+  MUSCLE_ALSO,
+  MUSCLE_REGIONS,
   REGION_TRANSLATE,
   type ExerciseIconKey,
   type FigureView,
@@ -170,13 +172,16 @@ function skPath(key: string, d: string, tx: number, ty: number, evenOdd: boolean
 // Each icon drawn once per size and palette, then replayed. A list of the same
 // exercise icon is one recording shown many times, not many drawings.
 const pictures = new Map<string, SkPicture>();
+type IconColors = { accent: string; secondary: string; body: string; recess: string };
+
 function iconPicture(
   icon: ExerciseIconKey,
   size: number,
   seamAll: boolean,
-  colors: { accent: string; body: string; recess: string },
+  secondary: readonly number[],
+  colors: IconColors,
 ): SkPicture {
-  const key = `${icon}|${size}|${seamAll}|${colors.accent}|${colors.body}|${colors.recess}`;
+  const key = `${icon}|${size}|${seamAll}|${secondary.join(',')}|${Object.values(colors).join('|')}`;
   let picture = pictures.get(key);
   if (!picture) {
     const def = EXERCISE_ICONS[icon];
@@ -186,6 +191,7 @@ function iconPicture(
     // The viewBox fitted and centred, as SVG's default xMidYMid meet does.
     const scale = Math.min(size / vw, size / vh);
     const accentSet = new Set(def.accent);
+    const secondarySet = new Set(secondary);
     const silhouette = skPath(`${def.view}:silhouette`, figure.silhouette, 0, 0, true);
     const fill = Skia.Paint();
     fill.setAntiAlias(true);
@@ -204,8 +210,11 @@ function iconPicture(
         const [x0, y0, x1, y1] = regionBounds(def.view, r, figure.regions[r], tx, ty);
         if (x1 < vx || x0 > vx + vw || y1 < vy || y0 > vy + vh) continue;
         const path = skPath(`${def.view}:${r}`, figure.regions[r], tx, ty, false);
-        const lit = accentSet.has(r);
-        fill.setColor(Skia.Color(lit ? colors.accent : colors.body));
+        // The main muscle in the accent, the secondary ones in its weaker
+        // shade, each filled as its own region; the rest in the body tone.
+        const main = accentSet.has(r);
+        const lit = main || secondarySet.has(r);
+        fill.setColor(Skia.Color(main ? colors.accent : lit ? colors.secondary : colors.body));
         canvas.drawPath(path, fill);
         if (seamAll || lit) {
           stroke.setColor(Skia.Color(seamAll ? colors.recess : colors.body));
@@ -227,10 +236,11 @@ function iconBitmap(
   icon: ExerciseIconKey,
   size: number,
   seamAll: boolean,
-  colors: { accent: string; body: string; recess: string },
+  secondary: readonly number[],
+  colors: IconColors,
 ): string {
   const scale = PixelRatio.get();
-  const key = `${icon}|${size}|${scale}|${seamAll}|${colors.accent}|${colors.body}|${colors.recess}`;
+  const key = `${icon}|${size}|${scale}|${seamAll}|${secondary.join(',')}|${Object.values(colors).join('|')}`;
   let uri = bitmaps.get(key);
   if (!uri) {
     const px = Math.round(size * scale);
@@ -238,7 +248,7 @@ function iconBitmap(
     if (!surface) return '';
     const canvas = surface.getCanvas();
     canvas.scale(px / size, px / size);
-    canvas.drawPicture(iconPicture(icon, size, seamAll, colors));
+    canvas.drawPicture(iconPicture(icon, size, seamAll, secondary, colors));
     uri = `data:image/png;base64,${surface.makeImageSnapshot().encodeToBase64()}`;
     bitmaps.set(key, uri);
   }
@@ -249,17 +259,35 @@ function iconBitmap(
 export function ExerciseIcon({
   icon,
   size,
+  secondary = [],
   seamAll = false,
 }: {
   icon: ExerciseIconKey;
   size: number;
+  /**
+   * Secondary muscles, by the names the body figure uses. Each is lit where it
+   * shows in the icon's view and crop; the icon is never re-framed for one.
+   */
+  secondary?: readonly string[];
   /** Every muscle seamed and visible, the way Progress draws the body. */
   seamAll?: boolean;
 }) {
   const { c } = useTheme();
   const inner = size - (size > 56 ? 4 : 3);
-  const uri = iconBitmap(icon, inner, seamAll, {
+  const def = EXERCISE_ICONS[icon];
+  const main = new Set(def.accent);
+  const regions = [
+    ...new Set(
+      secondary.flatMap((m) =>
+        [MUSCLE_REGIONS[m], MUSCLE_ALSO[m]].flatMap((r) => (r && r.view === def.view ? r.regions : [])),
+      ),
+    ),
+  ]
+    .filter((r) => !main.has(r))
+    .sort((a, b) => a - b);
+  const uri = iconBitmap(icon, inner, seamAll, regions, {
     accent: c.accent,
+    secondary: c.accentSecondary,
     body: c.iconBody,
     recess: mix(c.iconBody, c.bg, 0.45),
   });
