@@ -54,29 +54,51 @@ func TestMuscleCategoriesAreSeededInOrder(t *testing.T) {
 	}
 }
 
-// Every catalog exercise: name, secondary muscles in order, type. All train
-// the chest first and use the chest icon.
+// Every catalog exercise: name, icon, main muscle, secondary muscles in order,
+// type, and the category it lands in — the one its main muscle belongs to.
 var wantCatalog = []struct {
 	name      string
+	icon      string
+	main      string
 	secondary []string
 	kind      string
+	category  string
 }{
-	{"Flat Bench Press", []string{"Shoulders", "Triceps"}, "Free weight"},
-	{"Flat Barbell Chest Press", []string{"Shoulders", "Triceps"}, "Free weight"},
-	{"Incline Barbell Chest Press", []string{"Shoulders", "Triceps"}, "Free weight"},
-	{"Decline Barbell Chest Press", []string{"Shoulders", "Triceps"}, "Free weight"},
-	{"Flat Dumbbell Chest Press", []string{"Shoulders", "Triceps"}, "Free weight"},
-	{"Incline Dumbbell Chest Press", []string{"Shoulders", "Triceps"}, "Free weight"},
-	{"Decline Dumbbell Chest Press", []string{"Shoulders", "Triceps"}, "Free weight"},
-	{"Flat Smith Chest Press", []string{"Shoulders", "Triceps"}, "Machine"},
-	{"Incline Smith Chest Press", []string{"Shoulders", "Triceps"}, "Machine"},
-	{"Decline Smith Chest Press", []string{"Shoulders", "Triceps"}, "Machine"},
-	{"Chest Press Machine", []string{"Shoulders", "Triceps"}, "Machine"},
-	{"Dip", []string{"Triceps", "Shoulders"}, "Free weight"},
-	{"Push-up", []string{"Triceps", "Shoulders"}, "Free weight"},
-	{"Cable Fly", []string{"Shoulders"}, "Cable"},
-	{"Pec Deck", []string{"Shoulders"}, "Machine"},
-	{"Dumbbell Fly", []string{"Shoulders"}, "Free weight"},
+	{"Flat Barbell Chest Press", "bench", "Chest", []string{"Front delts", "Triceps"}, "Free weight", "Chest"},
+	{"Incline Barbell Chest Press", "bench", "Chest", []string{"Front delts", "Triceps"}, "Free weight", "Chest"},
+	{"Decline Barbell Chest Press", "bench", "Chest", []string{"Front delts", "Triceps"}, "Free weight", "Chest"},
+	{"Flat Dumbbell Chest Press", "bench", "Chest", []string{"Front delts", "Triceps"}, "Free weight", "Chest"},
+	{"Incline Dumbbell Chest Press", "bench", "Chest", []string{"Front delts", "Triceps"}, "Free weight", "Chest"},
+	{"Decline Dumbbell Chest Press", "bench", "Chest", []string{"Front delts", "Triceps"}, "Free weight", "Chest"},
+	{"Flat Smith Chest Press", "bench", "Chest", []string{"Front delts", "Triceps"}, "Machine", "Chest"},
+	{"Incline Smith Chest Press", "bench", "Chest", []string{"Front delts", "Triceps"}, "Machine", "Chest"},
+	{"Decline Smith Chest Press", "bench", "Chest", []string{"Front delts", "Triceps"}, "Machine", "Chest"},
+	{"Chest Press Machine", "bench", "Chest", []string{"Front delts", "Triceps"}, "Machine", "Chest"},
+	{"Dip", "bench", "Chest", []string{"Triceps", "Front delts"}, "Free weight", "Chest"},
+	{"Push-up", "bench", "Chest", []string{"Triceps", "Front delts"}, "Free weight", "Chest"},
+	{"Cable Fly", "bench", "Chest", []string{"Front delts"}, "Cable", "Chest"},
+	{"Pec Deck", "bench", "Chest", []string{"Front delts"}, "Machine", "Chest"},
+	{"Dumbbell Fly", "bench", "Chest", []string{"Front delts"}, "Free weight", "Chest"},
+	{"Wide-Grip Lat Pulldown", "row", "Lats", []string{"Biceps", "Rear delts", "Traps"}, "Cable", "Back"},
+	{"Close-Grip Lat Pulldown", "row", "Lats", []string{"Biceps"}, "Cable", "Back"},
+	{"Neutral-Grip Machine Pulldown", "row", "Lats", []string{"Biceps"}, "Machine", "Back"},
+	{"Pull-up", "row", "Lats", []string{"Biceps", "Traps"}, "Free weight", "Back"},
+	{"Chin-up", "row", "Lats", []string{"Biceps"}, "Free weight", "Back"},
+	{"Straight-Arm Pulldown", "row", "Lats", []string{"Triceps"}, "Cable", "Back"},
+	{"Barbell Row", "row", "Lats", []string{"Traps", "Rear delts", "Biceps"}, "Free weight", "Back"},
+	{"Pendlay Row", "row", "Lats", []string{"Traps", "Rear delts", "Biceps"}, "Free weight", "Back"},
+	{"Dumbbell Row", "row", "Lats", []string{"Traps", "Biceps"}, "Free weight", "Back"},
+	{"T-Bar Row", "row", "Lats", []string{"Traps", "Biceps"}, "Free weight", "Back"},
+	{"Chest-Supported Wide Row", "row", "Traps", []string{"Rear delts", "Lats", "Biceps"}, "Machine", "Back"},
+	{"Chest-Supported Close Row", "row", "Lats", []string{"Traps", "Biceps"}, "Machine", "Back"},
+	{"Close-Grip Seated Cable Row", "row", "Lats", []string{"Traps", "Biceps"}, "Cable", "Back"},
+	{"Wide-Grip Seated Cable Row", "row", "Traps", []string{"Rear delts", "Lats", "Biceps"}, "Cable", "Back"},
+	{"Inverted Row", "row", "Traps", []string{"Lats", "Biceps"}, "Free weight", "Back"},
+	{"Face Pull", "row", "Rear delts", []string{"Traps"}, "Cable", "Shoulders"},
+	{"Barbell Shrug", "row", "Traps", nil, "Free weight", "Back"},
+	{"Dumbbell Shrug", "row", "Traps", nil, "Free weight", "Back"},
+	{"Smith Shrug", "row", "Traps", nil, "Machine", "Back"},
+	{"Machine Shrug", "row", "Traps", nil, "Machine", "Back"},
 }
 
 func TestTheCatalogIsSeeded(t *testing.T) {
@@ -90,20 +112,26 @@ func TestTheCatalogIsSeeded(t *testing.T) {
 	if len(all) != len(wantCatalog) {
 		t.Fatalf("exercises: got %d, want %d", len(all), len(wantCatalog))
 	}
+	// The two left over from before the naming convention are gone.
+	for _, old := range []string{"Flat Bench Press", "Incline Bench Press"} {
+		if _, err := app.FindFirstRecordByFilter("exercises", "name = {:n}", dbx.Params{"n": old}); err == nil {
+			t.Fatalf("%s is still in the catalog", old)
+		}
+	}
 	for _, w := range wantCatalog {
 		r, err := app.FindFirstRecordByFilter("exercises", "name = {:n}", dbx.Params{"n": w.name})
 		if err != nil {
 			t.Fatalf("%s: %v", w.name, err)
 		}
-		if r.GetString("owner") != "" || r.GetString("icon") != "bench" {
+		if r.GetString("owner") != "" || r.GetString("icon") != w.icon {
 			t.Fatalf("%s: owner %q icon %q", w.name, r.GetString("owner"), r.GetString("icon"))
 		}
-		if r.GetString("main_muscle") != category(t, app, "Chest") {
-			t.Fatalf("%s: main muscle is not Chest", w.name)
+		if r.GetString("main_muscle") != muscle(t, app, w.main) {
+			t.Fatalf("%s: main muscle is not %s", w.name, w.main)
 		}
 		want := make([]string, len(w.secondary))
 		for i, s := range w.secondary {
-			want[i] = category(t, app, s)
+			want[i] = muscle(t, app, s)
 		}
 		if got := r.GetStringSlice("secondary_muscles"); strings.Join(got, ",") != strings.Join(want, ",") {
 			t.Fatalf("%s: secondary muscles: got %v, want %v", w.name, got, w.secondary)
@@ -111,10 +139,70 @@ func TestTheCatalogIsSeeded(t *testing.T) {
 		if r.GetString("type") != exerciseType(t, app, w.kind) {
 			t.Fatalf("%s: type is not %s", w.name, w.kind)
 		}
+		main, err := app.FindRecordById("muscles", r.GetString("main_muscle"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if main.GetString("category") != category(t, app, w.category) {
+			t.Fatalf("%s: lands outside %s", w.name, w.category)
+		}
 		// Seeded before the validator is bound; held to it all the same.
 		if err := app.Validate(r); err != nil {
 			t.Fatalf("%s: the seed fails validation: %v", w.name, err)
 		}
+	}
+}
+
+// Stavros's muscles under each category, in order, with the body figure's
+// name for each.
+var wantMuscles = []struct {
+	category string
+	muscles  []string
+}{
+	{"Chest", []string{"Chest"}},
+	{"Back", []string{"Lats", "Traps", "Erectors"}},
+	{"Biceps", []string{"Biceps"}},
+	{"Triceps", []string{"Triceps"}},
+	{"Shoulders", []string{"Front delts", "Side delts", "Rear delts"}},
+	{"Quads", []string{"Quads"}},
+	{"Hamstrings", []string{"Hamstrings"}},
+	{"Adductors", []string{"Adductors"}},
+	{"Glutes", []string{"Glutes"}},
+	{"Calves", []string{"Calves"}},
+	{"Abs", []string{"Abs", "Obliques"}},
+	{"Forearms", []string{"Forearms"}},
+	{"Neck", []string{"Neck"}},
+}
+
+func TestMusclesSitUnderTheirCategory(t *testing.T) {
+	app := newProgramsApp(t)
+	defer app.Cleanup()
+
+	total := 0
+	for _, w := range wantMuscles {
+		got, err := app.FindRecordsByFilter("muscles", "category = {:c}", "position", 0, 0, dbx.Params{"c": category(t, app, w.category)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var names []string
+		for _, r := range got {
+			names = append(names, r.GetString("name"))
+		}
+		if strings.Join(names, ",") != strings.Join(w.muscles, ",") {
+			t.Errorf("%s: got %v, want %v", w.category, names, w.muscles)
+		}
+		total += len(names)
+	}
+	all, _ := app.FindAllRecords("muscles")
+	if len(all) != total {
+		t.Fatalf("muscles: got %d, want %d", len(all), total)
+	}
+	front, err := app.FindFirstRecordByFilter("muscles", "name = 'Front delts'")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if front.GetString("figure") != "Delts" {
+		t.Fatalf("front delts drawn as %q, want Delts", front.GetString("figure"))
 	}
 }
 
@@ -147,6 +235,15 @@ func category(t testing.TB, app core.App, name string) string {
 	return r.Id
 }
 
+func muscle(t testing.TB, app core.App, name string) string {
+	t.Helper()
+	r, err := app.FindFirstRecordByFilter("muscles", "name = {:n}", dbx.Params{"n": name})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return r.Id
+}
+
 func exerciseType(t testing.TB, app core.App, name string) string {
 	t.Helper()
 	r, err := app.FindFirstRecordByFilter("exercise_types", "name = {:n}", dbx.Params{"n": name})
@@ -160,8 +257,8 @@ func exerciseBody(t testing.TB, app core.App) string {
 	b, _ := json.Marshal(map[string]any{
 		"name":              "Test Press",
 		"icon":              "bench",
-		"main_muscle":       category(t, app, "Chest"),
-		"secondary_muscles": []string{category(t, app, "Triceps"), category(t, app, "Shoulders")},
+		"main_muscle":       muscle(t, app, "Chest"),
+		"secondary_muscles": []string{muscle(t, app, "Triceps"), muscle(t, app, "Front delts")},
 		"type":              exerciseType(t, app, "Free weight"),
 	})
 	return string(b)
@@ -189,7 +286,7 @@ func TestCatalogRules(t *testing.T) {
 			Method:          http.MethodGet,
 			URL:             "/api/collections/exercises/records",
 			ExpectedStatus:  200,
-			ExpectedContent: []string{`"totalItems":16`, `"name":"Flat Bench Press"`, `"name":"Dumbbell Fly"`},
+			ExpectedContent: []string{`"totalItems":35`, `"name":"Flat Barbell Chest Press"`, `"name":"Wide-Grip Lat Pulldown"`},
 		}
 	})
 	run(t, "a free user cannot add a catalog exercise", func(f *fixture) tests.ApiScenario {
@@ -252,7 +349,7 @@ func TestAddingATypeIsOneRow(t *testing.T) {
 	r := core.NewRecord(col)
 	r.Set("name", "Rowing Machine")
 	r.Set("icon", "row")
-	r.Set("main_muscle", category(t, app, "Back"))
+	r.Set("main_muscle", muscle(t, app, "Lats"))
 	r.Set("type", aerobic.Id)
 	if err := app.Save(r); err != nil {
 		t.Fatalf("an exercise of the new type: %v", err)
@@ -261,13 +358,16 @@ func TestAddingATypeIsOneRow(t *testing.T) {
 
 func TestExerciseShape(t *testing.T) {
 	cases := map[string]func(app core.App, r *core.Record){
-		"no name":                              func(app core.App, r *core.Record) { r.Set("name", "") },
-		"no main muscle":                       func(app core.App, r *core.Record) { r.Set("main_muscle", "") },
-		"no type":                              func(app core.App, r *core.Record) { r.Set("type", "") },
-		"a main muscle that is not a category": func(app core.App, r *core.Record) { r.Set("main_muscle", "nosuchcategory1") },
-		"a type that does not exist":           func(app core.App, r *core.Record) { r.Set("type", "nosuchtypexxxx1") },
+		"no name":                            func(app core.App, r *core.Record) { r.Set("name", "") },
+		"no main muscle":                     func(app core.App, r *core.Record) { r.Set("main_muscle", "") },
+		"no type":                            func(app core.App, r *core.Record) { r.Set("type", "") },
+		"a main muscle that is not a muscle": func(app core.App, r *core.Record) { r.Set("main_muscle", "nosuchmuscle123") },
+		"a category given as the main muscle": func(app core.App, r *core.Record) {
+			r.Set("main_muscle", category(t, app, "Chest"))
+		},
+		"a type that does not exist": func(app core.App, r *core.Record) { r.Set("type", "nosuchtypexxxx1") },
 		"the main muscle also secondary": func(app core.App, r *core.Record) {
-			r.Set("secondary_muscles", []string{category(t, app, "Chest")})
+			r.Set("secondary_muscles", []string{muscle(t, app, "Chest")})
 		},
 	}
 	for name, spoil := range cases {
@@ -279,8 +379,8 @@ func TestExerciseShape(t *testing.T) {
 			r := core.NewRecord(col)
 			r.Set("name", "Test Press")
 			r.Set("icon", "bench")
-			r.Set("main_muscle", category(t, app, "Chest"))
-			r.Set("secondary_muscles", []string{category(t, app, "Triceps")})
+			r.Set("main_muscle", muscle(t, app, "Chest"))
+			r.Set("secondary_muscles", []string{muscle(t, app, "Triceps")})
 			r.Set("type", exerciseType(t, app, "Free weight"))
 			if err := app.Save(r); err != nil {
 				t.Fatalf("the valid exercise was refused: %v", err)
@@ -314,7 +414,7 @@ func customBody(t testing.TB, app core.App, owner string) string {
 		"name":        "My Press",
 		"icon":        "bench",
 		"owner":       owner,
-		"main_muscle": category(t, app, "Chest"),
+		"main_muscle": muscle(t, app, "Chest"),
 		"type":        exerciseType(t, app, "Cable"),
 	})
 	return string(b)
@@ -328,7 +428,7 @@ func saveExercise(t testing.TB, app core.App, owner string) *core.Record {
 	r.Set("name", "Stored Press")
 	r.Set("icon", "bench")
 	r.Set("owner", owner)
-	r.Set("main_muscle", category(t, app, "Chest"))
+	r.Set("main_muscle", muscle(t, app, "Chest"))
 	r.Set("type", exerciseType(t, app, "Machine"))
 	if err := app.Save(r); err != nil {
 		t.Fatal(err)
@@ -417,7 +517,7 @@ func TestCustomExerciseRules(t *testing.T) {
 			URL:                "/api/collections/exercises/records",
 			Headers:            auth(f.aliceTok),
 			ExpectedStatus:     200,
-			ExpectedContent:    []string{`"totalItems":17`},
+			ExpectedContent:    []string{`"totalItems":36`},
 			NotExpectedContent: []string{mine.Id},
 		}
 	})
