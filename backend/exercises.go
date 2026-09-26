@@ -8,7 +8,7 @@ import (
 )
 
 func bindExercises(app core.App) {
-	// The relations check that every muscle is a category and the type
+	// The relations check that every muscle is one of the muscles and the type
 	// exists; the one rule they cannot express is that the main muscle is not
 	// also listed as a secondary one.
 	app.OnRecordValidate("exercises").BindFunc(func(e *core.RecordEvent) error {
