@@ -150,12 +150,17 @@ const lightExtra = {
   rungTrack: '#DCD8C9',
   // Background of the gold "PR" chip. Gold's equivalent of `accentSoft`.
   recordSoft: '#F3ECD6',
+  // An exercise icon's secondary muscles: the accent mixed halfway with the
+  // icon body tone, so it reads as the same hue and clearly weaker than the
+  // main muscle (Stavros, 26 September 2026). Not in the design export.
+  accentSecondary: '#708D80',
 } as const;
 
 const darkExtra = {
   onAccent: '#10201F',
   rungTrack: '#3E3D38',
   recordSoft: '#3A331F',
+  accentSecondary: '#69887E',
   // PLAN.md §3 gives the dark theme one `record` token where light has two.
   // These two names exist so a component can read the same key in both
   // themes; both resolve to dark's single `record` value. No new colour.
