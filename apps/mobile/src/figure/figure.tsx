@@ -178,10 +178,11 @@ function iconPicture(
   icon: ExerciseIconKey,
   size: number,
   seamAll: boolean,
+  main: readonly number[],
   secondary: readonly number[],
   colors: IconColors,
 ): SkPicture {
-  const key = `${icon}|${size}|${seamAll}|${secondary.join(',')}|${Object.values(colors).join('|')}`;
+  const key = `${icon}|${size}|${seamAll}|${main.join(',')}|${secondary.join(',')}|${Object.values(colors).join('|')}`;
   let picture = pictures.get(key);
   if (!picture) {
     const def = EXERCISE_ICONS[icon];
@@ -190,7 +191,7 @@ function iconPicture(
     const [vx, vy, vw, vh] = def.viewBox.split(' ').map(Number);
     // The viewBox fitted and centred, as SVG's default xMidYMid meet does.
     const scale = Math.min(size / vw, size / vh);
-    const accentSet = new Set(def.accent);
+    const accentSet = new Set(main);
     const secondarySet = new Set(secondary);
     const silhouette = skPath(`${def.view}:silhouette`, figure.silhouette, 0, 0, true);
     const fill = Skia.Paint();
@@ -236,11 +237,12 @@ function iconBitmap(
   icon: ExerciseIconKey,
   size: number,
   seamAll: boolean,
+  main: readonly number[],
   secondary: readonly number[],
   colors: IconColors,
 ): string {
   const scale = PixelRatio.get();
-  const key = `${icon}|${size}|${scale}|${seamAll}|${secondary.join(',')}|${Object.values(colors).join('|')}`;
+  const key = `${icon}|${size}|${scale}|${seamAll}|${main.join(',')}|${secondary.join(',')}|${Object.values(colors).join('|')}`;
   let uri = bitmaps.get(key);
   if (!uri) {
     const px = Math.round(size * scale);
@@ -248,7 +250,7 @@ function iconBitmap(
     if (!surface) return '';
     const canvas = surface.getCanvas();
     canvas.scale(px / size, px / size);
-    canvas.drawPicture(iconPicture(icon, size, seamAll, secondary, colors));
+    canvas.drawPicture(iconPicture(icon, size, seamAll, main, secondary, colors));
     uri = `data:image/png;base64,${surface.makeImageSnapshot().encodeToBase64()}`;
     bitmaps.set(key, uri);
   }
@@ -259,11 +261,17 @@ function iconBitmap(
 export function ExerciseIcon({
   icon,
   size,
+  main,
   secondary = [],
   seamAll = false,
 }: {
   icon: ExerciseIconKey;
   size: number;
+  /**
+   * The exercise's main muscle, by the name the body figure uses, lit in the
+   * accent. Without it the icon lights the muscle it was drawn for.
+   */
+  main?: string;
   /**
    * Secondary muscles, by the names the body figure uses. Each is lit where it
    * shows in the icon's view and crop; the icon is never re-framed for one.
@@ -275,17 +283,21 @@ export function ExerciseIcon({
   const { c } = useTheme();
   const inner = size - (size > 56 ? 4 : 3);
   const def = EXERCISE_ICONS[icon];
-  const main = new Set(def.accent);
-  const regions = [
+  // A muscle's regions in the icon's view: where its own icon draws it, and
+  // where the design's body maps show it from the other side.
+  const regionsOf = (names: readonly string[]) => [
     ...new Set(
-      secondary.flatMap((m) =>
+      names.flatMap((m) =>
         [MUSCLE_REGIONS[m], MUSCLE_ALSO[m]].flatMap((r) => (r && r.view === def.view ? r.regions : [])),
       ),
     ),
-  ]
-    .filter((r) => !main.has(r))
+  ];
+  const accent = main === undefined ? [...def.accent] : regionsOf([main]);
+  const lit = new Set(accent);
+  const regions = regionsOf(secondary)
+    .filter((r) => !lit.has(r))
     .sort((a, b) => a - b);
-  const uri = iconBitmap(icon, inner, seamAll, regions, {
+  const uri = iconBitmap(icon, inner, seamAll, accent.sort((a, b) => a - b), regions, {
     accent: c.accent,
     secondary: c.accentSecondary,
     body: c.iconBody,

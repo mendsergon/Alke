@@ -475,7 +475,7 @@ const ListRows = memo(function ListRows({
   return exercises.map((e, i) => (
     <Travel key={e.id} as="list" index={i} g={g} progress={progress} label={e.name} padding={tokens.space[16]}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[16] }}>
-        <ExerciseIcon icon={e.icon} secondary={e.secondary} size={tokens.iconTile.size.sessionHeader} seamAll />
+        <ExerciseIcon icon={e.icon} main={e.main} secondary={e.secondary} size={tokens.iconTile.size.sessionHeader} seamAll />
         <Txt variant="serifListTitle" family="serif" weight={500} color={c.text} style={{ flexShrink: 1 }}>
           {e.name}
         </Txt>
@@ -502,7 +502,7 @@ const GridCards = memo(function GridCards({
   return exercises.map((e, i) => (
     <Travel key={e.id} as="grid" index={i} g={g} progress={progress} label={e.name} padding={tokens.space[12]}>
       <View style={{ gap: tokens.space[12] }}>
-        <ExerciseIcon icon={e.icon} secondary={e.secondary} size={tile} seamAll />
+        <ExerciseIcon icon={e.icon} main={e.main} secondary={e.secondary} size={tile} seamAll />
         <View style={{ gap: tokens.space[4] }}>
           <Txt
             variant="rowTitle"
@@ -530,6 +530,7 @@ function same(a: readonly Exercise[], b: readonly Exercise[]) {
         e.name === b[i].name &&
         e.icon === b[i].icon &&
         e.type === b[i].type &&
+        e.main === b[i].main &&
         e.secondary.join() === b[i].secondary.join(),
     )
   );
