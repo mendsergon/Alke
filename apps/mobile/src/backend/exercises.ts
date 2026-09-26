@@ -8,14 +8,16 @@ export type Exercise = {
   icon: ExerciseIconKey;
   /** The exercise type's name: Free weight, Cable, Machine. */
   type: string;
+  /** Its main muscle, by the name the body figure uses. */
+  main: string;
   /** Its secondary muscles, by the names the body figure uses. */
   secondary: string[];
 };
 
-type ExerciseRow = Omit<Exercise, 'type' | 'secondary'> & {
+type ExerciseRow = Omit<Exercise, 'type' | 'main' | 'secondary'> & {
   expand?: {
     type?: { name: string };
-    main_muscle?: { category: string };
+    main_muscle?: { category?: string; figure: string };
     secondary_muscles?: { figure: string }[];
   };
 };
@@ -25,6 +27,7 @@ const toExercise = (r: ExerciseRow): Exercise => ({
   name: r.name,
   icon: r.icon,
   type: r.expand?.type?.name ?? '',
+  main: r.expand?.main_muscle?.figure ?? '',
   secondary: (r.expand?.secondary_muscles ?? []).map((m) => m.figure),
 });
 
@@ -45,7 +48,7 @@ export function cachedExercisesIn(categoryId: string): Exercise[] | undefined {
 export async function prefetchExercises(categoryIds: readonly string[], token: string | null): Promise<void> {
   try {
     const response = await fetch(
-      `${POCKETBASE_URL}/api/collections/exercises/records?perPage=1000&sort=name&expand=type,main_muscle,secondary_muscles&fields=id,name,icon,expand.type.name,expand.main_muscle.category,expand.secondary_muscles.figure`,
+      `${POCKETBASE_URL}/api/collections/exercises/records?perPage=1000&sort=name&expand=type,main_muscle,secondary_muscles&fields=id,name,icon,expand.type.name,expand.main_muscle.category,expand.main_muscle.figure,expand.secondary_muscles.figure`,
       { headers: token ? { Authorization: token } : {} },
     );
     if (!response.ok) return;
@@ -69,7 +72,7 @@ export async function listExercisesIn(categoryId: string, token: string | null):
   const filter = encodeURIComponent(`main_muscle.category = "${categoryId}"`);
   try {
     const response = await fetch(
-      `${POCKETBASE_URL}/api/collections/exercises/records?perPage=200&sort=name&expand=type,secondary_muscles&fields=id,name,icon,expand.type.name,expand.secondary_muscles.figure&filter=${filter}`,
+      `${POCKETBASE_URL}/api/collections/exercises/records?perPage=200&sort=name&expand=type,main_muscle,secondary_muscles&fields=id,name,icon,expand.type.name,expand.main_muscle.figure,expand.secondary_muscles.figure&filter=${filter}`,
       { headers: token ? { Authorization: token } : {} },
     );
     if (!response.ok) return null;
