@@ -356,7 +356,10 @@ function Navigator() {
         }}
       >
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="account" />
+        {/* A second tap while the first push is under way reuses the screen
+            instead of opening it twice. */}
+        <Stack.Screen name="account" dangerouslySingular />
+        <Stack.Screen name="category/[id]" dangerouslySingular />
         <Stack.Screen name="sign-in" options={{ presentation: 'modal' }} />
       </Stack>
     </NavigationTheme>
