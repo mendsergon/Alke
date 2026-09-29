@@ -54,101 +54,18 @@ func TestMuscleCategoriesAreSeededInOrder(t *testing.T) {
 	}
 }
 
-// Every catalog exercise: name, icon, main muscle, secondary muscles in order,
-// type, and the category it lands in — the one its main muscle belongs to.
-var wantCatalog = []struct {
-	name      string
-	icon      string
-	main      string
-	secondary []string
-	kind      string
-	category  string
-}{
-	{"Flat Barbell Chest Press", "bench", "Chest", []string{"Front delts", "Triceps"}, "Free weight", "Chest"},
-	{"Incline Barbell Chest Press", "bench", "Chest", []string{"Front delts", "Triceps"}, "Free weight", "Chest"},
-	{"Decline Barbell Chest Press", "bench", "Chest", []string{"Front delts", "Triceps"}, "Free weight", "Chest"},
-	{"Flat Dumbbell Chest Press", "bench", "Chest", []string{"Front delts", "Triceps"}, "Free weight", "Chest"},
-	{"Incline Dumbbell Chest Press", "bench", "Chest", []string{"Front delts", "Triceps"}, "Free weight", "Chest"},
-	{"Decline Dumbbell Chest Press", "bench", "Chest", []string{"Front delts", "Triceps"}, "Free weight", "Chest"},
-	{"Flat Smith Chest Press", "bench", "Chest", []string{"Front delts", "Triceps"}, "Machine", "Chest"},
-	{"Incline Smith Chest Press", "bench", "Chest", []string{"Front delts", "Triceps"}, "Machine", "Chest"},
-	{"Decline Smith Chest Press", "bench", "Chest", []string{"Front delts", "Triceps"}, "Machine", "Chest"},
-	{"Chest Press Machine", "bench", "Chest", []string{"Front delts", "Triceps"}, "Machine", "Chest"},
-	{"Dip", "bench", "Chest", []string{"Triceps", "Front delts"}, "Free weight", "Chest"},
-	{"Push-up", "bench", "Chest", []string{"Triceps", "Front delts"}, "Free weight", "Chest"},
-	{"Cable Fly", "bench", "Chest", []string{"Front delts"}, "Cable", "Chest"},
-	{"Pec Deck", "bench", "Chest", []string{"Front delts"}, "Machine", "Chest"},
-	{"Dumbbell Fly", "bench", "Chest", []string{"Front delts"}, "Free weight", "Chest"},
-	{"Wide-Grip Lat Pulldown", "row", "Lats", []string{"Biceps", "Traps", "Rear delts"}, "Cable", "Back"},
-	{"Close-Grip Lat Pulldown", "row", "Lats", []string{"Biceps", "Rear delts"}, "Cable", "Back"},
-	{"Neutral-Grip Machine Pulldown", "row", "Lats", []string{"Biceps", "Rear delts"}, "Machine", "Back"},
-	{"Pull-up", "row", "Lats", []string{"Biceps", "Traps", "Forearms", "Rear delts"}, "Free weight", "Back"},
-	{"Chin-up", "row", "Lats", []string{"Biceps", "Forearms", "Rear delts"}, "Free weight", "Back"},
-	{"Straight-Arm Pulldown", "row", "Lats", []string{"Triceps", "Rear delts"}, "Cable", "Back"},
-	{"Barbell Row", "row", "Traps", []string{"Lats", "Rear delts", "Erectors", "Biceps", "Forearms"}, "Free weight", "Back"},
-	{"Pendlay Row", "row", "Traps", []string{"Lats", "Rear delts", "Erectors", "Biceps", "Forearms"}, "Free weight", "Back"},
-	{"Dumbbell Row", "row", "Traps", []string{"Lats", "Biceps", "Forearms", "Rear delts"}, "Free weight", "Back"},
-	{"T-Bar Row", "row", "Traps", []string{"Lats", "Erectors", "Biceps", "Forearms", "Rear delts"}, "Free weight", "Back"},
-	{"Chest-Supported Wide Row", "row", "Traps", []string{"Rear delts", "Lats", "Biceps"}, "Machine", "Back"},
-	{"Chest-Supported Close Row", "row", "Lats", []string{"Traps", "Biceps", "Rear delts"}, "Machine", "Back"},
-	{"Close-Grip Seated Cable Row", "row", "Lats", []string{"Traps", "Biceps", "Rear delts"}, "Cable", "Back"},
-	{"Wide-Grip Seated Cable Row", "row", "Traps", []string{"Rear delts", "Lats", "Biceps"}, "Cable", "Back"},
-	{"Barbell Shrug", "row", "Traps", []string{"Forearms"}, "Free weight", "Back"},
-	{"Dumbbell Shrug", "row", "Traps", []string{"Forearms"}, "Free weight", "Back"},
-	{"Smith Shrug", "row", "Traps", nil, "Machine", "Back"},
-	{"Machine Shrug", "row", "Traps", nil, "Machine", "Back"},
-}
-
-func TestTheCatalogIsSeeded(t *testing.T) {
+// The catalog is empty until the full exercise list comes in; the seeded
+// chest and back exercises are gone.
+func TestTheCatalogIsEmpty(t *testing.T) {
 	app := newProgramsApp(t)
 	defer app.Cleanup()
 
-	all, err := app.FindAllRecords("exercises")
+	all, err := app.FindRecordsByFilter("exercises", "owner = ''", "", 0, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(all) != len(wantCatalog) {
-		t.Fatalf("exercises: got %d, want %d", len(all), len(wantCatalog))
-	}
-	// The two left over from before the naming convention are gone, and Face
-	// Pull and Inverted Row are not in the catalog.
-	for _, old := range []string{"Flat Bench Press", "Incline Bench Press", "Face Pull", "Inverted Row"} {
-		if _, err := app.FindFirstRecordByFilter("exercises", "name = {:n}", dbx.Params{"n": old}); err == nil {
-			t.Fatalf("%s is still in the catalog", old)
-		}
-	}
-	for _, w := range wantCatalog {
-		r, err := app.FindFirstRecordByFilter("exercises", "name = {:n}", dbx.Params{"n": w.name})
-		if err != nil {
-			t.Fatalf("%s: %v", w.name, err)
-		}
-		if r.GetString("owner") != "" || r.GetString("icon") != w.icon {
-			t.Fatalf("%s: owner %q icon %q", w.name, r.GetString("owner"), r.GetString("icon"))
-		}
-		if r.GetString("main_muscle") != muscle(t, app, w.main) {
-			t.Fatalf("%s: main muscle is not %s", w.name, w.main)
-		}
-		want := make([]string, len(w.secondary))
-		for i, s := range w.secondary {
-			want[i] = muscle(t, app, s)
-		}
-		if got := r.GetStringSlice("secondary_muscles"); strings.Join(got, ",") != strings.Join(want, ",") {
-			t.Fatalf("%s: secondary muscles: got %v, want %v", w.name, got, w.secondary)
-		}
-		if r.GetString("type") != exerciseType(t, app, w.kind) {
-			t.Fatalf("%s: type is not %s", w.name, w.kind)
-		}
-		main, err := app.FindRecordById("muscles", r.GetString("main_muscle"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if main.GetString("category") != category(t, app, w.category) {
-			t.Fatalf("%s: lands outside %s", w.name, w.category)
-		}
-		// Seeded before the validator is bound; held to it all the same.
-		if err := app.Validate(r); err != nil {
-			t.Fatalf("%s: the seed fails validation: %v", w.name, err)
-		}
+	if len(all) != 0 {
+		t.Fatalf("catalog exercises: got %d, want none", len(all))
 	}
 }
 
@@ -285,7 +202,7 @@ func TestCatalogRules(t *testing.T) {
 			Method:          http.MethodGet,
 			URL:             "/api/collections/exercises/records",
 			ExpectedStatus:  200,
-			ExpectedContent: []string{`"totalItems":33`, `"name":"Flat Barbell Chest Press"`, `"name":"Wide-Grip Lat Pulldown"`},
+			ExpectedContent: []string{`"totalItems":0`},
 		}
 	})
 	run(t, "a free user cannot add a catalog exercise", func(f *fixture) tests.ApiScenario {
@@ -516,7 +433,7 @@ func TestCustomExerciseRules(t *testing.T) {
 			URL:                "/api/collections/exercises/records",
 			Headers:            auth(f.aliceTok),
 			ExpectedStatus:     200,
-			ExpectedContent:    []string{`"totalItems":34`},
+			ExpectedContent:    []string{`"totalItems":1`},
 			NotExpectedContent: []string{mine.Id},
 		}
 	})
