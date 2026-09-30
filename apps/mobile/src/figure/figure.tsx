@@ -286,10 +286,10 @@ export function ExerciseIcon({
   icon: ExerciseIconKey;
   size: number;
   /**
-   * The exercise's main muscle, by the name the body figure uses, lit in the
-   * accent. Without it the icon lights the muscle it was drawn for.
+   * The exercise's main muscles, by the names the body figure uses, lit in
+   * the accent. Without them the icon lights the muscle it was drawn for.
    */
-  main?: string;
+  main?: readonly string[];
   /**
    * Secondary muscles, by the names the body figure uses. Each is lit where it
    * shows in the icon's view and crop; the icon is never re-framed for one.
@@ -310,7 +310,7 @@ export function ExerciseIcon({
       ),
     ),
   ];
-  const accent = main === undefined ? [...def.accent] : regionsOf([main]);
+  const accent = main === undefined ? [...def.accent] : regionsOf(main);
   const lit = new Set(accent);
   const regions = regionsOf(secondary)
     .filter((r) => !lit.has(r))

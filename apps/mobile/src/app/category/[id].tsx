@@ -532,7 +532,7 @@ function same(a: readonly Exercise[], b: readonly Exercise[]) {
         e.name === b[i].name &&
         e.icon === b[i].icon &&
         e.type === b[i].type &&
-        e.main === b[i].main &&
+        e.main.join() === b[i].main.join() &&
         e.secondary.join() === b[i].secondary.join(),
     )
   );
