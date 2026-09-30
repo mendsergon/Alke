@@ -259,10 +259,20 @@ function iconBitmap(
 
 /**
  * The exercise icon drawn for a muscle, by the body figure's name for it: the
- * design draws one icon per muscle, framed on it.
+ * design draws one icon per muscle, framed on it. A muscle the design only
+ * draws inside a larger set — the front delts, inside the overhead press's
+ * delts — takes the icon that lights it.
  */
 export function iconForMuscle(figure: string): ExerciseIconKey | undefined {
-  return (Object.keys(EXERCISE_ICONS) as ExerciseIconKey[]).find((k) => EXERCISE_ICONS[k].muscle === figure);
+  const keys = Object.keys(EXERCISE_ICONS) as ExerciseIconKey[];
+  const own = keys.find((k) => EXERCISE_ICONS[k].muscle === figure);
+  if (own) return own;
+  const regions = MUSCLE_REGIONS[figure];
+  if (!regions) return undefined;
+  return keys.find((k) => {
+    const def = EXERCISE_ICONS[k];
+    return def.view === regions.view && regions.regions.every((r) => def.accent.includes(r));
+  });
 }
 
 /** The tile an exercise icon sits in: surface-raised, radius 12 (16 over 56). */
