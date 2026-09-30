@@ -1,11 +1,13 @@
 import { POCKETBASE_URL } from './pocketbase';
 import type { ExerciseIconKey } from '../figure/figure.generated';
+import { iconForMuscle } from '../figure/figure';
 
 /** An exercise from the `exercises` collection, as a list row needs it. */
 export type Exercise = {
   id: string;
   name: string;
-  icon: ExerciseIconKey;
+  /** The icon drawn for its main muscle; none when that muscle has no icon. */
+  icon: ExerciseIconKey | undefined;
   /** The exercise type's name: Free weight, Cable, Machine. */
   type: string;
   /** Its main muscle, by the name the body figure uses. */
@@ -14,7 +16,7 @@ export type Exercise = {
   secondary: string[];
 };
 
-type ExerciseRow = Omit<Exercise, 'type' | 'main' | 'secondary'> & {
+type ExerciseRow = Omit<Exercise, 'icon' | 'type' | 'main' | 'secondary'> & {
   expand?: {
     type?: { name: string };
     main_muscle?: { category?: string; figure: string };
@@ -25,7 +27,7 @@ type ExerciseRow = Omit<Exercise, 'type' | 'main' | 'secondary'> & {
 const toExercise = (r: ExerciseRow): Exercise => ({
   id: r.id,
   name: r.name,
-  icon: r.icon,
+  icon: iconForMuscle(r.expand?.main_muscle?.figure ?? ''),
   type: r.expand?.type?.name ?? '',
   main: r.expand?.main_muscle?.figure ?? '',
   secondary: (r.expand?.secondary_muscles ?? []).map((m) => m.figure),
@@ -48,7 +50,7 @@ export function cachedExercisesIn(categoryId: string): Exercise[] | undefined {
 export async function prefetchExercises(categoryIds: readonly string[], token: string | null): Promise<void> {
   try {
     const response = await fetch(
-      `${POCKETBASE_URL}/api/collections/exercises/records?perPage=1000&sort=name&expand=type,main_muscle,secondary_muscles&fields=id,name,icon,expand.type.name,expand.main_muscle.category,expand.main_muscle.figure,expand.secondary_muscles.figure`,
+      `${POCKETBASE_URL}/api/collections/exercises/records?perPage=1000&sort=name&expand=type,main_muscle,secondary_muscles&fields=id,name,expand.type.name,expand.main_muscle.category,expand.main_muscle.figure,expand.secondary_muscles.figure`,
       { headers: token ? { Authorization: token } : {} },
     );
     if (!response.ok) return;
@@ -72,7 +74,7 @@ export async function listExercisesIn(categoryId: string, token: string | null):
   const filter = encodeURIComponent(`main_muscle.category = "${categoryId}"`);
   try {
     const response = await fetch(
-      `${POCKETBASE_URL}/api/collections/exercises/records?perPage=200&sort=name&expand=type,main_muscle,secondary_muscles&fields=id,name,icon,expand.type.name,expand.main_muscle.figure,expand.secondary_muscles.figure&filter=${filter}`,
+      `${POCKETBASE_URL}/api/collections/exercises/records?perPage=200&sort=name&expand=type,main_muscle,secondary_muscles&fields=id,name,expand.type.name,expand.main_muscle.figure,expand.secondary_muscles.figure&filter=${filter}`,
       { headers: token ? { Authorization: token } : {} },
     );
     if (!response.ok) return null;

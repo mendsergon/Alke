@@ -257,6 +257,14 @@ function iconBitmap(
   return uri;
 }
 
+/**
+ * The exercise icon drawn for a muscle, by the body figure's name for it: the
+ * design draws one icon per muscle, framed on it.
+ */
+export function iconForMuscle(figure: string): ExerciseIconKey | undefined {
+  return (Object.keys(EXERCISE_ICONS) as ExerciseIconKey[]).find((k) => EXERCISE_ICONS[k].muscle === figure);
+}
+
 /** The tile an exercise icon sits in: surface-raised, radius 12 (16 over 56). */
 export function ExerciseIcon({
   icon,

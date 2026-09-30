@@ -9,7 +9,6 @@ export type MuscleCategory = {
   id: string;
   name: string;
   position: number;
-  muscles: string[];
   icon: ExerciseIconKey;
   icon_muscles: string[];
   icon_crop: string;
