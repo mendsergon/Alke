@@ -41,7 +41,10 @@ func TestTheCatalogReadsPlainly(t *testing.T) {
 	app := newProgramsApp(t)
 	defer app.Cleanup()
 
-	exercises, _ := app.FindCollectionByNameOrId("exercises")
+	if _, err := app.FindCollectionByNameOrId("exercises"); err == nil {
+		t.Fatal("the single exercises collection is still there")
+	}
+	exercises, _ := app.FindCollectionByNameOrId("weights_chest")
 	if exercises.Fields.GetByName("icon") != nil {
 		t.Fatal("exercises still carry an icon field")
 	}
@@ -52,7 +55,7 @@ func TestTheCatalogReadsPlainly(t *testing.T) {
 	if categories.Fields.GetByName("muscles") != nil {
 		t.Fatal("categories still list their muscles")
 	}
-	for _, name := range []string{"exercises", "muscle_categories", "muscles", "exercise_types"} {
+	for _, name := range []string{"weights_chest", "muscle_categories", "muscles", "exercise_types"} {
 		c, _ := app.FindCollectionByNameOrId(name)
 		if !c.Fields.GetByName("name").(*core.TextField).Presentable {
 			t.Errorf("%s: name is not shown for its records", name)
@@ -70,12 +73,51 @@ func TestTheCatalogIsEmpty(t *testing.T) {
 	app := newProgramsApp(t)
 	defer app.Cleanup()
 
-	all, err := app.FindRecordsByFilter("exercises", "owner = ''", "", 0, 0)
-	if err != nil {
-		t.Fatal(err)
+	for _, c := range wantCategories {
+		all, err := app.FindRecordsByFilter(weights(c), "owner = ''", "", 0, 0)
+		if err != nil {
+			t.Fatalf("%s: %v", weights(c), err)
+		}
+		if len(all) != 0 {
+			t.Fatalf("%s: got %d catalog exercises, want none", weights(c), len(all))
+		}
 	}
-	if len(all) != 0 {
-		t.Fatalf("catalog exercises: got %d, want none", len(all))
+}
+
+// Weight exercises are kept one collection per category, in the categories'
+// order: weights_chest, weights_back, … weights_neck.
+func weights(category string) string {
+	return "weights_" + strings.ReplaceAll(strings.ToLower(category), " ", "_")
+}
+
+func TestEachCategoryHasItsWeightsCollection(t *testing.T) {
+	app := newProgramsApp(t)
+	defer app.Cleanup()
+
+	for _, c := range wantCategories {
+		col, err := app.FindCollectionByNameOrId(weights(c))
+		if err != nil {
+			t.Fatalf("%s: %v", weights(c), err)
+		}
+		for _, f := range []string{"name", "main_muscle", "secondary_muscles", "type", "owner"} {
+			if col.Fields.GetByName(f) == nil {
+				t.Errorf("%s has no %s", weights(c), f)
+			}
+		}
+	}
+}
+
+func TestAMainMuscleFromAnotherCategoryIsRefused(t *testing.T) {
+	app := newProgramsApp(t)
+	defer app.Cleanup()
+
+	col, _ := app.FindCollectionByNameOrId("weights_chest")
+	r := core.NewRecord(col)
+	r.Set("name", "Lat Pulldown")
+	r.Set("main_muscle", muscle(t, app, "Lats"))
+	r.Set("type", exerciseType(t, app, "Cable"))
+	if err := app.Save(r); err == nil {
+		t.Fatal("a back exercise was saved under chest")
 	}
 }
 
@@ -209,7 +251,7 @@ func TestCatalogRules(t *testing.T) {
 	run(t, "anyone reads the exercises", func(f *fixture) tests.ApiScenario {
 		return tests.ApiScenario{
 			Method:          http.MethodGet,
-			URL:             "/api/collections/exercises/records",
+			URL:             "/api/collections/weights_chest/records",
 			ExpectedStatus:  200,
 			ExpectedContent: []string{`"totalItems":0`},
 		}
@@ -217,7 +259,7 @@ func TestCatalogRules(t *testing.T) {
 	run(t, "a free user cannot add a catalog exercise", func(f *fixture) tests.ApiScenario {
 		return tests.ApiScenario{
 			Method:          http.MethodPost,
-			URL:             "/api/collections/exercises/records",
+			URL:             "/api/collections/weights_chest/records",
 			Headers:         auth(f.aliceTok),
 			Body:            strings.NewReader(exerciseBody(t, f.app)),
 			ExpectedStatus:  400,
@@ -248,7 +290,7 @@ func TestCatalogRules(t *testing.T) {
 	run(t, "an admin adds an exercise with a main muscle, secondaries and a type", func(f *fixture) tests.ApiScenario {
 		return tests.ApiScenario{
 			Method:          http.MethodPost,
-			URL:             "/api/collections/exercises/records",
+			URL:             "/api/collections/weights_chest/records",
 			Headers:         auth(f.adminTok),
 			Body:            strings.NewReader(exerciseBody(t, f.app)),
 			ExpectedStatus:  200,
@@ -270,7 +312,7 @@ func TestAddingATypeIsOneRow(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	col, _ := app.FindCollectionByNameOrId("exercises")
+	col, _ := app.FindCollectionByNameOrId("weights_back")
 	r := core.NewRecord(col)
 	r.Set("name", "Rowing Machine")
 	r.Set("main_muscle", muscle(t, app, "Lats"))
@@ -299,7 +341,7 @@ func TestExerciseShape(t *testing.T) {
 			app := newProgramsApp(t)
 			defer app.Cleanup()
 
-			col, _ := app.FindCollectionByNameOrId("exercises")
+			col, _ := app.FindCollectionByNameOrId("weights_chest")
 			r := core.NewRecord(col)
 			r.Set("name", "Test Press")
 			r.Set("main_muscle", muscle(t, app, "Pecs"))
@@ -345,7 +387,7 @@ func customBody(t testing.TB, app core.App, owner string) string {
 // saveExercise writes an exercise directly, as an admin would.
 func saveExercise(t testing.TB, app core.App, owner string) *core.Record {
 	t.Helper()
-	col, _ := app.FindCollectionByNameOrId("exercises")
+	col, _ := app.FindCollectionByNameOrId("weights_chest")
 	r := core.NewRecord(col)
 	r.Set("name", "Stored Press")
 	r.Set("owner", owner)
@@ -362,7 +404,7 @@ func TestCustomExerciseRules(t *testing.T) {
 		setPremium(t, f.app, f.alice, true)
 		return tests.ApiScenario{
 			Method:          http.MethodPost,
-			URL:             "/api/collections/exercises/records",
+			URL:             "/api/collections/weights_chest/records",
 			Headers:         auth(f.aliceTok),
 			Body:            strings.NewReader(customBody(t, f.app, f.alice.Id)),
 			ExpectedStatus:  200,
@@ -372,7 +414,7 @@ func TestCustomExerciseRules(t *testing.T) {
 	run(t, "a free user cannot create one", func(f *fixture) tests.ApiScenario {
 		return tests.ApiScenario{
 			Method:          http.MethodPost,
-			URL:             "/api/collections/exercises/records",
+			URL:             "/api/collections/weights_chest/records",
 			Headers:         auth(f.aliceTok),
 			Body:            strings.NewReader(customBody(t, f.app, f.alice.Id)),
 			ExpectedStatus:  400,
@@ -382,7 +424,7 @@ func TestCustomExerciseRules(t *testing.T) {
 	run(t, "a guest cannot create one", func(f *fixture) tests.ApiScenario {
 		return tests.ApiScenario{
 			Method:          http.MethodPost,
-			URL:             "/api/collections/exercises/records",
+			URL:             "/api/collections/weights_chest/records",
 			Body:            strings.NewReader(customBody(t, f.app, "")),
 			ExpectedStatus:  400,
 			ExpectedContent: []string{`"status":400`},
@@ -392,7 +434,7 @@ func TestCustomExerciseRules(t *testing.T) {
 		setPremium(t, f.app, f.alice, true)
 		return tests.ApiScenario{
 			Method:          http.MethodPost,
-			URL:             "/api/collections/exercises/records",
+			URL:             "/api/collections/weights_chest/records",
 			Headers:         auth(f.aliceTok),
 			Body:            strings.NewReader(customBody(t, f.app, "")),
 			ExpectedStatus:  400,
@@ -403,7 +445,7 @@ func TestCustomExerciseRules(t *testing.T) {
 		setPremium(t, f.app, f.alice, true)
 		return tests.ApiScenario{
 			Method:          http.MethodPost,
-			URL:             "/api/collections/exercises/records",
+			URL:             "/api/collections/weights_chest/records",
 			Headers:         auth(f.aliceTok),
 			Body:            strings.NewReader(customBody(t, f.app, f.bob.Id)),
 			ExpectedStatus:  400,
@@ -414,7 +456,7 @@ func TestCustomExerciseRules(t *testing.T) {
 		mine := saveExercise(t, f.app, f.bob.Id)
 		return tests.ApiScenario{
 			Method:          http.MethodGet,
-			URL:             "/api/collections/exercises/records/" + mine.Id,
+			URL:             "/api/collections/weights_chest/records/" + mine.Id,
 			Headers:         auth(f.bobTok),
 			ExpectedStatus:  200,
 			ExpectedContent: []string{mine.Id},
@@ -424,7 +466,7 @@ func TestCustomExerciseRules(t *testing.T) {
 		mine := saveExercise(t, f.app, f.bob.Id)
 		return tests.ApiScenario{
 			Method:          http.MethodGet,
-			URL:             "/api/collections/exercises/records/" + mine.Id,
+			URL:             "/api/collections/weights_chest/records/" + mine.Id,
 			Headers:         auth(f.aliceTok),
 			ExpectedStatus:  404,
 			ExpectedContent: []string{`"status":404`},
@@ -435,7 +477,7 @@ func TestCustomExerciseRules(t *testing.T) {
 		mine := saveExercise(t, f.app, f.bob.Id)
 		return tests.ApiScenario{
 			Method:             http.MethodGet,
-			URL:                "/api/collections/exercises/records",
+			URL:                "/api/collections/weights_chest/records",
 			Headers:            auth(f.aliceTok),
 			ExpectedStatus:     200,
 			ExpectedContent:    []string{`"totalItems":1`},
@@ -446,7 +488,7 @@ func TestCustomExerciseRules(t *testing.T) {
 		mine := saveExercise(t, f.app, f.bob.Id)
 		return tests.ApiScenario{
 			Method:          http.MethodPatch,
-			URL:             "/api/collections/exercises/records/" + mine.Id,
+			URL:             "/api/collections/weights_chest/records/" + mine.Id,
 			Headers:         auth(f.bobTok),
 			Body:            strings.NewReader(`{"name":"Renamed"}`),
 			ExpectedStatus:  200,
@@ -457,7 +499,7 @@ func TestCustomExerciseRules(t *testing.T) {
 		mine := saveExercise(t, f.app, f.bob.Id)
 		return tests.ApiScenario{
 			Method:          http.MethodPatch,
-			URL:             "/api/collections/exercises/records/" + mine.Id,
+			URL:             "/api/collections/weights_chest/records/" + mine.Id,
 			Headers:         auth(f.bobTok),
 			Body:            strings.NewReader(`{"owner":"` + f.alice.Id + `"}`),
 			ExpectedStatus:  404,
@@ -468,7 +510,7 @@ func TestCustomExerciseRules(t *testing.T) {
 		mine := saveExercise(t, f.app, f.bob.Id)
 		return tests.ApiScenario{
 			Method:          http.MethodPatch,
-			URL:             "/api/collections/exercises/records/" + mine.Id,
+			URL:             "/api/collections/weights_chest/records/" + mine.Id,
 			Headers:         auth(f.bobTok),
 			Body:            strings.NewReader(`{"owner":""}`),
 			ExpectedStatus:  404,
@@ -479,7 +521,7 @@ func TestCustomExerciseRules(t *testing.T) {
 		mine := saveExercise(t, f.app, f.bob.Id)
 		return tests.ApiScenario{
 			Method:          http.MethodPatch,
-			URL:             "/api/collections/exercises/records/" + mine.Id,
+			URL:             "/api/collections/weights_chest/records/" + mine.Id,
 			Headers:         auth(f.aliceTok),
 			Body:            strings.NewReader(`{"name":"Taken"}`),
 			ExpectedStatus:  404,
@@ -491,7 +533,7 @@ func TestCustomExerciseRules(t *testing.T) {
 		catalog := saveExercise(t, f.app, "")
 		return tests.ApiScenario{
 			Method:          http.MethodPatch,
-			URL:             "/api/collections/exercises/records/" + catalog.Id,
+			URL:             "/api/collections/weights_chest/records/" + catalog.Id,
 			Headers:         auth(f.aliceTok),
 			Body:            strings.NewReader(`{"name":"Taken"}`),
 			ExpectedStatus:  404,
@@ -502,7 +544,7 @@ func TestCustomExerciseRules(t *testing.T) {
 		catalog := saveExercise(t, f.app, "")
 		return tests.ApiScenario{
 			Method:          http.MethodDelete,
-			URL:             "/api/collections/exercises/records/" + catalog.Id,
+			URL:             "/api/collections/weights_chest/records/" + catalog.Id,
 			Headers:         auth(f.aliceTok),
 			ExpectedStatus:  404,
 			ExpectedContent: []string{`"status":404`},
@@ -512,7 +554,7 @@ func TestCustomExerciseRules(t *testing.T) {
 		catalog := saveExercise(t, f.app, "")
 		return tests.ApiScenario{
 			Method:          http.MethodPatch,
-			URL:             "/api/collections/exercises/records/" + catalog.Id,
+			URL:             "/api/collections/weights_chest/records/" + catalog.Id,
 			Body:            strings.NewReader(`{"name":"Taken"}`),
 			ExpectedStatus:  404,
 			ExpectedContent: []string{`"status":404`},
@@ -522,7 +564,7 @@ func TestCustomExerciseRules(t *testing.T) {
 		catalog := saveExercise(t, f.app, "")
 		return tests.ApiScenario{
 			Method:          http.MethodDelete,
-			URL:             "/api/collections/exercises/records/" + catalog.Id,
+			URL:             "/api/collections/weights_chest/records/" + catalog.Id,
 			ExpectedStatus:  404,
 			ExpectedContent: []string{`"status":404`},
 		}
@@ -531,7 +573,7 @@ func TestCustomExerciseRules(t *testing.T) {
 		catalog := saveExercise(t, f.app, "")
 		return tests.ApiScenario{
 			Method:          http.MethodPatch,
-			URL:             "/api/collections/exercises/records/" + catalog.Id,
+			URL:             "/api/collections/weights_chest/records/" + catalog.Id,
 			Headers:         auth(f.adminTok),
 			Body:            strings.NewReader(`{"name":"Catalog Press"}`),
 			ExpectedStatus:  200,
@@ -547,7 +589,7 @@ func TestLapsedPremium(t *testing.T) {
 		mine := saveExercise(t, f.app, f.bob.Id) // bob is free: premium has lapsed
 		return tests.ApiScenario{
 			Method:          http.MethodGet,
-			URL:             "/api/collections/exercises/records/" + mine.Id,
+			URL:             "/api/collections/weights_chest/records/" + mine.Id,
 			Headers:         auth(f.bobTok),
 			ExpectedStatus:  200,
 			ExpectedContent: []string{mine.Id},
@@ -557,7 +599,7 @@ func TestLapsedPremium(t *testing.T) {
 		mine := saveExercise(t, f.app, f.bob.Id)
 		return tests.ApiScenario{
 			Method:          http.MethodPatch,
-			URL:             "/api/collections/exercises/records/" + mine.Id,
+			URL:             "/api/collections/weights_chest/records/" + mine.Id,
 			Headers:         auth(f.bobTok),
 			Body:            strings.NewReader(`{"name":"Still Mine"}`),
 			ExpectedStatus:  200,
@@ -570,7 +612,7 @@ func TestLapsedPremium(t *testing.T) {
 		setPremium(t, f.app, f.bob, false)
 		return tests.ApiScenario{
 			Method:          http.MethodPost,
-			URL:             "/api/collections/exercises/records",
+			URL:             "/api/collections/weights_chest/records",
 			Headers:         auth(f.bobTok),
 			Body:            strings.NewReader(customBody(t, f.app, f.bob.Id)),
 			ExpectedStatus:  400,
@@ -588,10 +630,10 @@ func TestDeletingAUserDeletesTheirExercises(t *testing.T) {
 	if err := f.app.Delete(f.bob); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := f.app.FindRecordById("exercises", mine.Id); err == nil {
+	if _, err := f.app.FindRecordById("weights_chest", mine.Id); err == nil {
 		t.Fatal("the deleted user's exercise is still there")
 	}
-	if _, err := f.app.FindRecordById("exercises", catalog.Id); err != nil {
+	if _, err := f.app.FindRecordById("weights_chest", catalog.Id); err != nil {
 		t.Fatal("the catalog exercise went with the user")
 	}
 }
