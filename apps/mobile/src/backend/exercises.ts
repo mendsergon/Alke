@@ -115,8 +115,8 @@ export async function prefetchExercises(
 }
 
 /**
- * A category's weight exercises, oldest added first. The list rule shows the catalog and
- * the caller's own; the token is sent when there is one.
+ * A category's weight exercises, oldest added first. The list rule shows the
+ * catalog and the caller's own; the token is sent when there is one.
  */
 export async function listExercisesIn(
   category: { id: string; name: string },
