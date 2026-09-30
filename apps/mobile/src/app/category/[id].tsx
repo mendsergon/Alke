@@ -14,7 +14,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
-import { Canvas, RoundedRect } from '@shopify/react-native-skia';
+import { Canvas, Group, RoundedRect } from '@shopify/react-native-skia';
 import { Stack, useLocalSearchParams, useNavigation, type NativeStackNavigationProp } from 'expo-router';
 import { useBack } from '../../navigation/use-back';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -78,7 +78,7 @@ export default function CategoryScreen() {
   const [exercises, setExercises] = useState<Exercise[] | null>(() => cachedExercisesIn(id) ?? null);
   const [query, setQuery] = useState('');
   const [view, setView] = useState<View_>('list');
-  const { width } = useWindowDimensions();
+  const { width, height: screen } = useWindowDimensions();
   const q = query.trim().toLowerCase();
   const shown = useMemo(
     () => exercises?.filter((e) => e.name.toLowerCase().includes(q)) ?? [],
@@ -275,7 +275,15 @@ export default function CategoryScreen() {
           <EmptyState line={exercises.length === 0 ? 'No exercises yet.' : 'No exercises match.'} />
         ) : (
           <View style={switching ? { minHeight: tallest } : undefined}>
-            <Surfaces count={shown.length} g={g} height={tallest} progress={progress} />
+            <Surfaces
+              count={shown.length}
+              g={g}
+              height={tallest}
+              progress={progress}
+              scrollY={scrollY}
+              top={cardsTop}
+              screen={screen}
+            />
             {view === 'list' || showing === 'list' || both ? (
               <Animated.View
                 pointerEvents={view === 'list' ? 'auto' : 'none'}
@@ -400,21 +408,45 @@ function Surfaces({
   g,
   height,
   progress,
+  scrollY,
+  top,
+  screen,
 }: {
   count: number;
   g: Geometry;
   height: number;
   progress: SharedValue<number>;
+  /** The page's scroll offset. */
+  scrollY: SharedValue<number>;
+  /** Where the cards start on the page. */
+  top: number;
+  /** The screen's height. */
+  screen: number;
 }) {
   // Read here: the canvas draws its children in its own tree, which the app's
   // theme does not reach.
   const { c } = useTheme();
+  // The canvas is one screen tall and moves down the page with the scroll,
+  // drawing the cards shifted back by as much: a canvas as tall as the whole
+  // list outgrows the largest texture the GPU can make (8192px on the
+  // simulator), and the app aborts.
+  const tall = Math.min(height, screen);
+  const offset = useDerivedValue(() => Math.min(Math.max(0, scrollY.value - top), Math.max(0, height - tall)));
+  const follow = useAnimatedStyle(() => ({ transform: [{ translateY: offset.value }] }));
+  const shift = useDerivedValue(() => [{ translateY: -offset.value }]);
   return (
-    <Canvas pointerEvents="none" style={{ position: 'absolute', left: 0, top: 0, width: g.content, height }}>
-      {Array.from({ length: count }, (_, i) => (
-        <Surface key={i} index={i} g={g} progress={progress} fill={c.surface} line={c.border} />
-      ))}
-    </Canvas>
+    <Animated.View
+      pointerEvents="none"
+      style={[{ position: 'absolute', left: 0, top: 0, width: g.content, height: tall }, follow]}
+    >
+      <Canvas style={{ width: g.content, height: tall }}>
+        <Group transform={shift}>
+          {Array.from({ length: count }, (_, i) => (
+            <Surface key={i} index={i} g={g} progress={progress} fill={c.surface} line={c.border} />
+          ))}
+        </Group>
+      </Canvas>
+    </Animated.View>
   );
 }
 
