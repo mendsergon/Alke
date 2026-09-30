@@ -81,7 +81,7 @@ async function fetchWeights(category: { id: string; name: string }, token: strin
     const own = encodeURIComponent(`category="${category.id}"`);
     const [exercises, muscles] = await Promise.all([
       fetch(
-        `${POCKETBASE_URL}/api/collections/${weightsCollection(category.name)}/records?perPage=500&sort=name&${FIELDS}`,
+        `${POCKETBASE_URL}/api/collections/${weightsCollection(category.name)}/records?perPage=500&sort=created&${FIELDS}`,
         { headers },
       ),
       fetch(`${POCKETBASE_URL}/api/collections/muscles/records?perPage=500&sort=position&filter=${own}&fields=name,figure`, {
@@ -115,7 +115,7 @@ export async function prefetchExercises(
 }
 
 /**
- * A category's weight exercises, by name. The list rule shows the catalog and
+ * A category's weight exercises, oldest added first. The list rule shows the catalog and
  * the caller's own; the token is sent when there is one.
  */
 export async function listExercisesIn(
