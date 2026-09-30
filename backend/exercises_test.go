@@ -11,25 +11,11 @@ import (
 	"github.com/pocketbase/pocketbase/tests"
 )
 
-// The thirteen muscle categories in Stavros's order, each with the muscles it
-// covers. Rear delts sit with the other delt heads under Shoulders.
-var wantCategories = []struct {
-	name    string
-	muscles []string
-}{
-	{"Chest", []string{"Chest"}},
-	{"Back", []string{"Lats", "Traps", "Erectors"}},
-	{"Biceps", []string{"Biceps"}},
-	{"Triceps", []string{"Triceps"}},
-	{"Shoulders", []string{"Delts", "Side delts", "Rear delts"}},
-	{"Quads", []string{"Quads"}},
-	{"Hamstrings", []string{"Hamstrings"}},
-	{"Adductors", []string{"Adductors"}},
-	{"Glutes", []string{"Glutes"}},
-	{"Calves", []string{"Calves"}},
-	{"Abs", []string{"Abs", "Obliques"}},
-	{"Forearms", []string{"Forearms", "Brachialis"}},
-	{"Neck", []string{"Neck"}},
+// The thirteen muscle categories in Stavros's order. The muscles under each
+// are in the muscles collection.
+var wantCategories = []string{
+	"Chest", "Back", "Biceps", "Triceps", "Shoulders", "Quads", "Hamstrings",
+	"Adductors", "Glutes", "Calves", "Abs", "Forearms", "Neck",
 }
 
 func TestMuscleCategoriesAreSeededInOrder(t *testing.T) {
@@ -40,17 +26,41 @@ func TestMuscleCategoriesAreSeededInOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got) != len(wantCategories) {
-		t.Fatalf("categories: got %d, want %d", len(got), len(wantCategories))
+	var names []string
+	for _, r := range got {
+		names = append(names, r.GetString("name"))
 	}
-	for i, r := range got {
-		var muscles []string
-		if err := json.Unmarshal([]byte(r.GetString("muscles")), &muscles); err != nil {
-			t.Fatal(err)
+	if strings.Join(names, ",") != strings.Join(wantCategories, ",") {
+		t.Fatalf("categories: got %v, want %v", names, wantCategories)
+	}
+}
+
+// An exercise has no icon of its own and a category no list of muscles; the
+// dashboard shows related records by name.
+func TestTheCatalogReadsPlainly(t *testing.T) {
+	app := newProgramsApp(t)
+	defer app.Cleanup()
+
+	exercises, _ := app.FindCollectionByNameOrId("exercises")
+	if exercises.Fields.GetByName("icon") != nil {
+		t.Fatal("exercises still carry an icon field")
+	}
+	if exercises.Fields.GetByName("owner").(*core.RelationField).Help == "" {
+		t.Fatal("owner does not say what it is for")
+	}
+	categories, _ := app.FindCollectionByNameOrId("muscle_categories")
+	if categories.Fields.GetByName("muscles") != nil {
+		t.Fatal("categories still list their muscles")
+	}
+	for _, name := range []string{"exercises", "muscle_categories", "muscles", "exercise_types"} {
+		c, _ := app.FindCollectionByNameOrId(name)
+		if !c.Fields.GetByName("name").(*core.TextField).Presentable {
+			t.Errorf("%s: name is not shown for its records", name)
 		}
-		if r.GetString("name") != wantCategories[i].name || strings.Join(muscles, ",") != strings.Join(wantCategories[i].muscles, ",") {
-			t.Errorf("category %d: got %s %v, want %s %v", i+1, r.GetString("name"), muscles, wantCategories[i].name, wantCategories[i].muscles)
-		}
+	}
+	users, _ := app.FindCollectionByNameOrId("users")
+	if !users.Fields.GetByName("email").(*core.EmailField).Presentable {
+		t.Error("users: email is not shown for their records")
 	}
 }
 
@@ -172,7 +182,6 @@ func exerciseType(t testing.TB, app core.App, name string) string {
 func exerciseBody(t testing.TB, app core.App) string {
 	b, _ := json.Marshal(map[string]any{
 		"name":              "Test Press",
-		"icon":              "bench",
 		"main_muscle":       muscle(t, app, "Chest"),
 		"secondary_muscles": []string{muscle(t, app, "Triceps"), muscle(t, app, "Front delts")},
 		"type":              exerciseType(t, app, "Free weight"),
@@ -264,7 +273,6 @@ func TestAddingATypeIsOneRow(t *testing.T) {
 	col, _ := app.FindCollectionByNameOrId("exercises")
 	r := core.NewRecord(col)
 	r.Set("name", "Rowing Machine")
-	r.Set("icon", "row")
 	r.Set("main_muscle", muscle(t, app, "Lats"))
 	r.Set("type", aerobic.Id)
 	if err := app.Save(r); err != nil {
@@ -294,7 +302,6 @@ func TestExerciseShape(t *testing.T) {
 			col, _ := app.FindCollectionByNameOrId("exercises")
 			r := core.NewRecord(col)
 			r.Set("name", "Test Press")
-			r.Set("icon", "bench")
 			r.Set("main_muscle", muscle(t, app, "Chest"))
 			r.Set("secondary_muscles", []string{muscle(t, app, "Triceps")})
 			r.Set("type", exerciseType(t, app, "Free weight"))
@@ -328,7 +335,6 @@ func setPremium(t testing.TB, app core.App, u *core.Record, premium bool) {
 func customBody(t testing.TB, app core.App, owner string) string {
 	b, _ := json.Marshal(map[string]any{
 		"name":        "My Press",
-		"icon":        "bench",
 		"owner":       owner,
 		"main_muscle": muscle(t, app, "Chest"),
 		"type":        exerciseType(t, app, "Cable"),
@@ -342,7 +348,6 @@ func saveExercise(t testing.TB, app core.App, owner string) *core.Record {
 	col, _ := app.FindCollectionByNameOrId("exercises")
 	r := core.NewRecord(col)
 	r.Set("name", "Stored Press")
-	r.Set("icon", "bench")
 	r.Set("owner", owner)
 	r.Set("main_muscle", muscle(t, app, "Chest"))
 	r.Set("type", exerciseType(t, app, "Machine"))
