@@ -381,6 +381,7 @@ export const MUSCLE_REGIONS: Record<string, { view: FigureView; regions: readonl
   "Traps": { view: "back", regions: [2, 3, 4, 5, 6, 7] },
   "Quads": { view: "front", regions: [41, 42, 43, 44, 45, 46] },
   "Forearms": { view: "front", regions: [35, 36, 37, 38] },
+  "Front delts": { view: "front", regions: [3, 4] },
 };
 
 /** Regions a muscle also covers in the view its icon does not use. */

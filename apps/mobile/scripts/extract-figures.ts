@@ -231,6 +231,18 @@ for (const i of icons) if (!byMuscle.has(i.muscle)) byMuscle.set(i.muscle, i);
 for (const [muscle, i] of byMuscle) {
   lines.push(`  ${q(muscle)}: { view: ${q(i.view)}, regions: [${i.accent.join(', ')}] },`);
 }
+// Muscles the design draws only as part of a larger set. The overhead press
+// lights "Delts" — the front and side heads together — and the lateral raise
+// lights the side heads alone, so the front heads are the first without the
+// second.
+for (const [muscle, whole, without] of [['Front delts', 'Delts', 'Side delts']] as const) {
+  const w = byMuscle.get(whole);
+  const o = byMuscle.get(without);
+  if (!w || !o || w.view !== o.view) throw new Error(`cannot derive ${muscle}`);
+  const regions = w.accent.filter((r) => !o.accent.includes(r));
+  if (regions.length === 0) throw new Error(`${muscle} has no regions of its own`);
+  lines.push(`  ${q(muscle)}: { view: ${q(w.view)}, regions: [${regions.join(', ')}] },`);
+}
 lines.push('};');
 lines.push('');
 
