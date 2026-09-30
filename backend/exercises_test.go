@@ -85,7 +85,7 @@ var wantMuscles = []struct {
 	category string
 	muscles  []string
 }{
-	{"Chest", []string{"Chest"}},
+	{"Chest", []string{"Pecs"}},
 	{"Back", []string{"Lats", "Traps", "Erectors"}},
 	{"Biceps", []string{"Biceps"}},
 	{"Triceps", []string{"Triceps"}},
@@ -127,8 +127,8 @@ func TestMusclesSitUnderTheirCategory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if front.GetString("figure") != "Delts" {
-		t.Fatalf("front delts drawn as %q, want Delts", front.GetString("figure"))
+	if front.GetString("figure") != "Front delts" {
+		t.Fatalf("front delts drawn as %q, want Front delts", front.GetString("figure"))
 	}
 }
 
@@ -182,7 +182,7 @@ func exerciseType(t testing.TB, app core.App, name string) string {
 func exerciseBody(t testing.TB, app core.App) string {
 	b, _ := json.Marshal(map[string]any{
 		"name":              "Test Press",
-		"main_muscle":       muscle(t, app, "Chest"),
+		"main_muscle":       muscle(t, app, "Pecs"),
 		"secondary_muscles": []string{muscle(t, app, "Triceps"), muscle(t, app, "Front delts")},
 		"type":              exerciseType(t, app, "Free weight"),
 	})
@@ -291,7 +291,7 @@ func TestExerciseShape(t *testing.T) {
 		},
 		"a type that does not exist": func(app core.App, r *core.Record) { r.Set("type", "nosuchtypexxxx1") },
 		"the main muscle also secondary": func(app core.App, r *core.Record) {
-			r.Set("secondary_muscles", []string{muscle(t, app, "Chest")})
+			r.Set("secondary_muscles", []string{muscle(t, app, "Pecs")})
 		},
 	}
 	for name, spoil := range cases {
@@ -302,7 +302,7 @@ func TestExerciseShape(t *testing.T) {
 			col, _ := app.FindCollectionByNameOrId("exercises")
 			r := core.NewRecord(col)
 			r.Set("name", "Test Press")
-			r.Set("main_muscle", muscle(t, app, "Chest"))
+			r.Set("main_muscle", muscle(t, app, "Pecs"))
 			r.Set("secondary_muscles", []string{muscle(t, app, "Triceps")})
 			r.Set("type", exerciseType(t, app, "Free weight"))
 			if err := app.Save(r); err != nil {
@@ -336,7 +336,7 @@ func customBody(t testing.TB, app core.App, owner string) string {
 	b, _ := json.Marshal(map[string]any{
 		"name":        "My Press",
 		"owner":       owner,
-		"main_muscle": muscle(t, app, "Chest"),
+		"main_muscle": muscle(t, app, "Pecs"),
 		"type":        exerciseType(t, app, "Cable"),
 	})
 	return string(b)
@@ -349,7 +349,7 @@ func saveExercise(t testing.TB, app core.App, owner string) *core.Record {
 	r := core.NewRecord(col)
 	r.Set("name", "Stored Press")
 	r.Set("owner", owner)
-	r.Set("main_muscle", muscle(t, app, "Chest"))
+	r.Set("main_muscle", muscle(t, app, "Pecs"))
 	r.Set("type", exerciseType(t, app, "Machine"))
 	if err := app.Save(r); err != nil {
 		t.Fatal(err)
