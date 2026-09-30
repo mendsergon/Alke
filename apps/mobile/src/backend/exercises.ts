@@ -19,7 +19,7 @@ export type Exercise = {
 type ExerciseRow = Omit<Exercise, 'icon' | 'type' | 'main' | 'secondary'> & {
   expand?: {
     type?: { name: string };
-    main_muscle?: { category?: string; figure: string };
+    main_muscle?: { figure: string };
     secondary_muscles?: { figure: string }[];
   };
 };
@@ -43,46 +43,56 @@ export function cachedExercisesIn(categoryId: string): Exercise[] | undefined {
 }
 
 /**
- * Every exercise the caller can see, fetched once and filed by the category its
- * main muscle belongs to.
- * Called where the categories are listed, before one is opened.
+ * The collection a category's weight exercises live in: weights_ and the
+ * category's name, lower case, spaces as underscores (weights_chest, …).
  */
-export async function prefetchExercises(categoryIds: readonly string[], token: string | null): Promise<void> {
-  try {
-    const response = await fetch(
-      `${POCKETBASE_URL}/api/collections/exercises/records?perPage=1000&sort=name&expand=type,main_muscle,secondary_muscles&fields=id,name,expand.type.name,expand.main_muscle.category,expand.main_muscle.figure,expand.secondary_muscles.figure`,
-      { headers: token ? { Authorization: token } : {} },
-    );
-    if (!response.ok) return;
-    const { items } = (await response.json()) as { items: ExerciseRow[] };
-    for (const id of categoryIds) {
-      byCategory.set(
-        id,
-        items.filter((r) => r.expand?.main_muscle?.category === id).map(toExercise),
-      );
-    }
-  } catch {
-    // The category screen fetches its own list; this only saves it the wait.
-  }
+export function weightsCollection(category: string): string {
+  return `weights_${category.toLowerCase().replace(/ /g, '_')}`;
 }
 
-/**
- * The exercises whose main muscle belongs to this category, by name. The list rule
- * shows the catalog and the caller's own; the token is sent when there is one.
- */
-export async function listExercisesIn(categoryId: string, token: string | null): Promise<Exercise[] | null> {
-  const filter = encodeURIComponent(`main_muscle.category = "${categoryId}"`);
+const FIELDS =
+  'expand=type,main_muscle,secondary_muscles&fields=id,name,expand.type.name,expand.main_muscle.figure,expand.secondary_muscles.figure';
+
+async function fetchWeights(category: string, token: string | null): Promise<Exercise[] | null> {
   try {
     const response = await fetch(
-      `${POCKETBASE_URL}/api/collections/exercises/records?perPage=200&sort=name&expand=type,main_muscle,secondary_muscles&fields=id,name,expand.type.name,expand.main_muscle.figure,expand.secondary_muscles.figure&filter=${filter}`,
+      `${POCKETBASE_URL}/api/collections/${weightsCollection(category)}/records?perPage=500&sort=name&${FIELDS}`,
       { headers: token ? { Authorization: token } : {} },
     );
     if (!response.ok) return null;
     const { items } = (await response.json()) as { items: ExerciseRow[] };
-    const exercises = items.map(toExercise);
-    byCategory.set(categoryId, exercises);
-    return exercises;
+    return items.map(toExercise);
   } catch {
     return null;
   }
+}
+
+/**
+ * Every category's weight exercises, fetched together and filed by category.
+ * Called where the categories are listed, before one is opened.
+ */
+export async function prefetchExercises(
+  categories: readonly { id: string; name: string }[],
+  token: string | null,
+): Promise<void> {
+  await Promise.all(
+    categories.map(async (c) => {
+      const exercises = await fetchWeights(c.name, token);
+      // The category screen fetches its own list; this only saves it the wait.
+      if (exercises) byCategory.set(c.id, exercises);
+    }),
+  );
+}
+
+/**
+ * A category's weight exercises, by name. The list rule shows the catalog and
+ * the caller's own; the token is sent when there is one.
+ */
+export async function listExercisesIn(
+  category: { id: string; name: string },
+  token: string | null,
+): Promise<Exercise[] | null> {
+  const exercises = await fetchWeights(category.name, token);
+  if (exercises) byCategory.set(category.id, exercises);
+  return exercises;
 }

@@ -230,7 +230,7 @@ export default function CategoryScreen() {
 
   useEffect(() => {
     let live = true;
-    void listExercisesIn(id, token).then((items) => {
+    void listExercisesIn({ id, name: name ?? '' }, token).then((items) => {
       if (!live) return;
       // The list Explore fetched is normally this one; replacing it with an
       // equal copy would redraw every card while the screen slides in.
@@ -239,7 +239,7 @@ export default function CategoryScreen() {
     return () => {
       live = false;
     };
-  }, [id, token]);
+  }, [id, name, token]);
 
   const layer = (v: View_) =>
     v === showing ? {} : { position: 'absolute' as const, top: 0, left: 0, right: 0 };

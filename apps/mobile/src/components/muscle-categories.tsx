@@ -27,7 +27,7 @@ export function MuscleCategories({ onOpen }: { onOpen?: (category: MuscleCategor
     void listMuscleCategories().then((items) => {
       if (live && items) setCategories(items);
       // Where a tile opens its exercises, have them before it is tapped.
-      if (items && opens) void prefetchExercises(items.map((category) => category.id), token);
+      if (items && opens) void prefetchExercises(items, token);
     });
     return () => {
       live = false;
