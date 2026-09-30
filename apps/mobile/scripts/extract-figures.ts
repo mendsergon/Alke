@@ -243,6 +243,30 @@ for (const [muscle, whole, without] of [['Front delts', 'Delts', 'Side delts']] 
   if (regions.length === 0) throw new Error(`${muscle} has no regions of its own`);
   lines.push(`  ${q(muscle)}: { view: ${q(w.view)}, regions: [${regions.join(', ')}] },`);
 }
+// The forearm is drawn as one muscle but trains as two sides (Stavros,
+// 30 September 2026): the curling side, the flexors, is the inner strip of
+// each forearm from the front — the palm side; the extending side, the
+// extensors, is the outer strip from the front and the whole forearm from the
+// back.
+const centreX = (d: string) => {
+  const n = (d.match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number);
+  let x = 0;
+  for (let k = 0; k < n.length; k += 2) x += n[k]!;
+  return x / (n.length / 2);
+};
+const forearms = byMuscle.get('Forearms');
+if (!forearms || forearms.view !== 'front') throw new Error('cannot split Forearms');
+const flexors = forearms.accent.filter((r) => {
+  const x = centreX(views.front.regions[r]!);
+  return !forearms.accent.some((o) => {
+    const ox = centreX(views.front.regions[o]!);
+    return o !== r && Math.sign(ox) === Math.sign(x) && Math.abs(ox) < Math.abs(x);
+  });
+});
+const extensors = forearms.accent.filter((r) => !flexors.includes(r));
+if (flexors.length !== 2 || extensors.length !== 2) throw new Error('Forearms is not two strips per arm');
+lines.push(`  ${q('Forearm flexors')}: { view: "front", regions: [${flexors.join(', ')}] },`);
+lines.push(`  ${q('Forearm extensors')}: { view: "front", regions: [${extensors.join(', ')}] },`);
 lines.push('};');
 lines.push('');
 
@@ -275,6 +299,10 @@ for (const [muscle, i] of byMuscle) {
     .map((_, r) => r)
     .filter((r) => !owned[other].has(r) && colourAt(other, r) === colourOf(i));
   if (extra.length > 0) lines.push(`  ${q(muscle)}: { view: ${q(other)}, regions: [${extra.join(', ')}] },`);
+  // The back of the forearm is the extending side.
+  if (muscle === 'Forearms' && extra.length > 0) {
+    lines.push(`  ${q('Forearm extensors')}: { view: ${q(other)}, regions: [${extra.join(', ')}] },`);
+  }
 }
 lines.push('};');
 lines.push('');
