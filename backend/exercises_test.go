@@ -116,6 +116,17 @@ func TestTheMainMuscleIsTheCategorysOwn(t *testing.T) {
 	for _, w := range wantMuscles {
 		col, _ := app.FindCollectionByNameOrId(weights(w.category))
 		f := col.Fields.GetByName("main_muscle")
+		if w.category == "Forearms" {
+			if f != nil {
+				t.Errorf("%s: a single main muscle choice, not a checkbox per muscle", col.Name)
+			}
+			for _, m := range w.muscles {
+				if _, ok := col.Fields.GetByName(muscleField(m)).(*core.BoolField); !ok {
+					t.Errorf("%s: no checkbox for %s", col.Name, m)
+				}
+			}
+			continue
+		}
 		if len(w.muscles) == 1 {
 			if f != nil {
 				t.Errorf("%s: a main muscle to pick, with only %s to pick", col.Name, w.muscles[0])
@@ -139,6 +150,49 @@ func TestTheMainMuscleIsTheCategorysOwn(t *testing.T) {
 	r.Set("type", exerciseType(t, app, "Cable"))
 	if err := app.Save(r); err == nil {
 		t.Fatal("Pecs was taken as the main muscle of a back exercise")
+	}
+}
+
+// A forearm exercise ticks its main muscles: any of the three, up to all of
+// them, but at least one, and none also secondary.
+func muscleField(m string) string { return strings.ReplaceAll(strings.ToLower(m), " ", "_") }
+
+func TestForearmMainMusclesAreTicked(t *testing.T) {
+	cases := map[string]struct {
+		ticked    []string
+		secondary []string
+		ok        bool
+	}{
+		"one ticked":             {[]string{"Brachialis"}, nil, true},
+		"all three ticked":       {[]string{"Forearm extensors", "Forearm flexors", "Brachialis"}, []string{"Biceps"}, true},
+		"none ticked":            {nil, nil, false},
+		"a ticked one secondary": {[]string{"Forearm flexors"}, []string{"Forearm flexors"}, false},
+	}
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			app := newProgramsApp(t)
+			defer app.Cleanup()
+
+			col, _ := app.FindCollectionByNameOrId("weights_forearms")
+			r := core.NewRecord(col)
+			r.Set("name", "Hammer Curl")
+			r.Set("type", exerciseType(t, app, "Free weight"))
+			for _, m := range c.ticked {
+				r.Set(muscleField(m), true)
+			}
+			var secondary []string
+			for _, m := range c.secondary {
+				secondary = append(secondary, muscle(t, app, m))
+			}
+			r.Set("secondary_muscles", secondary)
+			err := app.Save(r)
+			if c.ok && err != nil {
+				t.Fatalf("refused: %v", err)
+			}
+			if !c.ok && err == nil {
+				t.Fatal("accepted")
+			}
+		})
 	}
 }
 
