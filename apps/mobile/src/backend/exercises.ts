@@ -1,8 +1,8 @@
-import { POCKETBASE_URL } from './pocketbase';
-import type { ExerciseIconKey } from '../figure/figure.generated';
-import { iconForMuscle } from '../figure/figure';
+import { POCKETBASE_URL } from "./pocketbase";
+import type { ExerciseIconKey } from "../figure/figure.generated";
+import { iconForMuscle } from "../figure/figure";
 
-/** An exercise from the `exercises` collection, as a list row needs it. */
+/** A weight exercise from its category's collection, as a list row needs it. */
 export type Exercise = {
   id: string;
   name: string;
@@ -16,22 +16,36 @@ export type Exercise = {
   secondary: string[];
 };
 
-type ExerciseRow = Omit<Exercise, 'icon' | 'type' | 'main' | 'secondary'> & {
+type ExerciseRow = Omit<Exercise, "icon" | "type" | "main" | "secondary"> & {
+  /** The chosen muscle's name; absent where the category has one muscle. */
+  main_muscle?: string;
   expand?: {
     type?: { name: string };
-    main_muscle?: { figure: string };
     secondary_muscles?: { figure: string }[];
   };
 };
 
-const toExercise = (r: ExerciseRow): Exercise => ({
-  id: r.id,
-  name: r.name,
-  icon: iconForMuscle(r.expand?.main_muscle?.figure ?? ''),
-  type: r.expand?.type?.name ?? '',
-  main: r.expand?.main_muscle?.figure ?? '',
-  secondary: (r.expand?.secondary_muscles ?? []).map((m) => m.figure),
-});
+type MuscleRow = { name: string; figure: string };
+
+// The main muscle is one of the category's own: the one chosen by name, or
+// the category's only muscle.
+const toExercise = (r: ExerciseRow, muscles: MuscleRow[]): Exercise => {
+  const main =
+    (r.main_muscle
+      ? muscles.find((m) => m.name === r.main_muscle)
+      : muscles.length === 1
+        ? muscles[0]
+        : undefined
+    )?.figure ?? "";
+  return {
+    id: r.id,
+    name: r.name,
+    icon: iconForMuscle(main),
+    type: r.expand?.type?.name ?? "",
+    main,
+    secondary: (r.expand?.secondary_muscles ?? []).map((m) => m.figure),
+  };
+};
 
 // Each category's exercises as last fetched, so a category screen can open
 // with its list already in the first frame.
@@ -47,21 +61,34 @@ export function cachedExercisesIn(categoryId: string): Exercise[] | undefined {
  * category's name, lower case, spaces as underscores (weights_chest, …).
  */
 export function weightsCollection(category: string): string {
-  return `weights_${category.toLowerCase().replace(/ /g, '_')}`;
+  return `weights_${category.toLowerCase().replace(/ /g, "_")}`;
 }
 
 const FIELDS =
-  'expand=type,main_muscle,secondary_muscles&fields=id,name,expand.type.name,expand.main_muscle.figure,expand.secondary_muscles.figure';
+  "expand=type,secondary_muscles&fields=id,name,main_muscle,expand.type.name,expand.secondary_muscles.figure";
 
-async function fetchWeights(category: string, token: string | null): Promise<Exercise[] | null> {
+async function fetchWeights(
+  category: { id: string; name: string },
+  token: string | null,
+): Promise<Exercise[] | null> {
   try {
-    const response = await fetch(
-      `${POCKETBASE_URL}/api/collections/${weightsCollection(category)}/records?perPage=500&sort=name&${FIELDS}`,
-      { headers: token ? { Authorization: token } : {} },
-    );
-    if (!response.ok) return null;
-    const { items } = (await response.json()) as { items: ExerciseRow[] };
-    return items.map(toExercise);
+    const headers: Record<string, string> = token
+      ? { Authorization: token }
+      : {};
+    const [exercises, muscles] = await Promise.all([
+      fetch(
+        `${POCKETBASE_URL}/api/collections/${weightsCollection(category.name)}/records?perPage=500&sort=name&${FIELDS}`,
+        { headers },
+      ),
+      fetch(
+        `${POCKETBASE_URL}/api/collections/muscles/records?perPage=500&sort=position&filter=${encodeURIComponent(`category="${category.id}"`)}&fields=name,figure`,
+        { headers },
+      ),
+    ]);
+    if (!exercises.ok || !muscles.ok) return null;
+    const { items } = (await exercises.json()) as { items: ExerciseRow[] };
+    const { items: own } = (await muscles.json()) as { items: MuscleRow[] };
+    return items.map((r) => toExercise(r, own));
   } catch {
     return null;
   }
@@ -77,7 +104,7 @@ export async function prefetchExercises(
 ): Promise<void> {
   await Promise.all(
     categories.map(async (c) => {
-      const exercises = await fetchWeights(c.name, token);
+      const exercises = await fetchWeights(c, token);
       // The category screen fetches its own list; this only saves it the wait.
       if (exercises) byCategory.set(c.id, exercises);
     }),
@@ -92,7 +119,7 @@ export async function listExercisesIn(
   category: { id: string; name: string },
   token: string | null,
 ): Promise<Exercise[] | null> {
-  const exercises = await fetchWeights(category.name, token);
+  const exercises = await fetchWeights(category, token);
   if (exercises) byCategory.set(category.id, exercises);
   return exercises;
 }
