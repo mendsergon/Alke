@@ -8,7 +8,7 @@ export type Exercise = {
   name: string;
   /** The icon drawn for its main muscles; none when they have no icon. */
   icon: ExerciseIconKey | undefined;
-  /** The exercise type's name: Free weight, Cable, Machine. */
+  /** The exercise type's name: Free weight, Cable, Machine, Bodyweight. */
   type: string;
   /** Its main muscles, by the names the body figure uses. */
   main: readonly string[];
