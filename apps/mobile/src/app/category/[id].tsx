@@ -66,6 +66,22 @@ function frameIn(v: View_, g: Geometry, i: number) {
       };
 }
 
+/** The cards built: from the first index up to, not including, the last. */
+type Span = readonly [number, number];
+
+/**
+ * The cards of a view within a screen above and two below a scroll offset,
+ * the offset measured from the top of the cards. Only these are built, so a
+ * category costs the same with ten exercises as with a thousand.
+ */
+function spanIn(v: View_, g: Geometry, count: number, top: number, screen: number): Span {
+  const step = v === 'list' ? g.listStep : g.gridStep;
+  const perRow = v === 'list' ? 1 : 2;
+  const from = Math.max(0, Math.floor((top - screen) / step) * perRow);
+  const to = Math.min(count, Math.ceil((top + 2 * screen) / step) * perRow);
+  return [Math.min(from, to), to];
+}
+
 export default function CategoryScreen() {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
@@ -160,6 +176,21 @@ export default function CategoryScreen() {
   // move to the other view's place is never cut short by the page's end.
   const [showing, setShowing] = useState<View_>('list');
   const [switching, setSwitching] = useState(false);
+  // Which cards are built follows the scroll in steps of half a screen, so
+  // React commits only when a new step is reached, never while cards move.
+  const half = screen / 2;
+  const [spot, setSpot] = useState(0);
+  const moving = useSharedValue(false);
+  useAnimatedReaction(
+    () => (moving.value ? -1 : Math.floor(scrollY.value / half)),
+    (now, before) => {
+      if (now >= 0 && now !== before) scheduleOnRN(setSpot, now);
+    },
+  );
+  // While switching, the cards seen in either view on the way: those on the
+  // screen when the switch starts and those on it when it ends.
+  const [held, setHeld] = useState<Span | null>(null);
+  const span: Span = held ?? spanIn(view, g, shown.length, spot * half - cardsTop, screen);
   const tallest = Math.max(
     shown.length * step.list - tokens.space[12],
     Math.ceil(shown.length / 2) * step.grid - tokens.space[12],
@@ -167,6 +198,7 @@ export default function CategoryScreen() {
 
   const switchView = (next: View_) => {
     if (next === view) return;
+    let landing = scrollY.value;
     const under = scrollY.value + insets.top + tokens.sizing.tapTarget.ios - cardsTop;
     if (headerLength > 0 && under > 0 && shown.length > 0) {
       const row = Math.min(Math.floor(under / step[view]), Math.ceil(shown.length / perRow[view]) - 1);
@@ -178,16 +210,23 @@ export default function CategoryScreen() {
       anchorGrid.value = cardsTop + frameIn('grid', g, anchor.current).y;
       anchorOnScreen.value = cardsTop + frameIn(view, g, anchor.current).y - scrollY.value;
       following.value = true;
+      landing = Math.max(0, (next === 'grid' ? anchorGrid.value : anchorList.value) - anchorOnScreen.value);
     }
     // React commits everything that changes before the move starts (the
     // view, the header's menu, the page held at its taller height); the move
     // itself is started by the layout effect below, after that commit, so no
     // React work lands while the cards are moving.
     if (!ANIMATE_VIEW_SWITCH) {
+      setSpot(Math.floor(landing / half));
       setShowing(next);
       setView(next);
       return;
     }
+    const a = spanIn(view, g, shown.length, scrollY.value - cardsTop, screen);
+    const b = spanIn(next, g, shown.length, landing - cardsTop, screen);
+    moving.value = true;
+    setHeld([Math.min(a[0], b[0]), Math.max(a[1], b[1])]);
+    setSpot(Math.floor(landing / half));
     setSwitching(true);
     setView(next);
   };
@@ -196,6 +235,8 @@ export default function CategoryScreen() {
   const settle = (next: View_) => {
     setShowing(next);
     setSwitching(false);
+    setHeld(null);
+    moving.value = false;
   };
   const started = useRef<View_>('list');
   useLayoutEffect(() => {
@@ -241,8 +282,13 @@ export default function CategoryScreen() {
     };
   }, [id, name, token]);
 
+  // Each view is as tall as all its cards, built or not.
+  const length = {
+    list: shown.length * step.list - tokens.space[12],
+    grid: Math.ceil(shown.length / 2) * step.grid - tokens.space[12],
+  };
   const layer = (v: View_) =>
-    v === showing ? {} : { position: 'absolute' as const, top: 0, left: 0, right: 0 };
+    v === showing ? { height: length[v] } : { position: 'absolute' as const, top: 0, left: 0, right: 0, height: length[v] };
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
@@ -276,7 +322,7 @@ export default function CategoryScreen() {
         ) : (
           <View style={switching ? { minHeight: tallest } : undefined}>
             <Surfaces
-              count={shown.length}
+              span={span}
               g={g}
               height={tallest}
               progress={progress}
@@ -287,17 +333,17 @@ export default function CategoryScreen() {
             {view === 'list' || showing === 'list' || both ? (
               <Animated.View
                 pointerEvents={view === 'list' ? 'auto' : 'none'}
-                style={[{ gap: tokens.space[12] }, layer('list'), listStyle]}
+                style={[layer('list'), listStyle]}
               >
-                <ListRows exercises={shown} g={g} progress={progress} />
+                <ListRows exercises={shown} from={span[0]} to={span[1]} g={g} progress={progress} />
               </Animated.View>
             ) : null}
             {view === 'grid' || showing === 'grid' || both ? (
               <Animated.View
                 pointerEvents={view === 'grid' ? 'auto' : 'none'}
-                style={[{ flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space[12] }, layer('grid'), gridStyle]}
+                style={[layer('grid'), gridStyle]}
               >
-                <GridCards exercises={shown} g={g} tile={tile} progress={progress} />
+                <GridCards exercises={shown} from={span[0]} to={span[1]} g={g} tile={tile} progress={progress} />
               </Animated.View>
             ) : null}
           </View>
@@ -388,7 +434,7 @@ function Travel({
     };
   });
   return (
-    <Animated.View style={[{ width: own.w, height: own.h }, style]}>
+    <Animated.View style={[{ position: 'absolute', left: own.x, top: own.y, width: own.w, height: own.h }, style]}>
       {/* The card's 1pt border is drawn by Surfaces; the padding sits inside it. */}
       <Pressable accessibilityRole="button" accessibilityLabel={label} style={{ flex: 1, padding: padding + 1 }}>
         {children}
@@ -404,7 +450,7 @@ function Travel({
  * its corners round, and none is laid out.
  */
 function Surfaces({
-  count,
+  span,
   g,
   height,
   progress,
@@ -412,7 +458,7 @@ function Surfaces({
   top,
   screen,
 }: {
-  count: number;
+  span: Span;
   g: Geometry;
   height: number;
   progress: SharedValue<number>;
@@ -441,8 +487,8 @@ function Surfaces({
     >
       <Canvas style={{ width: g.content, height: tall }}>
         <Group transform={shift}>
-          {Array.from({ length: count }, (_, i) => (
-            <Surface key={i} index={i} g={g} progress={progress} fill={c.surface} line={c.border} />
+          {Array.from({ length: span[1] - span[0] }, (_, k) => (
+            <Surface key={span[0] + k} index={span[0] + k} g={g} progress={progress} fill={c.surface} line={c.border} />
           ))}
         </Group>
       </Canvas>
@@ -496,16 +542,21 @@ function Surface({
 // switch.
 const ListRows = memo(function ListRows({
   exercises,
+  from,
+  to,
   g,
   progress,
 }: {
   exercises: readonly Exercise[];
+  /** The cards built: from this index up to, not including, `to`. */
+  from: number;
+  to: number;
   g: Geometry;
   progress: SharedValue<number>;
 }) {
   const { c } = useTheme();
-  return exercises.map((e, i) => (
-    <Travel key={e.id} as="list" index={i} g={g} progress={progress} label={e.name} padding={tokens.space[16]}>
+  return exercises.slice(from, to).map((e, k) => (
+    <Travel key={e.id} as="list" index={from + k} g={g} progress={progress} label={e.name} padding={tokens.space[16]}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[16] }}>
         {e.icon ? (
           <ExerciseIcon icon={e.icon} main={e.main} secondary={e.secondary} size={tokens.iconTile.size.sessionHeader} seamAll />
@@ -523,18 +574,23 @@ const ListRows = memo(function ListRows({
 // on page 31 labels them. Every card is the same height, so the rows line up.
 const GridCards = memo(function GridCards({
   exercises,
+  from,
+  to,
   g,
   tile,
   progress,
 }: {
   exercises: readonly Exercise[];
+  /** The cards built: from this index up to, not including, `to`. */
+  from: number;
+  to: number;
   g: Geometry;
   tile: number;
   progress: SharedValue<number>;
 }) {
   const { c } = useTheme();
-  return exercises.map((e, i) => (
-    <Travel key={e.id} as="grid" index={i} g={g} progress={progress} label={e.name} padding={tokens.space[12]}>
+  return exercises.slice(from, to).map((e, k) => (
+    <Travel key={e.id} as="grid" index={from + k} g={g} progress={progress} label={e.name} padding={tokens.space[12]}>
       <View style={{ gap: tokens.space[12] }}>
         {e.icon ? <ExerciseIcon icon={e.icon} main={e.main} secondary={e.secondary} size={tile} seamAll /> : null}
         <View style={{ gap: tokens.space[4] }}>
