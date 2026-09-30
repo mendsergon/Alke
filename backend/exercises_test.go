@@ -250,7 +250,7 @@ func TestMusclesSitUnderTheirCategory(t *testing.T) {
 }
 
 // The exercise types, in order. Adding one is a row in exercise_types.
-var wantTypes = []string{"Free weight", "Cable", "Machine"}
+var wantTypes = []string{"Free weight", "Cable", "Machine", "Bodyweight"}
 
 func TestExerciseTypesAreSeededInOrder(t *testing.T) {
 	app := newProgramsApp(t)
@@ -319,7 +319,7 @@ func TestCatalogRules(t *testing.T) {
 			Method:          http.MethodGet,
 			URL:             "/api/collections/exercise_types/records",
 			ExpectedStatus:  200,
-			ExpectedContent: []string{`"totalItems":3`},
+			ExpectedContent: []string{`"totalItems":4`},
 		}
 	})
 	run(t, "anyone reads the exercises", func(f *fixture) tests.ApiScenario {
@@ -345,7 +345,7 @@ func TestCatalogRules(t *testing.T) {
 			Method:          http.MethodPost,
 			URL:             "/api/collections/exercise_types/records",
 			Headers:         auth(f.aliceTok),
-			Body:            strings.NewReader(`{"name":"Aerobic","position":4}`),
+			Body:            strings.NewReader(`{"name":"Aerobic","position":5}`),
 			ExpectedStatus:  403,
 			ExpectedContent: []string{`"status":403`},
 		}
@@ -381,7 +381,7 @@ func TestAddingATypeIsOneRow(t *testing.T) {
 	types, _ := app.FindCollectionByNameOrId("exercise_types")
 	aerobic := core.NewRecord(types)
 	aerobic.Set("name", "Aerobic")
-	aerobic.Set("position", 4)
+	aerobic.Set("position", 5)
 	if err := app.Save(aerobic); err != nil {
 		t.Fatal(err)
 	}
