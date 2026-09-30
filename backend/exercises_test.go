@@ -99,7 +99,7 @@ func TestEachCategoryHasItsWeightsCollection(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: %v", weights(c), err)
 		}
-		for _, f := range []string{"name", "main_muscle", "secondary_muscles", "type", "owner"} {
+		for _, f := range []string{"name", "secondary_muscles", "type", "owner"} {
 			if col.Fields.GetByName(f) == nil {
 				t.Errorf("%s has no %s", weights(c), f)
 			}
@@ -107,17 +107,38 @@ func TestEachCategoryHasItsWeightsCollection(t *testing.T) {
 	}
 }
 
-func TestAMainMuscleFromAnotherCategoryIsRefused(t *testing.T) {
+// The main muscle is picked only from the category's own muscles; a category
+// with one muscle has nothing to pick.
+func TestTheMainMuscleIsTheCategorysOwn(t *testing.T) {
 	app := newProgramsApp(t)
 	defer app.Cleanup()
 
-	col, _ := app.FindCollectionByNameOrId("weights_chest")
+	for _, w := range wantMuscles {
+		col, _ := app.FindCollectionByNameOrId(weights(w.category))
+		f := col.Fields.GetByName("main_muscle")
+		if len(w.muscles) == 1 {
+			if f != nil {
+				t.Errorf("%s: a main muscle to pick, with only %s to pick", col.Name, w.muscles[0])
+			}
+			continue
+		}
+		choice, ok := f.(*core.SelectField)
+		if !ok {
+			t.Errorf("%s: main_muscle is not a choice of its muscles", col.Name)
+			continue
+		}
+		if strings.Join(choice.Values, ",") != strings.Join(w.muscles, ",") || !choice.Required || choice.MaxSelect != 1 {
+			t.Errorf("%s: main_muscle offers %v, want exactly one of %v", col.Name, choice.Values, w.muscles)
+		}
+	}
+
+	col, _ := app.FindCollectionByNameOrId("weights_back")
 	r := core.NewRecord(col)
 	r.Set("name", "Lat Pulldown")
-	r.Set("main_muscle", muscle(t, app, "Lats"))
+	r.Set("main_muscle", "Pecs")
 	r.Set("type", exerciseType(t, app, "Cable"))
 	if err := app.Save(r); err == nil {
-		t.Fatal("a back exercise was saved under chest")
+		t.Fatal("Pecs was taken as the main muscle of a back exercise")
 	}
 }
 
@@ -224,7 +245,6 @@ func exerciseType(t testing.TB, app core.App, name string) string {
 func exerciseBody(t testing.TB, app core.App) string {
 	b, _ := json.Marshal(map[string]any{
 		"name":              "Test Press",
-		"main_muscle":       muscle(t, app, "Pecs"),
 		"secondary_muscles": []string{muscle(t, app, "Triceps"), muscle(t, app, "Front delts")},
 		"type":              exerciseType(t, app, "Free weight"),
 	})
@@ -315,7 +335,7 @@ func TestAddingATypeIsOneRow(t *testing.T) {
 	col, _ := app.FindCollectionByNameOrId("weights_back")
 	r := core.NewRecord(col)
 	r.Set("name", "Rowing Machine")
-	r.Set("main_muscle", muscle(t, app, "Lats"))
+	r.Set("main_muscle", "Lats")
 	r.Set("type", aerobic.Id)
 	if err := app.Save(r); err != nil {
 		t.Fatalf("an exercise of the new type: %v", err)
@@ -323,34 +343,42 @@ func TestAddingATypeIsOneRow(t *testing.T) {
 }
 
 func TestExerciseShape(t *testing.T) {
-	cases := map[string]func(app core.App, r *core.Record){
-		"no name":                            func(app core.App, r *core.Record) { r.Set("name", "") },
-		"no main muscle":                     func(app core.App, r *core.Record) { r.Set("main_muscle", "") },
-		"no type":                            func(app core.App, r *core.Record) { r.Set("type", "") },
-		"a main muscle that is not a muscle": func(app core.App, r *core.Record) { r.Set("main_muscle", "nosuchmuscle123") },
-		"a category given as the main muscle": func(app core.App, r *core.Record) {
-			r.Set("main_muscle", category(t, app, "Chest"))
-		},
-		"a type that does not exist": func(app core.App, r *core.Record) { r.Set("type", "nosuchtypexxxx1") },
-		"the main muscle also secondary": func(app core.App, r *core.Record) {
+	cases := map[string]struct {
+		collection string
+		spoil      func(app core.App, r *core.Record)
+	}{
+		"no name":                    {"weights_chest", func(app core.App, r *core.Record) { r.Set("name", "") }},
+		"no type":                    {"weights_chest", func(app core.App, r *core.Record) { r.Set("type", "") }},
+		"a type that does not exist": {"weights_chest", func(app core.App, r *core.Record) { r.Set("type", "nosuchtypexxxx1") }},
+		"a secondary that is not a muscle": {"weights_chest", func(app core.App, r *core.Record) {
+			r.Set("secondary_muscles", []string{"nosuchmuscle123"})
+		}},
+		"the category's only muscle also secondary": {"weights_chest", func(app core.App, r *core.Record) {
 			r.Set("secondary_muscles", []string{muscle(t, app, "Pecs")})
-		},
+		}},
+		"no main muscle":                    {"weights_back", func(app core.App, r *core.Record) { r.Set("main_muscle", "") }},
+		"a main muscle of another category": {"weights_back", func(app core.App, r *core.Record) { r.Set("main_muscle", "Pecs") }},
+		"the chosen main muscle also secondary": {"weights_back", func(app core.App, r *core.Record) {
+			r.Set("secondary_muscles", []string{muscle(t, app, "Lats")})
+		}},
 	}
-	for name, spoil := range cases {
+	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
 			app := newProgramsApp(t)
 			defer app.Cleanup()
 
-			col, _ := app.FindCollectionByNameOrId("weights_chest")
+			col, _ := app.FindCollectionByNameOrId(c.collection)
 			r := core.NewRecord(col)
-			r.Set("name", "Test Press")
-			r.Set("main_muscle", muscle(t, app, "Pecs"))
+			r.Set("name", "Test Lift")
+			if col.Fields.GetByName("main_muscle") != nil {
+				r.Set("main_muscle", "Lats")
+			}
 			r.Set("secondary_muscles", []string{muscle(t, app, "Triceps")})
 			r.Set("type", exerciseType(t, app, "Free weight"))
 			if err := app.Save(r); err != nil {
 				t.Fatalf("the valid exercise was refused: %v", err)
 			}
-			spoil(app, r)
+			c.spoil(app, r)
 			if err := app.Save(r); err == nil {
 				t.Fatal("accepted")
 			}
@@ -376,10 +404,9 @@ func setPremium(t testing.TB, app core.App, u *core.Record, premium bool) {
 
 func customBody(t testing.TB, app core.App, owner string) string {
 	b, _ := json.Marshal(map[string]any{
-		"name":        "My Press",
-		"owner":       owner,
-		"main_muscle": muscle(t, app, "Pecs"),
-		"type":        exerciseType(t, app, "Cable"),
+		"name":  "My Press",
+		"owner": owner,
+		"type":  exerciseType(t, app, "Cable"),
 	})
 	return string(b)
 }
@@ -391,7 +418,6 @@ func saveExercise(t testing.TB, app core.App, owner string) *core.Record {
 	r := core.NewRecord(col)
 	r.Set("name", "Stored Press")
 	r.Set("owner", owner)
-	r.Set("main_muscle", muscle(t, app, "Pecs"))
 	r.Set("type", exerciseType(t, app, "Machine"))
 	if err := app.Save(r); err != nil {
 		t.Fatal(err)
