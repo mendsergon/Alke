@@ -21,7 +21,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '../../components/surfaces';
 import { SearchBar } from '../../components/search-bar';
 import { ExerciseIcon } from '../../figure/figure';
-import { exerciseGridTile } from '../../components/exercise-grid';
 import { Txt } from '../../theme/text';
 import { tokens, useTheme } from '../../theme/theme';
 import { useAuth } from '../../auth/auth';
@@ -107,7 +106,7 @@ export default function CategoryScreen() {
   // Two columns across the content width; the icon fills its card inside the
   // card's padding and 1px border.
   const card = (content - tokens.space[12]) / 2;
-  const tile = exerciseGridTile(width);
+  const tile = card - 2 * tokens.space[12] - 2;
   // Every card in a view is the same size, so where any exercise sits is known
   // without measuring: a list row is the card's border and padding around the
   // icon (taller than two lines of name); a grid card is the tile over the

@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react';
-import { View, useWindowDimensions } from 'react-native';
+import { View } from 'react-native';
 import { Txt } from '../theme/text';
 import { tokens, useTheme } from '../theme/theme';
 import { listMuscleCategories, type MuscleCategory } from '../backend/muscles';
-import { cachedExercisesIn, prefetchExercises } from '../backend/exercises';
-import { exerciseIconUri } from '../figure/figure';
-import { exerciseGridTile } from './exercise-grid';
+import { prefetchExercises } from '../backend/exercises';
 import { useAuth } from '../auth/auth';
 import { ProgramCard } from './program-card';
 import { GroupIcon } from '../figure/muscle-groups';
@@ -23,35 +21,18 @@ export function MuscleCategories({ onOpen }: { onOpen?: (category: MuscleCategor
   const [categories, setCategories] = useState<MuscleCategory[]>([]);
   const { token } = useAuth();
   const opens = onOpen !== undefined;
-  const { width } = useWindowDimensions();
 
   useEffect(() => {
     let live = true;
-    let timer: ReturnType<typeof setTimeout> | undefined;
     void listMuscleCategories().then((items) => {
       if (live && items) setCategories(items);
-      // Where a tile opens its exercises, have them before it is tapped, and
-      // their grid icons drawn: a category opens on its grid, and drawing a
-      // tile-sized icon while the screen slides in stalls the slide. One icon
-      // per turn of the event loop, so nothing here holds up a frame.
-      if (!items || !opens) return;
-      void prefetchExercises(items, token).then(() => {
-        const tile = exerciseGridTile(width);
-        const icons = items.flatMap((category) => cachedExercisesIn(category.id) ?? []);
-        const next = (i: number) => {
-          if (!live || i >= icons.length) return;
-          const e = icons[i];
-          if (e.icon) exerciseIconUri(e.icon, tile, c, e.main, e.secondary, true);
-          timer = setTimeout(() => next(i + 1), 0);
-        };
-        next(0);
-      });
+      // Where a tile opens its exercises, have them before it is tapped.
+      if (items && opens) void prefetchExercises(items, token);
     });
     return () => {
       live = false;
-      if (timer) clearTimeout(timer);
     };
-  }, [opens, token, width, c]);
+  }, [opens, token]);
 
   return (
     <View

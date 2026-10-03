@@ -19,7 +19,7 @@ import {
   type ExerciseIconKey,
   type FigureView,
 } from './figure.generated';
-import { tokens, useTheme, type Palette } from '../theme/theme';
+import { tokens, useTheme } from '../theme/theme';
 import { mix } from '../components/heat';
 
 let seq = 0;
@@ -285,46 +285,6 @@ export function iconForMuscle(figure: string): ExerciseIconKey | undefined {
   });
 }
 
-/**
- * An exercise icon's bitmap as ExerciseIcon shows it at `size`. Each is drawn
- * once and kept, so drawing one ahead of time leaves nothing to draw when the
- * icon appears.
- */
-export function exerciseIconUri(
-  icon: ExerciseIconKey,
-  size: number,
-  c: Palette,
-  main?: readonly string[],
-  secondary: readonly string[] = [],
-  seamAll = false,
-): string {
-  const inner = size - (size > 56 ? 4 : 3);
-  const def = EXERCISE_ICONS[icon];
-  // A muscle's regions in the icon's view: where its own icon draws it, and
-  // where the design's body maps show it from the other side.
-  const regionsOf = (names: readonly string[]) => [
-    ...new Set(
-      names.flatMap((m) =>
-        [MUSCLE_REGIONS[m], MUSCLE_ALSO[m]].flatMap((r) => (r && r.view === def.view ? r.regions : [])),
-      ),
-    ),
-  ];
-  const accent = main === undefined ? [...def.accent] : regionsOf(main);
-  // Framed on the main muscle where it is drawn from another side.
-  const drawnAs = main?.[0] === undefined ? undefined : DRAWN_AS[main[0]];
-  const viewBox = drawnAs?.icon === icon ? drawnAs.viewBox : def.viewBox;
-  const lit = new Set(accent);
-  const regions = regionsOf(secondary)
-    .filter((r) => !lit.has(r))
-    .sort((a, b) => a - b);
-  return iconBitmap(icon, viewBox, inner, seamAll, accent.sort((a, b) => a - b), regions, {
-    accent: c.accent,
-    secondary: c.accentSecondary,
-    body: c.iconBody,
-    recess: mix(c.iconBody, c.bg, 0.45),
-  });
-}
-
 /** The tile an exercise icon sits in: surface-raised, radius 12 (16 over 56). */
 export function ExerciseIcon({
   icon,
@@ -350,7 +310,30 @@ export function ExerciseIcon({
 }) {
   const { c } = useTheme();
   const inner = size - (size > 56 ? 4 : 3);
-  const uri = exerciseIconUri(icon, size, c, main, secondary, seamAll);
+  const def = EXERCISE_ICONS[icon];
+  // A muscle's regions in the icon's view: where its own icon draws it, and
+  // where the design's body maps show it from the other side.
+  const regionsOf = (names: readonly string[]) => [
+    ...new Set(
+      names.flatMap((m) =>
+        [MUSCLE_REGIONS[m], MUSCLE_ALSO[m]].flatMap((r) => (r && r.view === def.view ? r.regions : [])),
+      ),
+    ),
+  ];
+  const accent = main === undefined ? [...def.accent] : regionsOf(main);
+  // Framed on the main muscle where it is drawn from another side.
+  const drawnAs = main?.[0] === undefined ? undefined : DRAWN_AS[main[0]];
+  const viewBox = drawnAs?.icon === icon ? drawnAs.viewBox : def.viewBox;
+  const lit = new Set(accent);
+  const regions = regionsOf(secondary)
+    .filter((r) => !lit.has(r))
+    .sort((a, b) => a - b);
+  const uri = iconBitmap(icon, viewBox, inner, seamAll, accent.sort((a, b) => a - b), regions, {
+    accent: c.accent,
+    secondary: c.accentSecondary,
+    body: c.iconBody,
+    recess: mix(c.iconBody, c.bg, 0.45),
+  });
   return (
     <View
       style={{
