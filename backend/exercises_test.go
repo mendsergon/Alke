@@ -164,7 +164,7 @@ func TestForearmMainMusclesAreTicked(t *testing.T) {
 		ok        bool
 	}{
 		"one ticked":             {[]string{"Brachialis"}, nil, true},
-		"all three ticked":       {[]string{"Forearm extensors", "Forearm flexors", "Brachialis"}, []string{"Biceps"}, true},
+		"all three ticked":       {[]string{"Brachioradialis", "Forearm flexors", "Brachialis"}, []string{"Biceps"}, true},
 		"none ticked":            {nil, nil, false},
 		"a ticked one secondary": {[]string{"Forearm flexors"}, []string{"Forearm flexors"}, false},
 	}
@@ -213,7 +213,7 @@ var wantMuscles = []struct {
 	{"Glutes", []string{"Glutes"}},
 	{"Calves", []string{"Calves"}},
 	{"Abs", []string{"Abs", "Obliques"}},
-	{"Forearms", []string{"Forearm extensors", "Forearm flexors", "Brachialis"}},
+	{"Forearms", []string{"Brachioradialis", "Forearm flexors", "Brachialis"}},
 	{"Neck", []string{"Neck"}},
 }
 
