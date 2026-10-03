@@ -12,7 +12,8 @@ import { GroupIcon } from '../figure/muscle-groups';
 import { EmptyState } from './surfaces';
 import { Star } from './exercise-star';
 
-type Favorite = { exercise: Exercise; category: MuscleCategory };
+/** An exercise and the muscle group it is filed under. */
+export type Favorite = { exercise: Exercise; category: MuscleCategory };
 
 export type FavoriteExercises = {
   categories: MuscleCategory[];
@@ -90,6 +91,22 @@ export function useFavoriteExercises(): FavoriteExercises {
  * it, and fade in under its bottom edge rather than being cut by it.
  */
 export function FavoriteGroups({ favorites }: { favorites: FavoriteExercises }) {
+  return <GroupRow categories={favorites.categories} picked={favorites.picked} onPick={favorites.pick} />;
+}
+
+/**
+ * The muscle-group row itself, for any screen that narrows exercises by group:
+ * the Library's favorites, and the exercises a session adds from.
+ */
+export function GroupRow({
+  categories,
+  picked,
+  onPick,
+}: {
+  categories: readonly MuscleCategory[];
+  picked: string | null;
+  onPick: (category: string) => void;
+}) {
   const { c } = useTheme();
   const band = tokens.space[16];
   return (
@@ -102,13 +119,8 @@ export function FavoriteGroups({ favorites }: { favorites: FavoriteExercises }) 
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: tokens.space[24], gap: tokens.space[8] }}
         >
-          {favorites.categories.map((k) => (
-            <GroupTile
-              key={k.id}
-              category={k}
-              on={favorites.picked === k.id}
-              onPress={() => favorites.pick(k.id)}
-            />
+          {categories.map((k) => (
+            <GroupTile key={k.id} category={k} on={picked === k.id} onPress={() => onPick(k.id)} />
           ))}
         </ScrollView>
         <Fade direction="left" />
@@ -123,14 +135,8 @@ export function FavoriteGroups({ favorites }: { favorites: FavoriteExercises }) 
 
 /** The favorites, or those of the picked group, as a category's grid draws them. */
 export function FavoriteGrid({ favorites }: { favorites: FavoriteExercises }) {
-  const { c, cardBorderWidth } = useTheme();
-  const { width } = useWindowDimensions();
   if (favorites.favorites === null) return null;
 
-  // Two cards across, sized as a category's grid sizes them.
-  const content = width - 2 * tokens.space[24];
-  const card = (content - tokens.space[12]) / 2;
-  const tile = card - 2 * tokens.space[12] - 2;
   const group = favorites.categories.find((k) => k.id === favorites.picked);
   const shown = favorites.favorites.filter((f) => favorites.picked === null || f.category.id === favorites.picked);
 
@@ -139,12 +145,41 @@ export function FavoriteGrid({ favorites }: { favorites: FavoriteExercises }) {
       <EmptyState line={group ? `No favorite ${group.name.toLowerCase()} exercises yet.` : 'No favorite exercises yet.'} />
     );
   }
+  return <ExerciseCards items={shown} onStar={favorites.unstar} />;
+}
+
+/**
+ * Exercises two across, as a category's grid draws them: the icon, the name,
+ * the type and the star. With `onPress` the whole card presses.
+ */
+export function ExerciseCards({
+  items,
+  onPress,
+  onStar,
+}: {
+  items: readonly Favorite[];
+  onPress?: (f: Favorite) => void;
+  /** Without it, a signed-out person: no star. */
+  onStar?: (f: Favorite) => void;
+}) {
+  const { c, cardBorderWidth } = useTheme();
+  const { width } = useWindowDimensions();
+
+  // Two cards across, sized as a category's grid sizes them.
+  const content = width - 2 * tokens.space[24];
+  const card = (content - tokens.space[12]) / 2;
+  const tile = card - 2 * tokens.space[12] - 2;
+
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space[12] }}>
-      {shown.map((f) => (
-        <View
+      {items.map((f) => (
+        <Pressable
           key={f.exercise.id}
-          style={{
+          accessibilityRole={onPress ? 'button' : undefined}
+          accessibilityLabel={f.exercise.name}
+          disabled={!onPress}
+          onPress={onPress ? () => onPress(f) : undefined}
+          style={({ pressed }) => ({
             width: card,
             padding: tokens.space[12],
             gap: tokens.space[12],
@@ -152,8 +187,9 @@ export function FavoriteGrid({ favorites }: { favorites: FavoriteExercises }) {
             // Light mode carries a card border; dark does not (PLAN.md §3).
             borderWidth: cardBorderWidth,
             borderColor: c.border,
-            backgroundColor: c.surface,
-          }}
+            // Pressed, the card sinks to the page tone, as a program card does.
+            backgroundColor: pressed && onPress ? c.bg : c.surface,
+          })}
         >
           {f.exercise.icon ? (
             <ExerciseIcon
@@ -172,10 +208,10 @@ export function FavoriteGrid({ favorites }: { favorites: FavoriteExercises }) {
               <Txt variant="captionTight" color={c.textSecondary} numberOfLines={1} style={{ flexShrink: 1 }}>
                 {f.exercise.type}
               </Txt>
-              <Star on onPress={() => favorites.unstar(f)} push />
+              {onStar ? <Star on={f.exercise.favorite !== undefined} onPress={() => onStar(f)} push /> : null}
             </View>
           </View>
-        </View>
+        </Pressable>
       ))}
     </View>
   );
