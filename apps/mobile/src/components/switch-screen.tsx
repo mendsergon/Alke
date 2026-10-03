@@ -41,6 +41,7 @@ export function SwitchScreen({
   onIndexChange,
   gap = tokens.space[16],
   headerGap = gap,
+  pinFirst = [false, false],
 }: {
   /** Given the pager's progress, 0 to 1, for a switch that moves with it. */
   header: (progress: SharedValue<number>) => ReactNode;
@@ -50,6 +51,8 @@ export function SwitchScreen({
   gap?: number;
   /** Space between the header and the top of each side. */
   headerGap?: number;
+  /** Per side: its first block stays pinned at the top while the rest scrolls under it. */
+  pinFirst?: readonly [boolean, boolean];
 }) {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
@@ -127,6 +130,7 @@ export function SwitchScreen({
         {pages.map((page, p) => (
           <ScrollView
             key={p}
+            stickyHeaderIndices={pinFirst[p] ? [0] : undefined}
             style={{ width }}
             contentContainerStyle={{
               paddingHorizontal: tokens.space[24],
