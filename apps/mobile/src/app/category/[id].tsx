@@ -96,7 +96,9 @@ export default function CategoryScreen() {
   const back = useBack('/explore');
   const { token } = useAuth();
   const navigation = useNavigation<NativeStackNavigationProp<Record<string, object | undefined>>>();
-  const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
+  const { id, name, favorites } = useLocalSearchParams<{ id: string; name?: string; favorites?: string }>();
+  // Opened from the Library's favorite exercises: only the starred ones.
+  const favoritesOnly = favorites === '1';
   // Explore fetches every category's list before one is opened, so the list is
   // normally here in the first frame.
   const [exercises, setExercises] = useState<Exercise[] | null>(() => cachedExercisesIn(id) ?? null);
@@ -105,10 +107,11 @@ export default function CategoryScreen() {
   const [view, setView] = useState<View_>('grid');
   const { width, height: screen } = useWindowDimensions();
   const q = query.trim().toLowerCase();
-  const shown = useMemo(
-    () => exercises?.filter((e) => e.name.toLowerCase().includes(q)) ?? [],
-    [exercises, q],
+  const pool = useMemo(
+    () => (favoritesOnly ? exercises?.filter((e) => e.favorite !== undefined) : exercises) ?? null,
+    [exercises, favoritesOnly],
   );
+  const shown = useMemo(() => pool?.filter((e) => e.name.toLowerCase().includes(q)) ?? [], [pool, q]);
 
   const content = width - 2 * tokens.space[24];
   // Two columns across the content width; the icon fills its card inside the
@@ -361,13 +364,17 @@ export default function CategoryScreen() {
             {name ?? ''}
           </Txt>
           {/* Laid out from the first frame, so the list arriving pushes nothing. */}
-          {exercises === null || exercises.length > 0 ? (
+          {pool === null || pool.length > 0 ? (
             <SearchBar value={query} onChange={setQuery} label="Search exercises" />
           ) : null}
         </View>
 
-        {exercises === null ? null : shown.length === 0 ? (
-          <EmptyState line={exercises.length === 0 ? 'No exercises yet.' : 'No exercises match.'} />
+        {pool === null ? null : shown.length === 0 ? (
+          <EmptyState
+            line={
+              pool.length > 0 ? 'No exercises match.' : favoritesOnly ? 'No favorite exercises yet.' : 'No exercises yet.'
+            }
+          />
         ) : (
           <View style={switching ? { minHeight: tallest } : undefined}>
             <Surfaces
