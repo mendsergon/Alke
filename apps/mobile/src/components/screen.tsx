@@ -79,14 +79,24 @@ export function ScreenHeader({
   title,
   subtitle,
   action,
+  centerAction = false,
 }: {
   title: string;
   subtitle?: string;
   action?: ReactNode;
+  /** The action centred against the title, not set at its top. */
+  centerAction?: boolean;
 }) {
   const { c } = useTheme();
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: centerAction ? 'center' : 'flex-start',
+        justifyContent: 'space-between',
+        gap: 12,
+      }}
+    >
       <View style={{ flexShrink: 1, flexGrow: 1 }}>
         <Txt variant="screenTitle" family="serif" weight={500}>
           {title}

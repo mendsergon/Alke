@@ -43,10 +43,10 @@ export default function Library() {
           <ScreenHeader
             title="Library"
             action={<GlassButton icon="plus" label="Create a program" />}
+            centerAction
           />
-          <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-            <PagerSwitch options={SIDES} value={side} onChange={setSide} progress={progress} />
-          </View>
+          {/* Full width under the title, as design page 05 draws it. */}
+          <PagerSwitch options={SIDES} value={side} onChange={setSide} progress={progress} fill />
         </>
       }
       pages={[

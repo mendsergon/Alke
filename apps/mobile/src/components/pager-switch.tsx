@@ -19,12 +19,15 @@ export function PagerSwitch<T extends string>({
   value,
   onChange,
   progress,
+  fill = false,
 }: {
   options: readonly [T, T];
   value: T;
   onChange: (v: T) => void;
   /** 0 on the first side, 1 on the second, fractional while sliding. */
   progress: SharedValue<number>;
+  /** Spans its row, the two sides sharing it equally, as design page 05 draws it. */
+  fill?: boolean;
 }) {
   const { c } = useTheme();
   // One value per segment: two layouts land together, and a shared array
@@ -72,6 +75,7 @@ export function PagerSwitch<T extends string>({
           label={o}
           index={i}
           selected={o === value}
+          fill={fill}
           progress={progress}
           onPress={() => onChange(o)}
           onMeasure={(x, w) => {
@@ -88,6 +92,7 @@ function Segment({
   label,
   index,
   selected,
+  fill,
   progress,
   onPress,
   onMeasure,
@@ -95,6 +100,7 @@ function Segment({
   label: string;
   index: number;
   selected: boolean;
+  fill: boolean;
   progress: SharedValue<number>;
   onPress: () => void;
   onMeasure: (x: number, width: number) => void;
@@ -114,6 +120,7 @@ function Segment({
       onLayout={(e) => onMeasure(e.nativeEvent.layout.x, e.nativeEvent.layout.width)}
       style={{
         height: 36,
+        flex: fill ? 1 : undefined,
         paddingHorizontal: tokens.space[12],
         borderRadius: tokens.radius.chip,
         alignItems: 'center',
