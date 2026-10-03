@@ -1,5 +1,5 @@
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Pressable, View, useWindowDimensions } from 'react-native';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Image, Pressable, View, useWindowDimensions } from 'react-native';
 import Animated, {
   Easing,
   interpolate,
@@ -24,10 +24,18 @@ import { ExerciseIcon } from '../../figure/figure';
 import { Txt } from '../../theme/text';
 import { tokens, useTheme } from '../../theme/theme';
 import { useAuth } from '../../auth/auth';
-import { cachedExercisesIn, listExercisesIn, type Exercise } from '../../backend/exercises';
+import {
+  cachedExercisesIn,
+  listExercisesIn,
+  starExercise,
+  unstarExercise,
+  type Exercise,
+} from '../../backend/exercises';
 import backIcon from '../../../assets/images/back.png';
 import viewListIcon from '../../../assets/images/view-list.png';
 import viewGridIcon from '../../../assets/images/view-grid.png';
+import starIcon from '../../../assets/images/star.png';
+import starFilledIcon from '../../../assets/images/star-filled.png';
 
 /**
  * A muscle category's exercises: every exercise whose main muscle it is, as
@@ -306,6 +314,28 @@ export default function CategoryScreen() {
     list: shown.length * step.list - tokens.space[12],
     grid: Math.ceil(shown.length / 2) * step.grid - tokens.space[12],
   };
+  // A star toggles at once and is saved behind it; if saving fails it goes
+  // back. A signed-out person has no favorites, so no star is drawn.
+  const starring = useRef(new Set<string>());
+  const toggleStar = useCallback(
+    (e: Exercise) => {
+      if (!token || starring.current.has(e.id)) return;
+      starring.current.add(e.id);
+      const category = { id, name: name ?? '' };
+      const on = e.favorite === undefined;
+      const mark = (favorite: string | undefined) =>
+        setExercises((prev) => prev?.map((x) => (x.id === e.id ? { ...x, favorite } : x)) ?? prev);
+      mark(on ? '' : undefined);
+      void (async () => {
+        if (on) mark((await starExercise(category, e.id, token)) ?? undefined);
+        else if (!(await unstarExercise(category, e.id, e.favorite ?? '', token))) mark(e.favorite);
+        starring.current.delete(e.id);
+      })();
+    },
+    [token, id, name],
+  );
+  const onStar = token ? toggleStar : undefined;
+
   const layer = (v: View_) =>
     v === showing ? { height: length[v] } : { position: 'absolute' as const, top: 0, left: 0, right: 0, height: length[v] };
 
@@ -354,7 +384,7 @@ export default function CategoryScreen() {
                 pointerEvents={view === 'list' ? 'auto' : 'none'}
                 style={[layer('list'), listStyle]}
               >
-                <ListRows exercises={shown} from={span[0]} to={span[1]} g={g} progress={progress} />
+                <ListRows exercises={shown} from={span[0]} to={span[1]} g={g} progress={progress} onStar={onStar} />
               </Animated.View>
             ) : null}
             {view === 'grid' || showing === 'grid' || both ? (
@@ -362,7 +392,15 @@ export default function CategoryScreen() {
                 pointerEvents={view === 'grid' ? 'auto' : 'none'}
                 style={[layer('grid'), gridStyle]}
               >
-                <GridCards exercises={shown} from={span[0]} to={span[1]} g={g} tile={tile} progress={progress} />
+                <GridCards
+                  exercises={shown}
+                  from={span[0]}
+                  to={span[1]}
+                  g={g}
+                  tile={tile}
+                  progress={progress}
+                  onStar={onStar}
+                />
               </Animated.View>
             ) : null}
           </View>
@@ -565,6 +603,7 @@ const ListRows = memo(function ListRows({
   to,
   g,
   progress,
+  onStar,
 }: {
   exercises: readonly Exercise[];
   /** The cards built: from this index up to, not including, `to`. */
@@ -572,6 +611,8 @@ const ListRows = memo(function ListRows({
   to: number;
   g: Geometry;
   progress: SharedValue<number>;
+  /** Toggles an exercise's star; none for a signed-out person. */
+  onStar?: (e: Exercise) => void;
 }) {
   const { c } = useTheme();
   return exercises.slice(from, to).map((e, k) => (
@@ -583,6 +624,7 @@ const ListRows = memo(function ListRows({
         <Txt variant="serifListTitle" family="serif" weight={500} color={c.text} style={{ flexShrink: 1 }}>
           {e.name}
         </Txt>
+        {onStar ? <Star on={e.favorite !== undefined} onPress={() => onStar(e)} push /> : null}
       </View>
     </Travel>
   ));
@@ -598,6 +640,7 @@ const GridCards = memo(function GridCards({
   g,
   tile,
   progress,
+  onStar,
 }: {
   exercises: readonly Exercise[];
   /** The cards built: from this index up to, not including, `to`. */
@@ -606,6 +649,8 @@ const GridCards = memo(function GridCards({
   g: Geometry;
   tile: number;
   progress: SharedValue<number>;
+  /** Toggles an exercise's star; none for a signed-out person. */
+  onStar?: (e: Exercise) => void;
 }) {
   const { c } = useTheme();
   return exercises.slice(from, to).map((e, k) => (
@@ -621,14 +666,40 @@ const GridCards = memo(function GridCards({
           >
             {e.name}
           </Txt>
-          <Txt variant="captionTight" color={c.textSecondary} numberOfLines={1}>
-            {e.type}
-          </Txt>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[8] }}>
+            <Txt variant="captionTight" color={c.textSecondary} numberOfLines={1} style={{ flexShrink: 1 }}>
+              {e.type}
+            </Txt>
+            {onStar ? <Star on={e.favorite !== undefined} onPress={() => onStar(e)} push /> : null}
+          </View>
         </View>
       </View>
     </Travel>
   ));
 });
+
+// An exercise's star: grey and open, or gold and filled when it is one of the
+// person's favorites (Stavros, 3 October 2026). As tall as the card's last
+// line, so the card keeps its height; its touch area is a full tap target.
+function Star({ on, onPress, push = false }: { on: boolean; onPress: () => void; push?: boolean }) {
+  const { c } = useTheme();
+  const size = tokens.type.captionTight.lineHeight;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={on ? 'Remove from favorites' : 'Add to favorites'}
+      accessibilityState={{ selected: on }}
+      hitSlop={(tokens.sizing.tapTarget.ios - size) / 2}
+      onPress={onPress}
+      style={push ? { marginLeft: 'auto' } : undefined}
+    >
+      <Image
+        source={on ? starFilledIcon : starIcon}
+        style={{ width: size, height: size, tintColor: on ? c.recordFill : c.textSecondary }}
+      />
+    </Pressable>
+  );
+}
 
 function same(a: readonly Exercise[], b: readonly Exercise[]) {
   return (
@@ -640,7 +711,8 @@ function same(a: readonly Exercise[], b: readonly Exercise[]) {
         e.icon === b[i].icon &&
         e.type === b[i].type &&
         e.main.join() === b[i].main.join() &&
-        e.secondary.join() === b[i].secondary.join(),
+        e.secondary.join() === b[i].secondary.join() &&
+        e.favorite === b[i].favorite,
     )
   );
 }
