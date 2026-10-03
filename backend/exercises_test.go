@@ -212,7 +212,7 @@ var wantMuscles = []struct {
 	{"Adductors", []string{"Adductors"}},
 	{"Glutes", []string{"Glutes"}},
 	{"Calves", []string{"Calves"}},
-	{"Abs", []string{"Abs", "Obliques"}},
+	{"Abs", []string{"Abs", "Obliques", "Hip flexors"}},
 	{"Forearms", []string{"Brachioradialis", "Forearm flexors", "Brachialis"}},
 	{"Neck", []string{"Neck"}},
 }
