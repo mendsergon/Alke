@@ -177,21 +177,37 @@ export default function CategoryScreen() {
   // move to the other view's place is never cut short by the page's end.
   const [showing, setShowing] = useState<View_>('grid');
   const [switching, setSwitching] = useState(false);
-  // Which cards are built follows the scroll in steps of half a screen, so
-  // React commits only when a new step is reached, never while cards move.
+  // The cards are built from the top down to two screens past the furthest
+  // the page has been, in either view, and kept: a category opens with only
+  // what is near its top, and scrolling back or switching builds nothing
+  // again. React commits only when the page goes further than before, in
+  // steps of half a screen, never while cards move.
   const half = screen / 2;
-  const [spot, setSpot] = useState(0);
+  const [furthest, setFurthest] = useState(0);
+  const reached = useSharedValue(0);
   const moving = useSharedValue(false);
   useAnimatedReaction(
     () => (moving.value ? -1 : Math.floor(scrollY.value / half)),
-    (now, before) => {
-      if (now >= 0 && now !== before) scheduleOnRN(setSpot, now);
+    (now) => {
+      if (now > reached.value) {
+        reached.value = now;
+        scheduleOnRN(setFurthest, now);
+      }
     },
   );
-  // While switching, the cards seen in either view on the way: those on the
-  // screen when the switch starts and those on it when it ends.
-  const [held, setHeld] = useState<Span | null>(null);
-  const span: Span = held ?? spanIn(view, g, shown.length, spot * half - cardsTop, screen);
+  const reachTo = (y: number) => {
+    const now = Math.floor(y / half);
+    if (now > reached.value) {
+      reached.value = now;
+      setFurthest(now);
+    }
+  };
+  const top = (furthest + 1) * half - cardsTop;
+  const built = Math.max(
+    spanIn('list', g, shown.length, top, screen)[1],
+    spanIn('grid', g, shown.length, top, screen)[1],
+  );
+  const span: Span = [0, built];
   const tallest = Math.max(
     shown.length * step.list - tokens.space[12],
     Math.ceil(shown.length / 2) * step.grid - tokens.space[12],
@@ -217,17 +233,14 @@ export default function CategoryScreen() {
     // view, the header's menu, the page held at its taller height); the move
     // itself is started by the layout effect below, after that commit, so no
     // React work lands while the cards are moving.
+    // The cards around where the page lands are built in this same commit.
+    reachTo(landing);
     if (!ANIMATE_VIEW_SWITCH) {
-      setSpot(Math.floor(landing / half));
       setShowing(next);
       setView(next);
       return;
     }
-    const a = spanIn(view, g, shown.length, scrollY.value - cardsTop, screen);
-    const b = spanIn(next, g, shown.length, landing - cardsTop, screen);
     moving.value = true;
-    setHeld([Math.min(a[0], b[0]), Math.max(a[1], b[1])]);
-    setSpot(Math.floor(landing / half));
     setSwitching(true);
     setView(next);
   };
@@ -236,8 +249,8 @@ export default function CategoryScreen() {
   const settle = (next: View_) => {
     setShowing(next);
     setSwitching(false);
-    setHeld(null);
     moving.value = false;
+    reachTo(scrollY.value);
   };
   const started = useRef<View_>('grid');
   useLayoutEffect(() => {
