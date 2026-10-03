@@ -1,5 +1,5 @@
 diff --git a/Libraries/Animated/nodes/AnimatedValue.js b/Libraries/Animated/nodes/AnimatedValue.js
-index 8650912edf6fd70cd72d135b432945ea35733478..0517797a80c200c8be044cacb196fef29129cdd3 100644
+index 8650912edf6fd70cd72d135b432945ea35733478..df9ccb7932e1069f02d4557aff80e32ddc6434e3 100644
 --- a/Libraries/Animated/nodes/AnimatedValue.js
 +++ b/Libraries/Animated/nodes/AnimatedValue.js
 @@ -20,6 +20,7 @@ import type AnimatedNode from './AnimatedNode';
@@ -10,19 +10,47 @@ index 8650912edf6fd70cd72d135b432945ea35733478..0517797a80c200c8be044cacb196fef2
  import NativeAnimatedHelper from '../../../src/private/animated/NativeAnimatedHelper';
  import AnimatedInterpolation from './AnimatedInterpolation';
  import AnimatedWithChildren from './AnimatedWithChildren';
-@@ -182,8 +183,17 @@ export default class AnimatedValue extends AnimatedWithChildren {
+@@ -86,6 +87,32 @@ function _executeAsAnimatedBatch(id: string, operation: () => void) {
+  *
+  * See https://reactnative.dev/docs/animatedvalue
+  */
++// iOS counts the native module's listeners as soon as one is removed, while a
++// node stops sending updates only once the operation queue runs: removing the
++// listener first lets an update go out with none registered. So listeners are
++// removed together, once per batch, in the callback of a single getValue
++// queued after all of that batch's stops.
++let pendingRemovals: Array<EventSubscription> = [];
++let queueMark: ?AnimatedValue = null;
++function removeAfterQueuedStops(subscription: EventSubscription): void {
++  pendingRemovals.push(subscription);
++  if (pendingRemovals.length > 1) {
++    return;
++  }
++  queueMicrotask(() => {
++    const batch = pendingRemovals;
++    pendingRemovals = [];
++    if (queueMark == null) {
++      queueMark = new AnimatedValue(0, {useNativeDriver: true});
++    }
++    NativeAnimatedAPI.getValue(queueMark.__getNativeTag(), () => {
++      for (const removal of batch) {
++        removal.remove();
++      }
++    });
++  });
++}
++
+ export default class AnimatedValue extends AnimatedWithChildren {
+   _listenerCount: number;
+   _updateSubscription: ?EventSubscription;
+@@ -182,8 +209,12 @@ export default class AnimatedValue extends AnimatedWithChildren {
            return;
          }
          this._updateSubscription = null;
 -        subscription.remove();
          NativeAnimatedAPI.stopListeningToAnimatedNodeValue(nativeTag);
 +        if (Platform.OS === 'ios') {
-+          // iOS counts the module's listeners as soon as one is removed, while
-+          // the node stops sending only once the operation queue runs: removing
-+          // the listener first lets an update go out with none registered.
-+          // getValue runs after the stop in that same queue, so its callback
-+          // comes once the node has stopped sending.
-+          NativeAnimatedAPI.getValue(nativeTag, () => subscription.remove());
++          removeAfterQueuedStops(subscription);
 +        } else {
 +          subscription.remove();
 +        }
