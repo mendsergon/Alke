@@ -176,19 +176,20 @@ type IconColors = { accent: string; secondary: string; body: string; recess: str
 
 function iconPicture(
   icon: ExerciseIconKey,
+  viewBox: string,
   size: number,
   seamAll: boolean,
   main: readonly number[],
   secondary: readonly number[],
   colors: IconColors,
 ): SkPicture {
-  const key = `${icon}|${size}|${seamAll}|${main.join(',')}|${secondary.join(',')}|${Object.values(colors).join('|')}`;
+  const key = `${icon}|${viewBox}|${size}|${seamAll}|${main.join(',')}|${secondary.join(',')}|${Object.values(colors).join('|')}`;
   let picture = pictures.get(key);
   if (!picture) {
     const def = EXERCISE_ICONS[icon];
     const figure = FIGURE[def.view];
     const [tx, ty] = REGION_TRANSLATE.split(',').map(Number);
-    const [vx, vy, vw, vh] = def.viewBox.split(' ').map(Number);
+    const [vx, vy, vw, vh] = viewBox.split(' ').map(Number);
     // The viewBox fitted and centred, as SVG's default xMidYMid meet does.
     const scale = Math.min(size / vw, size / vh);
     const accentSet = new Set(main);
@@ -235,6 +236,7 @@ function iconPicture(
 const bitmaps = new Map<string, string>();
 function iconBitmap(
   icon: ExerciseIconKey,
+  viewBox: string,
   size: number,
   seamAll: boolean,
   main: readonly number[],
@@ -242,7 +244,7 @@ function iconBitmap(
   colors: IconColors,
 ): string {
   const scale = PixelRatio.get();
-  const key = `${icon}|${size}|${scale}|${seamAll}|${main.join(',')}|${secondary.join(',')}|${Object.values(colors).join('|')}`;
+  const key = `${icon}|${viewBox}|${size}|${scale}|${seamAll}|${main.join(',')}|${secondary.join(',')}|${Object.values(colors).join('|')}`;
   let uri = bitmaps.get(key);
   if (!uri) {
     const px = Math.round(size * scale);
@@ -250,7 +252,7 @@ function iconBitmap(
     if (!surface) return '';
     const canvas = surface.getCanvas();
     canvas.scale(px / size, px / size);
-    canvas.drawPicture(iconPicture(icon, size, seamAll, main, secondary, colors));
+    canvas.drawPicture(iconPicture(icon, viewBox, size, seamAll, main, secondary, colors));
     uri = `data:image/png;base64,${surface.makeImageSnapshot().encodeToBase64()}`;
     bitmaps.set(key, uri);
   }
@@ -263,7 +265,15 @@ function iconBitmap(
  * draws inside a larger set — the front delts, inside the overhead press's
  * delts — takes the icon that lights it.
  */
+// Muscles drawn from another side than the design's own icon for them, framed
+// on them (Stavros): the neck is shown from the back, as its category tile
+// shows it, not from the front as the neck curl icon does.
+const DRAWN_AS: Record<string, { icon: ExerciseIconKey; viewBox: string }> = {
+  Neck: { icon: 'row', viewBox: '131.5 0.0 120.0 120.0' },
+};
+
 export function iconForMuscle(figure: string): ExerciseIconKey | undefined {
+  if (DRAWN_AS[figure]) return DRAWN_AS[figure].icon;
   const keys = Object.keys(EXERCISE_ICONS) as ExerciseIconKey[];
   const own = keys.find((k) => EXERCISE_ICONS[k].muscle === figure);
   if (own) return own;
@@ -311,11 +321,14 @@ export function ExerciseIcon({
     ),
   ];
   const accent = main === undefined ? [...def.accent] : regionsOf(main);
+  // Framed on the main muscle where it is drawn from another side.
+  const drawnAs = main?.[0] === undefined ? undefined : DRAWN_AS[main[0]];
+  const viewBox = drawnAs?.icon === icon ? drawnAs.viewBox : def.viewBox;
   const lit = new Set(accent);
   const regions = regionsOf(secondary)
     .filter((r) => !lit.has(r))
     .sort((a, b) => a - b);
-  const uri = iconBitmap(icon, inner, seamAll, accent.sort((a, b) => a - b), regions, {
+  const uri = iconBitmap(icon, viewBox, inner, seamAll, accent.sort((a, b) => a - b), regions, {
     accent: c.accent,
     secondary: c.accentSecondary,
     body: c.iconBody,
