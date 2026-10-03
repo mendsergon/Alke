@@ -93,7 +93,8 @@ export default function CategoryScreen() {
   // normally here in the first frame.
   const [exercises, setExercises] = useState<Exercise[] | null>(() => cachedExercisesIn(id) ?? null);
   const [query, setQuery] = useState('');
-  const [view, setView] = useState<View_>('list');
+  // A category opens on the grid (Stavros, 3 October 2026).
+  const [view, setView] = useState<View_>('grid');
   const { width, height: screen } = useWindowDimensions();
   const q = query.trim().toLowerCase();
   const shown = useMemo(
@@ -144,7 +145,7 @@ export default function CategoryScreen() {
   // in one view to its place in the other, carried by transforms alone, so
   // nothing is laid out again while it moves; the two views' contents
   // cross-fade on top of that.
-  const progress = useSharedValue(0);
+  const progress = useSharedValue(1);
   // The cards under both views stay drawn the whole way, so only what is on
   // them cross-fades, and nothing dims through the page.
   const listStyle = useAnimatedStyle(() => ({
@@ -174,7 +175,7 @@ export default function CategoryScreen() {
   // Which view sets the page's height: the one shown, once it has fully
   // arrived. While switching, the page keeps the taller of the two, so the
   // move to the other view's place is never cut short by the page's end.
-  const [showing, setShowing] = useState<View_>('list');
+  const [showing, setShowing] = useState<View_>('grid');
   const [switching, setSwitching] = useState(false);
   // Which cards are built follows the scroll in steps of half a screen, so
   // React commits only when a new step is reached, never while cards move.
@@ -238,7 +239,7 @@ export default function CategoryScreen() {
     setHeld(null);
     moving.value = false;
   };
-  const started = useRef<View_>('list');
+  const started = useRef<View_>('grid');
   useLayoutEffect(() => {
     if (started.current === view) return;
     started.current = view;
