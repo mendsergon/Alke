@@ -2,7 +2,7 @@ import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenHeader } from '../../components/screen';
 import { EmptyState, Pill } from '../../components/surfaces';
-import { FavoriteExercises } from '../../components/favorite-exercises';
+import { FavoriteGrid, FavoriteGroups, useFavoriteExercises } from '../../components/favorite-exercises';
 import { SwitchScreen } from '../../components/switch-screen';
 import { PagerSwitch } from '../../components/pager-switch';
 import { useState } from 'react';
@@ -29,6 +29,7 @@ export default function Library() {
   const router = useRouter();
   const { programs } = useLibrary();
   const [side, setSide] = useState<(typeof SIDES)[number]>('Programs');
+  const favorites = useFavoriteExercises();
 
   return (
     // The header stays; the two sides slide under it, and each keeps its own
@@ -36,6 +37,8 @@ export default function Library() {
     <SwitchScreen
       gap={tokens.space[16]}
       index={SIDES.indexOf(side)}
+      // The muscle groups stay put while the favorites scroll under them.
+      pinFirst={[false, true]}
       onIndexChange={(i) => setSide(SIDES[i] ?? 'Programs')}
       header={(progress) =>
         <>
@@ -67,7 +70,10 @@ export default function Library() {
             onSecondary={() => router.push('/explore')}
           />
         ),
-        <FavoriteExercises />,
+        <>
+          <FavoriteGroups favorites={favorites} />
+          <FavoriteGrid favorites={favorites} />
+        </>,
       ]}
     />
   );

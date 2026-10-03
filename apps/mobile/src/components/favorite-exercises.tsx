@@ -14,17 +14,24 @@ import { Star } from './exercise-star';
 
 type Favorite = { exercise: Exercise; category: MuscleCategory };
 
+export type FavoriteExercises = {
+  categories: MuscleCategory[];
+  /** Every favorite, in the categories' order; null until they are known. */
+  favorites: Favorite[] | null;
+  /** The muscle group picked, or none: every favorite shows. */
+  picked: string | null;
+  pick: (category: string) => void;
+  unstar: (f: Favorite) => void;
+};
+
 /**
- * The Library's favorite exercises (Stavros, 3 October 2026): the muscle
- * groups as their figure tiles in a row that scrolls sideways, over the
- * person's starred exercises drawn as a category's grid draws them. With no
+ * The Library's favorite exercises (Stavros, 3 October 2026): the person's
+ * starred exercises, and the muscle group picked to narrow them to. With no
  * group picked every favorite shows; picking a group shows its favorites, and
  * picking it again shows all of them.
  */
-export function FavoriteExercises() {
-  const { c, cardBorderWidth } = useTheme();
+export function useFavoriteExercises(): FavoriteExercises {
   const { token } = useAuth();
-  const { width } = useWindowDimensions();
   const [categories, setCategories] = useState<MuscleCategory[]>([]);
   const [favorites, setFavorites] = useState<Favorite[] | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
@@ -62,6 +69,8 @@ export function FavoriteExercises() {
     }, [categories, gather]),
   );
 
+  const pick = (category: string) => setPicked((now) => (now === category ? null : category));
+
   const unstar = (f: Favorite) => {
     const favorite = f.exercise.favorite;
     if (!token || !favorite) return;
@@ -72,85 +81,102 @@ export function FavoriteExercises() {
     });
   };
 
-  // Two cards across, sized as a category's grid sizes them.
-  const content = width - 2 * tokens.space[24];
-  const card = (content - tokens.space[12]) / 2;
-  const tile = card - 2 * tokens.space[12] - 2;
-  const group = categories.find((k) => k.id === picked);
-  const shown = favorites?.filter((f) => picked === null || f.category.id === picked) ?? [];
+  return { categories, favorites, picked, pick, unstar };
+}
 
+/**
+ * The muscle groups as their figure tiles, in a row that scrolls sideways and
+ * fades into the screen's edges. Pinned over the favorites: they scroll under
+ * it, and fade in under its bottom edge rather than being cut by it.
+ */
+export function FavoriteGroups({ favorites }: { favorites: FavoriteExercises }) {
+  const { c } = useTheme();
+  const band = tokens.space[16];
   return (
-    <View style={{ gap: tokens.space[16] }}>
-      {/* The row runs to the screen's edges and fades into them, so a group
-          scrolled off the margin dissolves rather than being cut. */}
-      <View style={{ marginHorizontal: -tokens.space[24] }}>
+    // The page puts a gap under every block; the band under the tiles takes
+    // its place, so the grid starts where it would without the pin.
+    <View style={{ marginHorizontal: -tokens.space[24], marginBottom: -band }}>
+      <View style={{ backgroundColor: c.bg }}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: tokens.space[24], gap: tokens.space[8] }}
         >
-          {categories.map((k) => (
+          {favorites.categories.map((k) => (
             <GroupTile
               key={k.id}
               category={k}
-              on={picked === k.id}
-              onPress={() => setPicked(picked === k.id ? null : k.id)}
+              on={favorites.picked === k.id}
+              onPress={() => favorites.pick(k.id)}
             />
           ))}
         </ScrollView>
-        <EdgeFade side="left" />
-        <EdgeFade side="right" />
+        <Fade direction="left" />
+        <Fade direction="right" />
       </View>
+      <View pointerEvents="none" style={{ height: band }}>
+        <Fade direction="down" />
+      </View>
+    </View>
+  );
+}
 
-      {favorites === null ? null : shown.length === 0 ? (
-        <EmptyState
-          line={group ? `No favorite ${group.name.toLowerCase()} exercises yet.` : 'No favorite exercises yet.'}
-        />
-      ) : (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space[12] }}>
-          {shown.map((f) => (
-            <View
-              key={f.exercise.id}
-              style={{
-                width: card,
-                padding: tokens.space[12],
-                gap: tokens.space[12],
-                borderRadius: tokens.radius.card,
-                // Light mode carries a card border; dark does not (PLAN.md §3).
-                borderWidth: cardBorderWidth,
-                borderColor: c.border,
-                backgroundColor: c.surface,
-              }}
-            >
-              {f.exercise.icon ? (
-                <ExerciseIcon
-                  icon={f.exercise.icon}
-                  main={f.exercise.main}
-                  secondary={f.exercise.secondary}
-                  size={tile}
-                  seamAll
-                />
-              ) : null}
-              <View style={{ gap: tokens.space[4] }}>
-                <Txt
-                  variant="rowTitle"
-                  color={c.text}
-                  numberOfLines={2}
-                  style={{ minHeight: 2 * tokens.type.rowTitle.lineHeight }}
-                >
-                  {f.exercise.name}
-                </Txt>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[8] }}>
-                  <Txt variant="captionTight" color={c.textSecondary} numberOfLines={1} style={{ flexShrink: 1 }}>
-                    {f.exercise.type}
-                  </Txt>
-                  <Star on onPress={() => unstar(f)} push />
-                </View>
-              </View>
+/** The favorites, or those of the picked group, as a category's grid draws them. */
+export function FavoriteGrid({ favorites }: { favorites: FavoriteExercises }) {
+  const { c, cardBorderWidth } = useTheme();
+  const { width } = useWindowDimensions();
+  if (favorites.favorites === null) return null;
+
+  // Two cards across, sized as a category's grid sizes them.
+  const content = width - 2 * tokens.space[24];
+  const card = (content - tokens.space[12]) / 2;
+  const tile = card - 2 * tokens.space[12] - 2;
+  const group = favorites.categories.find((k) => k.id === favorites.picked);
+  const shown = favorites.favorites.filter((f) => favorites.picked === null || f.category.id === favorites.picked);
+
+  if (shown.length === 0) {
+    return (
+      <EmptyState line={group ? `No favorite ${group.name.toLowerCase()} exercises yet.` : 'No favorite exercises yet.'} />
+    );
+  }
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space[12] }}>
+      {shown.map((f) => (
+        <View
+          key={f.exercise.id}
+          style={{
+            width: card,
+            padding: tokens.space[12],
+            gap: tokens.space[12],
+            borderRadius: tokens.radius.card,
+            // Light mode carries a card border; dark does not (PLAN.md §3).
+            borderWidth: cardBorderWidth,
+            borderColor: c.border,
+            backgroundColor: c.surface,
+          }}
+        >
+          {f.exercise.icon ? (
+            <ExerciseIcon
+              icon={f.exercise.icon}
+              main={f.exercise.main}
+              secondary={f.exercise.secondary}
+              size={tile}
+              seamAll
+            />
+          ) : null}
+          <View style={{ gap: tokens.space[4] }}>
+            <Txt variant="rowTitle" color={c.text} numberOfLines={2} style={{ minHeight: 2 * tokens.type.rowTitle.lineHeight }}>
+              {f.exercise.name}
+            </Txt>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[8] }}>
+              <Txt variant="captionTight" color={c.textSecondary} numberOfLines={1} style={{ flexShrink: 1 }}>
+                {f.exercise.type}
+              </Txt>
+              <Star on onPress={() => favorites.unstar(f)} push />
             </View>
-          ))}
+          </View>
         </View>
-      )}
+      ))}
     </View>
   );
 }
@@ -184,21 +210,31 @@ function GroupTile({ category, on, onPress }: { category: MuscleCategory; on: bo
   );
 }
 
-// The page's background fading in over one end of the row, across its margin.
-function EdgeFade({ side }: { side: 'left' | 'right' }) {
+// The page's background fading in over an edge: over the row's ends, across
+// its margins, and down from under the pinned row.
+function Fade({ direction }: { direction: 'left' | 'right' | 'down' }) {
   const { c } = useTheme();
-  const width = tokens.space[24];
-  const id = `fade-${side}`;
+  const across = direction !== 'down';
+  const id = `fade-${direction}`;
+  const size = across ? tokens.space[24] : '100%';
+  const from = direction === 'right' ? 0 : 1;
   return (
-    <View pointerEvents="none" style={{ position: 'absolute', top: 0, bottom: 0, width, [side]: 0 }}>
-      <Svg width={width} height="100%">
+    <View
+      pointerEvents="none"
+      style={
+        across
+          ? { position: 'absolute', top: 0, bottom: 0, width: tokens.space[24], [direction]: 0 }
+          : { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 }
+      }
+    >
+      <Svg width={size} height="100%">
         <Defs>
-          <LinearGradient id={id} x1="0" y1="0" x2="1" y2="0">
-            <Stop offset="0" stopColor={c.bg} stopOpacity={side === 'left' ? 1 : 0} />
-            <Stop offset="1" stopColor={c.bg} stopOpacity={side === 'left' ? 0 : 1} />
+          <LinearGradient id={id} x1="0" y1="0" x2={across ? '1' : '0'} y2={across ? '0' : '1'}>
+            <Stop offset="0" stopColor={c.bg} stopOpacity={from} />
+            <Stop offset="1" stopColor={c.bg} stopOpacity={1 - from} />
           </LinearGradient>
         </Defs>
-        <Rect x="0" y="0" width={width} height="100%" fill={`url(#${id})`} />
+        <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${id})`} />
       </Svg>
     </View>
   );
