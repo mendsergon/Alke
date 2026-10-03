@@ -31,6 +31,7 @@ func newProgramsApp(t testing.TB) *tests.TestApp {
 	bindPrograms(app)
 	bindExercises(app)
 	bindUsers(app)
+	bindFavorites(app)
 	return app
 }
 
