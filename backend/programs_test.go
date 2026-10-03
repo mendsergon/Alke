@@ -649,9 +649,9 @@ func TestShapeValidation(t *testing.T) {
 			schedule: []string{"training", "rest", "training", "rest", "training", "rest", "rest"},
 			days:     `[{"weekday":"monday","workouts":[{"name":"A","icon":"squat"}]},{"weekday":"wednesday","workouts":[{"name":"A","icon":"upper"}]},{"weekday":"friday","workouts":[{"name":"A","icon":"upper"}]}]`,
 		},
-		"a workout carrying anything but a name and an icon": {
+		"a workout carrying anything but a name, an icon and its exercises": {
 			schedule: []string{"training", "rest", "training", "rest", "training", "rest", "rest"},
-			days:     `[{"weekday":"monday","workouts":[{"name":"A","icon":"upper","exercises":[]}]},{"weekday":"wednesday","workouts":[{"name":"A","icon":"upper"}]},{"weekday":"friday","workouts":[{"name":"A","icon":"upper"}]}]`,
+			days:     `[{"weekday":"monday","workouts":[{"name":"A","icon":"upper","notes":""}]},{"weekday":"wednesday","workouts":[{"name":"A","icon":"upper"}]},{"weekday":"friday","workouts":[{"name":"A","icon":"upper"}]}]`,
 		},
 	}
 

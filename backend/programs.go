@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"regexp"
 	"strings"
 
 	validation "github.com/pocketbase/ozzo-validation/v4"
@@ -29,12 +30,24 @@ var workoutIcons = map[string]bool{
 	"pull":      true,
 }
 
-// A workout inside a program is a placeholder: a name and an icon, nothing
-// else. It holds no exercises.
+// A workout inside a program: a name, an icon, and the exercises it plans, in
+// the order they are done. A workout may plan none yet.
 type programWorkout struct {
-	Name string `json:"name"`
-	Icon string `json:"icon"`
+	Name      string            `json:"name"`
+	Icon      string            `json:"icon"`
+	Exercises []programExercise `json:"exercises,omitempty"`
 }
+
+// An exercise a workout plans: where it lives (exercises are kept one
+// collection per category, as favorites name them) and how many sets.
+type programExercise struct {
+	Collection string `json:"collection"`
+	Exercise   string `json:"exercise"`
+	Sets       int    `json:"sets"`
+}
+
+// The collections weight exercises live in: weights_chest, weights_back, …
+var exerciseCollection = regexp.MustCompile(`^weights_[a-z_]+$`)
 
 // One entry per training day, in week order. Rest days have no entry.
 type programDay struct {
@@ -51,7 +64,7 @@ func bindPrograms(app core.App) {
 		schedule, err := checkSchedule(e.Record.GetString("schedule"))
 		if err != nil {
 			errs["schedule"] = err
-		} else if err := checkDays(e.Record.GetString("days"), schedule); err != nil {
+		} else if err := checkDays(e.App, e.Record.GetString("days"), schedule, e.Record.GetString("owner")); err != nil {
 			errs["days"] = err
 		}
 
@@ -81,10 +94,10 @@ func checkSchedule(raw string) ([]string, error) {
 	return schedule, nil
 }
 
-func checkDays(raw string, schedule []string) error {
+func checkDays(app core.App, raw string, schedule []string, owner string) error {
 	var days []programDay
 	if err := strictUnmarshal(raw, &days); err != nil {
-		return validation.NewError("validation_days_shape", "Each day is a weekday and its workouts, each workout a name and an icon.")
+		return validation.NewError("validation_days_shape", "Each day is a weekday and its workouts, each workout a name, an icon and its exercises.")
 	}
 
 	var training []string
@@ -111,7 +124,32 @@ func checkDays(raw string, schedule []string) error {
 			if !workoutIcons[w.Icon] {
 				return validation.NewError("validation_workout_icon", "Unknown workout icon.")
 			}
+			for _, x := range w.Exercises {
+				if err := checkExercise(app, x, owner); err != nil {
+					return err
+				}
+			}
 		}
+	}
+	return nil
+}
+
+// A planned exercise is one the program's owner can read: a catalog exercise,
+// or a custom one of their own. A template, which has no owner, plans only
+// catalog exercises. It has at least one set.
+func checkExercise(app core.App, x programExercise, owner string) error {
+	if x.Sets < 1 {
+		return validation.NewError("validation_exercise_sets", "An exercise has at least one set.")
+	}
+	if !exerciseCollection.MatchString(x.Collection) || x.Exercise == "" {
+		return validation.NewError("validation_exercise_unknown", "Unknown exercise.")
+	}
+	r, err := app.FindRecordById(x.Collection, x.Exercise)
+	if err != nil {
+		return validation.NewError("validation_exercise_unknown", "Unknown exercise.")
+	}
+	if o := r.GetString("owner"); o != "" && o != owner {
+		return validation.NewError("validation_exercise_unknown", "Unknown exercise.")
 	}
 	return nil
 }
