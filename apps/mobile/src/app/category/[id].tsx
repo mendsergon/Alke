@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Image, Pressable, View, useWindowDimensions } from 'react-native';
+import { Pressable, View, useWindowDimensions } from 'react-native';
 import Animated, {
   Easing,
   interpolate,
@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '../../components/surfaces';
 import { SearchBar } from '../../components/search-bar';
 import { ExerciseIcon } from '../../figure/figure';
+import { Star } from '../../components/exercise-star';
 import { Txt } from '../../theme/text';
 import { tokens, useTheme } from '../../theme/theme';
 import { useAuth } from '../../auth/auth';
@@ -34,8 +35,6 @@ import {
 import backIcon from '../../../assets/images/back.png';
 import viewListIcon from '../../../assets/images/view-list.png';
 import viewGridIcon from '../../../assets/images/view-grid.png';
-import starIcon from '../../../assets/images/star.png';
-import starFilledIcon from '../../../assets/images/star-filled.png';
 
 /**
  * A muscle category's exercises: every exercise whose main muscle it is, as
@@ -96,9 +95,7 @@ export default function CategoryScreen() {
   const back = useBack('/explore');
   const { token } = useAuth();
   const navigation = useNavigation<NativeStackNavigationProp<Record<string, object | undefined>>>();
-  const { id, name, favorites } = useLocalSearchParams<{ id: string; name?: string; favorites?: string }>();
-  // Opened from the Library's favorite exercises: only the starred ones.
-  const favoritesOnly = favorites === '1';
+  const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
   // Explore fetches every category's list before one is opened, so the list is
   // normally here in the first frame.
   const [exercises, setExercises] = useState<Exercise[] | null>(() => cachedExercisesIn(id) ?? null);
@@ -107,11 +104,10 @@ export default function CategoryScreen() {
   const [view, setView] = useState<View_>('grid');
   const { width, height: screen } = useWindowDimensions();
   const q = query.trim().toLowerCase();
-  const pool = useMemo(
-    () => (favoritesOnly ? exercises?.filter((e) => e.favorite !== undefined) : exercises) ?? null,
-    [exercises, favoritesOnly],
+  const shown = useMemo(
+    () => exercises?.filter((e) => e.name.toLowerCase().includes(q)) ?? [],
+    [exercises, q],
   );
-  const shown = useMemo(() => pool?.filter((e) => e.name.toLowerCase().includes(q)) ?? [], [pool, q]);
 
   const content = width - 2 * tokens.space[24];
   // Two columns across the content width; the icon fills its card inside the
@@ -364,17 +360,13 @@ export default function CategoryScreen() {
             {name ?? ''}
           </Txt>
           {/* Laid out from the first frame, so the list arriving pushes nothing. */}
-          {pool === null || pool.length > 0 ? (
+          {exercises === null || exercises.length > 0 ? (
             <SearchBar value={query} onChange={setQuery} label="Search exercises" />
           ) : null}
         </View>
 
-        {pool === null ? null : shown.length === 0 ? (
-          <EmptyState
-            line={
-              pool.length > 0 ? 'No exercises match.' : favoritesOnly ? 'No favorite exercises yet.' : 'No exercises yet.'
-            }
-          />
+        {exercises === null ? null : shown.length === 0 ? (
+          <EmptyState line={exercises.length === 0 ? 'No exercises yet.' : 'No exercises match.'} />
         ) : (
           <View style={switching ? { minHeight: tallest } : undefined}>
             <Surfaces
@@ -684,29 +676,6 @@ const GridCards = memo(function GridCards({
     </Travel>
   ));
 });
-
-// An exercise's star: grey and open, or gold and filled when it is one of the
-// person's favorites (Stavros, 3 October 2026). As tall as the card's last
-// line, so the card keeps its height; its touch area is a full tap target.
-function Star({ on, onPress, push = false }: { on: boolean; onPress: () => void; push?: boolean }) {
-  const { c } = useTheme();
-  const size = tokens.type.captionTight.lineHeight;
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={on ? 'Remove from favorites' : 'Add to favorites'}
-      accessibilityState={{ selected: on }}
-      hitSlop={(tokens.sizing.tapTarget.ios - size) / 2}
-      onPress={onPress}
-      style={push ? { marginLeft: 'auto' } : undefined}
-    >
-      <Image
-        source={on ? starFilledIcon : starIcon}
-        style={{ width: size, height: size, tintColor: on ? c.recordFill : c.textSecondary }}
-      />
-    </Pressable>
-  );
-}
 
 function same(a: readonly Exercise[], b: readonly Exercise[]) {
   return (
