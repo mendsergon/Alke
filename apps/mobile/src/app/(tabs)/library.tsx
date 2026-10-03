@@ -42,7 +42,6 @@ export default function Library() {
           {/* OPEN: the program builder is not designed yet (PLAN.md §3), so the + opens nothing. */}
           <ScreenHeader
             title="Library"
-            subtitle="Your programs"
             action={<GlassButton icon="plus" label="Create a program" />}
           />
           <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
