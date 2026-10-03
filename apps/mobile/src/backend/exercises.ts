@@ -14,6 +14,11 @@ export type Exercise = {
   main: readonly string[];
   /** Its secondary muscles, by the names the body figure uses. */
   secondary: string[];
+  /**
+   * The signed-in person's star on it, by the favorite's id; empty while a
+   * new star is being saved. None when it is not starred.
+   */
+  favorite?: string;
 };
 
 type ExerciseRow = {
@@ -36,7 +41,7 @@ const checkbox = (muscle: string) => muscle.toLowerCase().replace(/ /g, '_');
 
 // The main muscles are the category's own: the one chosen by name, every one
 // whose checkbox is ticked, or the category's only muscle.
-const toExercise = (r: ExerciseRow, muscles: MuscleRow[]): Exercise => {
+const toExercise = (r: ExerciseRow, muscles: MuscleRow[], favorites: ReadonlyMap<string, string>): Exercise => {
   const main = (
     r.main_muscle
       ? muscles.filter((m) => m.name === r.main_muscle)
@@ -51,6 +56,7 @@ const toExercise = (r: ExerciseRow, muscles: MuscleRow[]): Exercise => {
     type: r.expand?.type?.name ?? '',
     main,
     secondary: (r.expand?.secondary_muscles ?? []).map((m) => m.figure),
+    favorite: favorites.get(r.id),
   };
 };
 
@@ -79,19 +85,30 @@ async function fetchWeights(category: { id: string; name: string }, token: strin
   try {
     const headers: Record<string, string> = token ? { Authorization: token } : {};
     const own = encodeURIComponent(`category="${category.id}"`);
-    const [exercises, muscles] = await Promise.all([
-      fetch(
-        `${POCKETBASE_URL}/api/collections/${weightsCollection(category.name)}/records?perPage=500&sort=created&${FIELDS}`,
-        { headers },
-      ),
+    const collection = weightsCollection(category.name);
+    const inCollection = encodeURIComponent(`collection="${collection}"`);
+    const [exercises, muscles, stars] = await Promise.all([
+      fetch(`${POCKETBASE_URL}/api/collections/${collection}/records?perPage=500&sort=created&${FIELDS}`, { headers }),
       fetch(`${POCKETBASE_URL}/api/collections/muscles/records?perPage=500&sort=position&filter=${own}&fields=name,figure`, {
         headers,
       }),
+      // The signed-in person's stars in this category; a guest has none.
+      token
+        ? fetch(
+            `${POCKETBASE_URL}/api/collections/favorite_exercises/records?perPage=500&filter=${inCollection}&fields=id,exercise`,
+            { headers },
+          )
+        : null,
     ]);
-    if (!exercises.ok || !muscles.ok) return null;
+    if (!exercises.ok || !muscles.ok || (stars && !stars.ok)) return null;
     const { items } = (await exercises.json()) as { items: ExerciseRow[] };
     const { items: theirs } = (await muscles.json()) as { items: MuscleRow[] };
-    return items.map((r) => toExercise(r, theirs));
+    const favorites = new Map<string, string>();
+    if (stars) {
+      const { items: starred } = (await stars.json()) as { items: { id: string; exercise: string }[] };
+      for (const f of starred) favorites.set(f.exercise, f.id);
+    }
+    return items.map((r) => toExercise(r, theirs, favorites));
   } catch {
     return null;
   }
@@ -125,4 +142,66 @@ export async function listExercisesIn(
   const exercises = await fetchWeights(category, token);
   if (exercises) byCategory.set(category.id, exercises);
   return exercises;
+}
+
+/** The signed-in person's id, read from their PocketBase auth token. */
+function userOf(token: string): string | null {
+  try {
+    const part = token.split('.')[1] ?? '';
+    const base64 = part.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (part.length % 4)) % 4);
+    const { id } = JSON.parse(atob(base64)) as { id?: string };
+    return id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// A star given or taken is kept in the category's cached list too, so the
+// category opens with it next time.
+function cacheStar(categoryId: string, exercise: string, favorite: string | undefined) {
+  const list = byCategory.get(categoryId);
+  if (list) byCategory.set(categoryId, list.map((e) => (e.id === exercise ? { ...e, favorite } : e)));
+}
+
+/** Stars an exercise for the signed-in person; the favorite's id, or null. */
+export async function starExercise(
+  category: { id: string; name: string },
+  exercise: string,
+  token: string,
+): Promise<string | null> {
+  const user = userOf(token);
+  if (!user) return null;
+  try {
+    const response = await fetch(`${POCKETBASE_URL}/api/collections/favorite_exercises/records`, {
+      method: 'POST',
+      headers: { Authorization: token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user, collection: weightsCollection(category.name), exercise }),
+    });
+    if (!response.ok) return null;
+    const { id } = (await response.json()) as { id: string };
+    cacheStar(category.id, exercise, id);
+    return id;
+  } catch {
+    return null;
+  }
+}
+
+/** Takes the signed-in person's star off an exercise; whether it went. */
+export async function unstarExercise(
+  category: { id: string; name: string },
+  exercise: string,
+  favorite: string,
+  token: string,
+): Promise<boolean> {
+  try {
+    const response = await fetch(`${POCKETBASE_URL}/api/collections/favorite_exercises/records/${favorite}`, {
+      method: 'DELETE',
+      headers: { Authorization: token },
+    });
+    if (!response.ok) return false;
+    cacheStar(category.id, exercise, undefined);
+    return true;
+  } catch {
+    return false;
+  }
 }
