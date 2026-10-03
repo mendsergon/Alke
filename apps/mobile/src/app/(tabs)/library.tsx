@@ -2,7 +2,7 @@ import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenHeader } from '../../components/screen';
 import { EmptyState, Pill } from '../../components/surfaces';
-import { MuscleCategories } from '../../components/muscle-categories';
+import { FavoriteExercises } from '../../components/favorite-exercises';
 import { SwitchScreen } from '../../components/switch-screen';
 import { PagerSwitch } from '../../components/pager-switch';
 import { useState } from 'react';
@@ -67,14 +67,7 @@ export default function Library() {
             onSecondary={() => router.push('/explore')}
           />
         ),
-        <MuscleCategories
-          onOpen={(category) =>
-            router.push({
-              pathname: '/category/[id]',
-              params: { id: category.id, name: category.name, favorites: '1' },
-            })
-          }
-        />,
+        <FavoriteExercises />,
       ]}
     />
   );
