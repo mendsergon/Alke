@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { useFocusEffect } from 'expo-router';
 import { Txt } from '../theme/text';
 import { tokens, useTheme } from '../theme/theme';
@@ -7,6 +8,7 @@ import { useAuth } from '../auth/auth';
 import { listMuscleCategories, type MuscleCategory } from '../backend/muscles';
 import { cachedExercisesIn, listExercisesIn, unstarExercise, type Exercise } from '../backend/exercises';
 import { ExerciseIcon } from '../figure/figure';
+import { GroupIcon } from '../figure/muscle-groups';
 import { EmptyState } from './surfaces';
 import { Star } from './exercise-star';
 
@@ -14,12 +16,13 @@ type Favorite = { exercise: Exercise; category: MuscleCategory };
 
 /**
  * The Library's favorite exercises (Stavros, 3 October 2026): the muscle
- * groups in a row that scrolls sideways, All first and picked, over the
- * person's starred exercises drawn as a category's grid draws them. Picking a
- * group shows its favorites; picking it again shows all of them.
+ * groups as their figure tiles in a row that scrolls sideways, over the
+ * person's starred exercises drawn as a category's grid draws them. With no
+ * group picked every favorite shows; picking a group shows its favorites, and
+ * picking it again shows all of them.
  */
 export function FavoriteExercises() {
-  const { c } = useTheme();
+  const { c, cardBorderWidth } = useTheme();
   const { token } = useAuth();
   const { width } = useWindowDimensions();
   const [categories, setCategories] = useState<MuscleCategory[]>([]);
@@ -78,17 +81,26 @@ export function FavoriteExercises() {
 
   return (
     <View style={{ gap: tokens.space[16] }}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={{ marginHorizontal: -tokens.space[24] }}
-        contentContainerStyle={{ paddingHorizontal: tokens.space[24], gap: tokens.space[8] }}
-      >
-        <Chip label="All" on={picked === null} onPress={() => setPicked(null)} />
-        {categories.map((k) => (
-          <Chip key={k.id} label={k.name} on={picked === k.id} onPress={() => setPicked(picked === k.id ? null : k.id)} />
-        ))}
-      </ScrollView>
+      {/* The row runs to the screen's edges and fades into them, so a group
+          scrolled off the margin dissolves rather than being cut. */}
+      <View style={{ marginHorizontal: -tokens.space[24] }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: tokens.space[24], gap: tokens.space[8] }}
+        >
+          {categories.map((k) => (
+            <GroupTile
+              key={k.id}
+              category={k}
+              on={picked === k.id}
+              onPress={() => setPicked(picked === k.id ? null : k.id)}
+            />
+          ))}
+        </ScrollView>
+        <EdgeFade side="left" />
+        <EdgeFade side="right" />
+      </View>
 
       {favorites === null ? null : shown.length === 0 ? (
         <EmptyState
@@ -104,7 +116,8 @@ export function FavoriteExercises() {
                 padding: tokens.space[12],
                 gap: tokens.space[12],
                 borderRadius: tokens.radius.card,
-                borderWidth: 1,
+                // Light mode carries a card border; dark does not (PLAN.md §3).
+                borderWidth: cardBorderWidth,
                 borderColor: c.border,
                 backgroundColor: c.surface,
               }}
@@ -142,31 +155,51 @@ export function FavoriteExercises() {
   );
 }
 
-// A muscle group to show the favorites of: the design's chip (Explore's
-// template card), and in the accent when picked.
-function Chip({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
+// A muscle group to show the favorites of: its figure tile, as Explore draws
+// the group, with an accent halo when it is picked.
+function GroupTile({ category, on, onPress }: { category: MuscleCategory; on: boolean; onPress: () => void }) {
   const { c } = useTheme();
-  const height = tokens.type.bodySmall.lineHeight + 2 * tokens.space[8] + 2;
-  const slop = Math.max(0, (tokens.sizing.tapTarget.ios - height) / 2);
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={category.name}
       accessibilityState={{ selected: on }}
-      hitSlop={{ top: slop, bottom: slop }}
       onPress={onPress}
       style={{
-        paddingVertical: tokens.space[8],
-        paddingHorizontal: tokens.space[12],
-        borderRadius: tokens.radius.chip,
+        padding: tokens.space[4],
+        borderRadius: tokens.radius.card,
         borderWidth: 1,
-        borderColor: on ? c.accent : c.border,
-        backgroundColor: on ? c.accentSoft : c.bg,
+        borderColor: on ? c.accent : 'transparent',
+        backgroundColor: on ? c.accentSoft : 'transparent',
       }}
     >
-      <Txt variant="bodySmall" color={on ? c.accent : c.textSecondary}>
-        {label}
-      </Txt>
+      <GroupIcon
+        base={category.icon}
+        muscles={category.icon_muscles}
+        viewBox={category.icon_crop || undefined}
+        size={tokens.iconTile.size.sessionHeader}
+        seamAll
+      />
     </Pressable>
+  );
+}
+
+// The page's background fading in over one end of the row, across its margin.
+function EdgeFade({ side }: { side: 'left' | 'right' }) {
+  const { c } = useTheme();
+  const width = tokens.space[24];
+  const id = `fade-${side}`;
+  return (
+    <View pointerEvents="none" style={{ position: 'absolute', top: 0, bottom: 0, width, [side]: 0 }}>
+      <Svg width={width} height="100%">
+        <Defs>
+          <LinearGradient id={id} x1="0" y1="0" x2="1" y2="0">
+            <Stop offset="0" stopColor={c.bg} stopOpacity={side === 'left' ? 1 : 0} />
+            <Stop offset="1" stopColor={c.bg} stopOpacity={side === 'left' ? 0 : 1} />
+          </LinearGradient>
+        </Defs>
+        <Rect x="0" y="0" width={width} height="100%" fill={`url(#${id})`} />
+      </Svg>
+    </View>
   );
 }
