@@ -203,10 +203,15 @@ export default function CategoryScreen() {
     }
   };
   const top = (furthest + 1) * half - cardsTop;
-  const built = Math.max(
-    spanIn('list', g, shown.length, top, screen)[1],
-    spanIn('grid', g, shown.length, top, screen)[1],
+  // While the screen slides in, only the cards on its first screen are built;
+  // the rest are built once it has arrived, with the other view.
+  const firstScreen = Math.min(
+    shown.length,
+    Math.ceil(Math.max(0, screen - cardsTop) / step[view]) * perRow[view],
   );
+  const built = both
+    ? Math.max(spanIn('list', g, shown.length, top, screen)[1], spanIn('grid', g, shown.length, top, screen)[1])
+    : firstScreen;
   const span: Span = [0, built];
   const tallest = Math.max(
     shown.length * step.list - tokens.space[12],
