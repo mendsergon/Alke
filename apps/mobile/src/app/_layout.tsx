@@ -32,6 +32,7 @@ import { AuthProvider, useAuth } from '../auth/auth';
 import { SignIn } from '../auth/sign-in';
 import { ArrivalProvider } from '../components/arrival';
 import { LibraryProvider } from '../library/library';
+import { SessionProvider } from '../session/session';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -361,6 +362,10 @@ function Navigator() {
         <Stack.Screen name="account" dangerouslySingular />
         <Stack.Screen name="category/[id]" dangerouslySingular />
         <Stack.Screen name="sign-in" options={{ presentation: 'modal' }} />
+        {/* A session is full screen over the tabs (PLAN.md §2); adding an
+            exercise to it is a sheet over the session. */}
+        <Stack.Screen name="session" options={{ presentation: 'fullScreenModal', headerShown: false }} dangerouslySingular />
+        <Stack.Screen name="add-exercise" options={{ presentation: 'modal', headerShown: false }} dangerouslySingular />
       </Stack>
     </NavigationTheme>
   );
@@ -383,8 +388,10 @@ export default function RootLayout() {
           <AuthProvider>
             <GymProvider>
               <LibraryProvider>
-                <Gate />
-                <SplashHold />
+                <SessionProvider>
+                  <Gate />
+                  <SplashHold />
+                </SessionProvider>
               </LibraryProvider>
             </GymProvider>
           </AuthProvider>
