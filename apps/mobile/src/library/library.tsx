@@ -10,6 +10,8 @@ type LibraryState = {
   programs: ProgramRecord[];
   /** Saves a template as the person's own copy. Resolves false if it did not save. */
   save: (template: ProgramRecord) => Promise<boolean>;
+  /** Puts a program the person changed back in place. */
+  replace: (program: ProgramRecord) => void;
 };
 
 const Ctx = createContext<LibraryState | null>(null);
@@ -44,7 +46,11 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     [token, ownerId],
   );
 
-  const value = useMemo<LibraryState>(() => ({ programs, save }), [programs, save]);
+  const replace = useCallback((program: ProgramRecord) => {
+    setPrograms((current) => current.map((p) => (p.id === program.id ? program : p)));
+  }, []);
+
+  const value = useMemo<LibraryState>(() => ({ programs, save, replace }), [programs, save, replace]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

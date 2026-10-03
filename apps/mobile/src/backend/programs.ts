@@ -5,8 +5,14 @@ import { POCKETBASE_URL } from './pocketbase';
  * A row with no owner is a template; a row with an owner is that person's.
  */
 
-/** A placeholder: a name and an icon. It holds no exercises. */
-export type ProgramWorkout = { name: string; icon: string };
+/**
+ * An exercise a workout plans: the collection it lives in (weights_chest, …),
+ * its id there, and how many sets.
+ */
+export type PlannedExercise = { collection: string; exercise: string; sets: number };
+
+/** A workout: a name, an icon, and the exercises it plans, in order. */
+export type ProgramWorkout = { name: string; icon: string; exercises?: PlannedExercise[] };
 
 /** One entry per training day, in week order. Rest days have none. */
 export type ProgramDay = { weekday: string; workouts: ProgramWorkout[] };
@@ -79,6 +85,28 @@ export async function saveTemplate(
         schedule: template.schedule,
         days: template.days,
       }),
+    });
+    if (!response.ok) return null;
+    return (await response.json()) as ProgramRecord;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Writes a program's days. Only the person's own programs can be written; the
+ * collection's update rule refuses a template or anyone else's.
+ */
+export async function updateProgramDays(
+  token: string,
+  program: ProgramRecord,
+  days: ProgramDay[],
+): Promise<ProgramRecord | null> {
+  try {
+    const response = await fetch(`${POCKETBASE_URL}/api/collections/programs/records/${program.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: token },
+      body: JSON.stringify({ days }),
     });
     if (!response.ok) return null;
     return (await response.json()) as ProgramRecord;
