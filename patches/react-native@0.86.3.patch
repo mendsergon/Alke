@@ -1,0 +1,31 @@
+diff --git a/Libraries/Animated/nodes/AnimatedValue.js b/Libraries/Animated/nodes/AnimatedValue.js
+index 8650912edf6fd70cd72d135b432945ea35733478..0517797a80c200c8be044cacb196fef29129cdd3 100644
+--- a/Libraries/Animated/nodes/AnimatedValue.js
++++ b/Libraries/Animated/nodes/AnimatedValue.js
+@@ -20,6 +20,7 @@ import type AnimatedNode from './AnimatedNode';
+ import type {AnimatedNodeConfig} from './AnimatedNode';
+ import type AnimatedTracking from './AnimatedTracking';
+ 
++import Platform from '../../Utilities/Platform';
+ import NativeAnimatedHelper from '../../../src/private/animated/NativeAnimatedHelper';
+ import AnimatedInterpolation from './AnimatedInterpolation';
+ import AnimatedWithChildren from './AnimatedWithChildren';
+@@ -182,8 +183,17 @@ export default class AnimatedValue extends AnimatedWithChildren {
+           return;
+         }
+         this._updateSubscription = null;
+-        subscription.remove();
+         NativeAnimatedAPI.stopListeningToAnimatedNodeValue(nativeTag);
++        if (Platform.OS === 'ios') {
++          // iOS counts the module's listeners as soon as one is removed, while
++          // the node stops sending only once the operation queue runs: removing
++          // the listener first lets an update go out with none registered.
++          // getValue runs after the stop in that same queue, so its callback
++          // comes once the node has stopped sending.
++          NativeAnimatedAPI.getValue(nativeTag, () => subscription.remove());
++        } else {
++          subscription.remove();
++        }
+       },
+     };
+   }
