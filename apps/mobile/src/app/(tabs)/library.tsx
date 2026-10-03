@@ -12,6 +12,7 @@ import { DayDots, ProgramCard, weekLine } from '../../components/program-card';
 import { Txt } from '../../theme/text';
 import { tokens, useTheme } from '../../theme/theme';
 import { useLibrary } from '../../library/library';
+import { useSession } from '../../session/session';
 import { trainingDays, type ProgramRecord } from '../../backend/programs';
 
 /**
@@ -81,10 +82,18 @@ export default function Library() {
 
 function LibraryCard({ program }: { program: ProgramRecord }) {
   const { c } = useTheme();
+  const router = useRouter();
+  const { open } = useSession();
   const days = trainingDays(program);
   return (
-    // OPEN: there is no program screen yet, so the card presses and goes nowhere.
-    <ProgramCard label={program.name}>
+    // The card opens the program's workout, as an overview before it starts.
+    <ProgramCard
+      label={program.name}
+      onPress={() => {
+        open(program);
+        router.push('/session');
+      }}
+    >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[12] }}>
         <View style={{ flexGrow: 1, flexShrink: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: tokens.space[12] }}>

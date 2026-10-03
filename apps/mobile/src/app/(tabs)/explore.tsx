@@ -13,6 +13,7 @@ import { tokens, useTheme } from '../../theme/theme';
 import { useAuth } from '../../auth/auth';
 import { useGym } from '../../gym/gym';
 import { useLibrary } from '../../library/library';
+import { useSession } from '../../session/session';
 import { listTemplates, trainingDays, type ProgramRecord } from '../../backend/programs';
 import { DayDots, ProgramCard, weekLine } from '../../components/program-card';
 import { GYM_PROGRAMS, SHARED_PROGRAMS } from '../../mock/mock-data';
@@ -48,7 +49,9 @@ function MetaChip({ label }: { label: string }) {
 
 function TemplateCard({ template }: { template: ProgramRecord }) {
   const { c } = useTheme();
+  const router = useRouter();
   const { programs, save } = useLibrary();
+  const { open } = useSession();
   const [saving, setSaving] = useState(false);
   const days = trainingDays(template);
   const restDays = template.schedule.length - days;
@@ -56,8 +59,14 @@ function TemplateCard({ template }: { template: ProgramRecord }) {
   const chips = [...new Set(template.days.flatMap((d) => d.workouts.map((w) => w.name)))];
 
   return (
-    // OPEN: there is no program screen yet, so the card presses and goes nowhere.
-    <ProgramCard label={template.name}>
+    // The card opens the program's workout, as an overview before it starts.
+    <ProgramCard
+      label={template.name}
+      onPress={() => {
+        open(template);
+        router.push('/session');
+      }}
+    >
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: tokens.space[12] }}>
         <View style={{ flexGrow: 1, flexShrink: 1 }}>
           <Txt variant="serifCardTitle" family="serif" weight={500} color={c.text}>
