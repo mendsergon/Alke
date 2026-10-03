@@ -148,10 +148,7 @@ export function FavoriteGrid({ favorites }: { favorites: FavoriteExercises }) {
   return <ExerciseCards items={shown} onStar={favorites.unstar} />;
 }
 
-/**
- * Exercises two across, as a category's grid draws them: the icon, the name,
- * the type and the star. With `onPress` the whole card presses.
- */
+/** Exercises two across, as a category's grid draws them. */
 export function ExerciseCards({
   items,
   onPress,
@@ -160,6 +157,28 @@ export function ExerciseCards({
   items: readonly Favorite[];
   onPress?: (f: Favorite) => void;
   /** Without it, a signed-out person: no star. */
+  onStar?: (f: Favorite) => void;
+}) {
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space[12] }}>
+      {items.map((f) => (
+        <ExerciseCard key={f.exercise.id} item={f} onPress={onPress} onStar={onStar} />
+      ))}
+    </View>
+  );
+}
+
+/**
+ * One exercise as a category's grid draws it, half the content's width: the
+ * icon, the name, the type and the star. With `onPress` the whole card presses.
+ */
+export function ExerciseCard({
+  item: f,
+  onPress,
+  onStar,
+}: {
+  item: Favorite;
+  onPress?: (f: Favorite) => void;
   onStar?: (f: Favorite) => void;
 }) {
   const { c, cardBorderWidth } = useTheme();
@@ -171,49 +190,38 @@ export function ExerciseCards({
   const tile = card - 2 * tokens.space[12] - 2;
 
   return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space[12] }}>
-      {items.map((f) => (
-        <Pressable
-          key={f.exercise.id}
-          accessibilityRole={onPress ? 'button' : undefined}
-          accessibilityLabel={f.exercise.name}
-          disabled={!onPress}
-          onPress={onPress ? () => onPress(f) : undefined}
-          style={({ pressed }) => ({
-            width: card,
-            padding: tokens.space[12],
-            gap: tokens.space[12],
-            borderRadius: tokens.radius.card,
-            // Light mode carries a card border; dark does not (PLAN.md §3).
-            borderWidth: cardBorderWidth,
-            borderColor: c.border,
-            // Pressed, the card sinks to the page tone, as a program card does.
-            backgroundColor: pressed && onPress ? c.bg : c.surface,
-          })}
-        >
-          {f.exercise.icon ? (
-            <ExerciseIcon
-              icon={f.exercise.icon}
-              main={f.exercise.main}
-              secondary={f.exercise.secondary}
-              size={tile}
-              seamAll
-            />
-          ) : null}
-          <View style={{ gap: tokens.space[4] }}>
-            <Txt variant="rowTitle" color={c.text} numberOfLines={2} style={{ minHeight: 2 * tokens.type.rowTitle.lineHeight }}>
-              {f.exercise.name}
-            </Txt>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[8] }}>
-              <Txt variant="captionTight" color={c.textSecondary} numberOfLines={1} style={{ flexShrink: 1 }}>
-                {f.exercise.type}
-              </Txt>
-              {onStar ? <Star on={f.exercise.favorite !== undefined} onPress={() => onStar(f)} push /> : null}
-            </View>
-          </View>
-        </Pressable>
-      ))}
-    </View>
+    <Pressable
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={f.exercise.name}
+      disabled={!onPress}
+      onPress={onPress ? () => onPress(f) : undefined}
+      style={({ pressed }) => ({
+        width: card,
+        padding: tokens.space[12],
+        gap: tokens.space[12],
+        borderRadius: tokens.radius.card,
+        // Light mode carries a card border; dark does not (PLAN.md §3).
+        borderWidth: cardBorderWidth,
+        borderColor: c.border,
+        // Pressed, the card sinks to the page tone, as a program card does.
+        backgroundColor: pressed && onPress ? c.bg : c.surface,
+      })}
+    >
+      {f.exercise.icon ? (
+        <ExerciseIcon icon={f.exercise.icon} main={f.exercise.main} secondary={f.exercise.secondary} size={tile} seamAll />
+      ) : null}
+      <View style={{ gap: tokens.space[4] }}>
+        <Txt variant="rowTitle" color={c.text} numberOfLines={2} style={{ minHeight: 2 * tokens.type.rowTitle.lineHeight }}>
+          {f.exercise.name}
+        </Txt>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[8] }}>
+          <Txt variant="captionTight" color={c.textSecondary} numberOfLines={1} style={{ flexShrink: 1 }}>
+            {f.exercise.type}
+          </Txt>
+          {onStar ? <Star on={f.exercise.favorite !== undefined} onPress={() => onStar(f)} push /> : null}
+        </View>
+      </View>
+    </Pressable>
   );
 }
 
