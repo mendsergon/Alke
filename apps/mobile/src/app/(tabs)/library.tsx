@@ -67,7 +67,14 @@ export default function Library() {
             onSecondary={() => router.push('/explore')}
           />
         ),
-        <MuscleCategories />,
+        <MuscleCategories
+          onOpen={(category) =>
+            router.push({
+              pathname: '/category/[id]',
+              params: { id: category.id, name: category.name, favorites: '1' },
+            })
+          }
+        />,
       ]}
     />
   );
