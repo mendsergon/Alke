@@ -1,54 +1,130 @@
-import { useEffect, useRef } from 'react';
-import { FlatList, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/icon';
 import { Rung } from '../components/rung';
-import { Card, Chip, EmptyState, PrimaryButton, Row, SecondaryButton } from '../components/surfaces';
+import { Card, EmptyState, SecondaryButton } from '../components/surfaces';
 import { ExerciseIcon } from '../figure/figure';
+import { useAuth } from '../auth/auth';
 import { MicroCaps, Txt } from '../theme/text';
 import { tokens, useTheme } from '../theme/theme';
-import { useElapsed, useSession, type Session, type SessionExercise } from '../session/session';
+import { amount, totals, useElapsed, useSession, type SessionExercise, type SessionSet } from '../session/session';
 
 /**
- * A workout, full screen over the tabs (PLAN.md §2).
+ * A workout, full screen over the tabs (PLAN.md §2), laid out as Stavros
+ * showed it (4 October 2026) and drawn in Alke's design: across the top the
+ * minimise chevron, the workout and the action; then the session's numbers
+ * in a card — duration, volume and sets, over a rung of the sets done against
+ * the sets planned; then every exercise in order, each its own card led by its
+ * icon, with its sets under its name. An exercise opens to its sets as a
+ * table — set, previous, load, reps and the check that marks it done — with
+ * Add set under it. Add exercise closes the list.
  *
- * Before it starts it is the workout's overview (Stavros, 4 October 2026):
- * Home's "Next session" card from design page 01 — the day, the program, the
- * exercises and sets as chips, and Start workout at the top — then the
- * planned exercises as Library's exercise rows on page 05, each led by its
- * icon. No timer yet.
+ * Before it starts it shows only what is planned: the exercises, their sets,
+ * and Start. The duration starts counting at Start and stops at Finish.
  *
- * Started, it is design page 06: the minimise chevron and "Exercise 2 of 5"
- * across the top; the exercise's 56pt icon, its name and its sets, one
- * exercise to a page, swiped between in order; and the footer, where the
- * timer counts up from the start until Finish, over a rung of the sets done
- * against the sets planned, and Complete set. Add exercise sits where page 06
- * puts Add set.
- *
- * OPEN: entering a set's weight, reps and RIR is not designed (PLAN.md §3).
- * A set is completed with its numbers left as page 06 draws a set not yet
- * logged, and its load rung stays empty; nothing is stored once the session
- * is finished.
+ * OPEN: nothing is stored when the session is finished, so Previous has
+ * nothing to show yet.
  */
 export default function SessionScreen() {
   const { c } = useTheme();
-  const { session } = useSession();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { account } = useAuth();
+  const { session, categories, start, finish, added } = useSession();
+  const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
+  const scroller = useRef<ScrollView>(null);
+  const started = session?.startedAt != null;
+  const ready = categories.length > 0;
+  const shown = session && ready ? session.exercises.filter((x) => x.info) : [];
+  const first = shown[0]?.key;
+
+  // Started, the first exercise is open, as the work begins with it.
+  useEffect(() => {
+    if (started && first) setOpen((now) => (now.size === 0 ? new Set([first]) : now));
+  }, [started, first]);
+
+  // An exercise just added opens, at the end of the list.
+  useEffect(() => {
+    if (!added) return;
+    setOpen((now) => new Set(now).add(added));
+    const t = setTimeout(() => scroller.current?.scrollToEnd({ animated: true }), 0);
+    return () => clearTimeout(t);
+  }, [added]);
+
   if (!session) return <View style={{ flex: 1, backgroundColor: c.bg }} />;
-  return session.startedAt == null ? <Overview session={session} /> : <Running session={session} />;
+
+  const unit = account?.units === 'lb' ? 'lb' : 'kg';
+  const workout = session.program.days[session.day]?.workouts[session.workout];
+  const toggle = (key: string) =>
+    setOpen((now) => {
+      const next = new Set(now);
+      if (!next.delete(key)) next.add(key);
+      return next;
+    });
+
+  return (
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
+      <TopRow
+        title={workout?.name ?? session.program.name}
+        action={
+          started ? (
+            <TopAction
+              label="Finish"
+              onPress={() => {
+                finish();
+                router.back();
+              }}
+            />
+          ) : (
+            <TopAction label="Start" onPress={start} />
+          )
+        }
+      />
+      <ScrollView
+        ref={scroller}
+        style={{ flex: 1 }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        automaticallyAdjustKeyboardInsets
+        contentContainerStyle={{
+          paddingTop: tokens.space[16],
+          paddingHorizontal: tokens.space[20],
+          paddingBottom: insets.bottom + tokens.space[24],
+          gap: tokens.space[12],
+        }}
+        showsVerticalScrollIndicator={false}
+      >
+        <Numbers exercises={shown} startedAt={session.startedAt} unit={unit} />
+        {ready && shown.length === 0 ? <EmptyState line="No exercises planned yet." /> : null}
+        {shown.map((x) => (
+          <ExerciseCard
+            key={x.key}
+            exercise={x}
+            unit={unit}
+            open={started && open.has(x.key)}
+            onToggle={started ? () => toggle(x.key) : undefined}
+          />
+        ))}
+        {started ? (
+          <SecondaryButton
+            label="Add exercise"
+            icon="plus"
+            dashed
+            onPress={() => router.push('/add-exercise')}
+            style={{ marginTop: tokens.space[4] }}
+          />
+        ) : null}
+      </ScrollView>
+    </View>
+  );
 }
 
-const count = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`;
-const capitalised = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-
-/** The exercises whose name and icon are known: the ones a screen can draw. */
-function drawable(session: Session, ready: boolean): SessionExercise[] {
-  return ready ? session.exercises.filter((x) => x.info) : [];
-}
-
-/** Page 06's top row: the minimise chevron, and a centred line. */
-function TopRow({ label, onClose }: { label: string; onClose: () => void }) {
+/** The minimise chevron, the workout's name, and the action. */
+function TopRow({ title, action }: { title: string; action: ReactNode }) {
   const { c } = useTheme();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const tap = tokens.sizing.tapTarget.ios;
   return (
@@ -61,333 +137,27 @@ function TopRow({ label, onClose }: { label: string; onClose: () => void }) {
         justifyContent: 'space-between',
       }}
     >
+      {/* Centred on the screen, whatever the widths either side of it. */}
+      <View
+        pointerEvents="none"
+        style={{ position: 'absolute', left: tap * 2, right: tap * 2, bottom: 0, height: tap, alignItems: 'center', justifyContent: 'center' }}
+      >
+        <MicroCaps numberOfLines={1}>{title}</MicroCaps>
+      </View>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Minimise session"
-        onPress={onClose}
+        onPress={() => router.back()}
         style={{ width: tap, height: tap, justifyContent: 'center' }}
       >
         <Icon name="chevronDown" size={24} color={c.textSecondary} width={1.7} />
       </Pressable>
-      <MicroCaps>{label}</MicroCaps>
-      <View style={{ width: tap, height: tap }} />
+      {action}
     </View>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Before the start
-// ---------------------------------------------------------------------------
-
-function Overview({ session }: { session: Session }) {
-  const { c } = useTheme();
-  const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const { categories, start } = useSession();
-  const ready = categories.length > 0;
-  const shown = drawable(session, ready);
-  const sets = shown.reduce((n, x) => n + x.sets, 0);
-  const day = session.program.days[session.day];
-  const workout = day?.workouts[session.workout];
-  const next = tokens.session.next;
-
-  return (
-    <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <TopRow label="" onClose={() => router.back()} />
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{
-          paddingTop: tokens.space[8],
-          paddingHorizontal: tokens.space[24],
-          paddingBottom: insets.bottom + tokens.space[24],
-          gap: tokens.space[16],
-        }}
-        showsVerticalScrollIndicator={false}
-      >
-        <Card>
-          <MicroCaps color={c.accent}>{day ? capitalised(day.weekday) : 'Workout'}</MicroCaps>
-          <Txt variant="section" family="serif" weight={500} style={{ marginTop: next.titleTop }}>
-            {session.program.name}
-          </Txt>
-          <Txt variant="label" weight={400} color={c.textSecondary} style={{ marginTop: next.subtitleTop }}>
-            {workout?.name ?? ''}
-          </Txt>
-          <View
-            style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              gap: tokens.templateCard.chipGap,
-              marginTop: next.chipsTop,
-              marginBottom: next.chipsBottom,
-            }}
-          >
-            <Chip>{count(shown.length, 'exercise')}</Chip>
-            <Chip>{count(sets, 'set')}</Chip>
-          </View>
-          <PrimaryButton label="Start workout" icon="play" onPress={start} />
-        </Card>
-
-        <MicroCaps>Exercises</MicroCaps>
-        {ready && shown.length === 0 ? <EmptyState line="No exercises planned yet." /> : null}
-        {shown.length > 0 ? (
-          <Card>
-            {shown.map((x, i) => (
-              <Row key={x.key} first={i === 0}>
-                <ExerciseLead exercise={x} size={tokens.iconTile.size.listRow} />
-                <View style={{ flexGrow: 1, flexShrink: 1 }}>
-                  <Txt variant="rowLabel" color={c.text} numberOfLines={2}>
-                    {x.info?.name}
-                  </Txt>
-                  <Txt variant="captionTight" color={c.textSecondary} tnum style={{ marginTop: 1 }}>
-                    {[x.group, x.info?.type, count(x.sets, 'set')].filter(Boolean).join(' · ')}
-                  </Txt>
-                </View>
-              </Row>
-            ))}
-          </Card>
-        ) : null}
-      </ScrollView>
-    </View>
-  );
-}
-
-/** An exercise's icon on its raised tile, at a list row's or the session header's size. */
-function ExerciseLead({ exercise, size }: { exercise: SessionExercise; size: number }) {
-  const info = exercise.info;
-  if (!info?.icon) return <View style={{ width: size, height: size }} />;
-  return <ExerciseIcon icon={info.icon} main={info.main} secondary={info.secondary} size={size} seamAll />;
-}
-
-// ---------------------------------------------------------------------------
-// Started
-// ---------------------------------------------------------------------------
-
-function Running({ session }: { session: Session }) {
-  const { c } = useTheme();
-  const router = useRouter();
-  const { width } = useWindowDimensions();
-  const { categories, go } = useSession();
-  const shown = drawable(session, categories.length > 0);
-  const pager = useRef<FlatList<SessionExercise>>(null);
-  const current = Math.max(0, shown.findIndex((x) => x.key === session.exercises[session.current]?.key));
-
-  // Completing an exercise's last set, or adding one, moves to it.
-  useEffect(() => {
-    if (shown.length > 0) pager.current?.scrollToIndex({ index: current, animated: true });
-  }, [current, shown.length]);
-
-  return (
-    <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <TopRow
-        label={shown.length > 0 ? `Exercise ${current + 1} of ${shown.length}` : ''}
-        onClose={() => router.back()}
-      />
-      <FlatList
-        ref={pager}
-        data={shown}
-        keyExtractor={(x) => x.key}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        getItemLayout={(_, index) => ({ length: width, offset: width * index, index })}
-        initialScrollIndex={shown.length > 0 ? current : undefined}
-        onMomentumScrollEnd={(e) => {
-          const i = Math.round(e.nativeEvent.contentOffset.x / width);
-          const x = shown[i];
-          if (x) go(session.exercises.findIndex((y) => y.key === x.key));
-        }}
-        style={{ flex: 1 }}
-        renderItem={({ item }) => (
-          <ExercisePage exercise={item} width={width} isCurrent={item.key === shown[current]?.key} />
-        )}
-        ListEmptyComponent={
-          <View style={{ width, paddingHorizontal: tokens.space[20], paddingTop: tokens.space[20], gap: tokens.space[12] }}>
-            {categories.length > 0 ? <EmptyState line="No exercises yet." /> : null}
-            <AddExercise />
-          </View>
-        }
-      />
-      <Footer session={session} shown={shown} current={current} />
-    </View>
-  );
-}
-
-/** One exercise: page 06's header, then its sets, then Add exercise. */
-function ExercisePage({ exercise, width, isCurrent }: { exercise: SessionExercise; width: number; isCurrent: boolean }) {
-  const { c } = useTheme();
-  return (
-    <ScrollView style={{ width }} showsVerticalScrollIndicator={false}>
-      <View
-        style={{
-          paddingTop: tokens.session.titleTop,
-          paddingHorizontal: tokens.space[24],
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: tokens.session.rowGap,
-        }}
-      >
-        <ExerciseLead exercise={exercise} size={tokens.iconTile.size.sessionHeader} />
-        <View style={{ flexShrink: 1 }}>
-          <Txt variant="heading" weight={600} tracking={-0.02} color={c.text}>
-            {exercise.info?.name}
-          </Txt>
-          <Txt variant="captionTight" color={c.textSecondary} tnum style={{ marginTop: tokens.space[4] }}>
-            {[exercise.group, exercise.info?.type, count(exercise.sets, 'set')].filter(Boolean).join(' · ')}
-          </Txt>
-        </View>
-      </View>
-      <View style={{ paddingTop: tokens.space[20], paddingHorizontal: tokens.space[20], paddingBottom: tokens.space[24], gap: tokens.space[8] }}>
-        {Array.from({ length: exercise.sets }, (_, i) => (
-          <SetCard
-            key={i}
-            n={i + 1}
-            state={i < exercise.done ? 'done' : i === exercise.done && isCurrent ? 'current' : 'next'}
-          />
-        ))}
-        <View style={{ marginTop: tokens.space[4] }}>
-          <AddExercise />
-        </View>
-      </View>
-    </ScrollView>
-  );
-}
-
-/** Where page 06 puts Add set: the dashed secondary button. */
-function AddExercise() {
-  const router = useRouter();
-  return <SecondaryButton label="Add exercise" icon="plus" dashed onPress={() => router.push('/add-exercise')} />;
-}
-
-/**
- * A set as page 06 draws it: done (surface, a filled check), being done
- * (accent soft, its number in an accent ring) or still to come (no surface,
- * its number in a hairline ring). Weight, reps and RIR are not logged yet.
- */
-function SetCard({ n, state }: { n: number; state: 'done' | 'current' | 'next' }) {
-  const { c } = useTheme();
-  const set = tokens.session.set;
-  const numeral = state === 'next' ? c.textSecondary : c.text;
-  return (
-    <View
-      style={{
-        backgroundColor: state === 'done' ? c.surface : state === 'current' ? c.accentSoft : 'transparent',
-        borderRadius: tokens.radius.row,
-        paddingTop: set.paddingTop,
-        paddingHorizontal: set.paddingHorizontal,
-        paddingBottom: set.paddingBottom,
-        gap: set.gap,
-      }}
-    >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.session.rowGap }}>
-        <View
-          style={{
-            width: set.mark,
-            height: set.mark,
-            borderRadius: tokens.radius.rung,
-            backgroundColor: state === 'done' ? c.accent : 'transparent',
-            borderWidth: state === 'done' ? 0 : state === 'current' ? tokens.session.currentRing : 1,
-            borderColor: state === 'current' ? c.accent : c.border,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          {state === 'done' ? (
-            <Icon name="check" size={16} color={c.onAccent} width={2} />
-          ) : (
-            <Txt variant="label" weight={600} tnum color={state === 'current' ? c.accent : c.textSecondary}>
-              {n}
-            </Txt>
-          )}
-        </View>
-        <View style={{ flexGrow: 1, flexDirection: 'row', alignItems: 'baseline' }}>
-          <Txt variant="numeralL" weight={600} tnum tracking={-0.015} color={numeral}>
-            —
-          </Txt>
-          <Txt variant="times" color={c.textSecondary} style={{ marginHorizontal: tokens.space[8] }}>
-            ×
-          </Txt>
-          <Txt variant="numeralL" weight={600} tnum tracking={-0.015} color={numeral}>
-            —
-          </Txt>
-        </View>
-        <View style={{ alignItems: 'flex-end', minWidth: set.rirMinWidth }}>
-          <MicroCaps>RIR</MicroCaps>
-          <Txt variant="dataValue" tnum color={numeral}>
-            —
-          </Txt>
-        </View>
-      </View>
-      <Rung value={0} target={1} muted={state === 'next'} />
-    </View>
-  );
-}
-
-/**
- * Page 06's footer: the timer's row — counting up since the start, and
- * Finish where page 06 has Skip — over a rung of the sets done against the
- * sets planned, then Complete set.
- */
-function Footer({ session, shown, current }: { session: Session; shown: SessionExercise[]; current: number }) {
-  const { c } = useTheme();
-  const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const { finish, complete } = useSession();
-  const footer = tokens.session.footer;
-  const planned = shown.reduce((n, x) => n + x.sets, 0);
-  const done = shown.reduce((n, x) => n + Math.min(x.done, x.sets), 0);
-  const at = shown[current];
-  const all = planned > 0 && done >= planned;
-  const end = () => {
-    finish();
-    router.back();
-  };
-
-  return (
-    <View
-      style={{
-        paddingTop: footer.paddingTop,
-        paddingHorizontal: footer.paddingHorizontal,
-        paddingBottom: Math.max(footer.paddingBottom, insets.bottom),
-        backgroundColor: c.bg,
-        borderTopWidth: 1,
-        borderTopColor: c.border,
-      }}
-    >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[12], marginBottom: footer.rowBottom }}>
-        <Icon name="timer" size={20} color={c.accent} />
-        <Elapsed startedAt={session.startedAt} />
-        <Txt variant="captionTight" color={c.textSecondary} tnum style={{ flexGrow: 1 }}>
-          {`${done} of ${count(planned, 'set')}`}
-        </Txt>
-        <TopAction label="Finish" onPress={end} />
-      </View>
-      <Rung value={done} target={Math.max(planned, 1)} />
-      <View style={{ height: tokens.space[16] }} />
-      {all || !at ? (
-        <PrimaryButton label="Finish workout" icon="check" height={tokens.sizing.primaryButtonHeight.max} onPress={end} />
-      ) : (
-        <PrimaryButton
-          label={at.done < at.sets ? `Complete set ${at.done + 1}` : 'Next exercise'}
-          icon="check"
-          height={tokens.sizing.primaryButtonHeight.max}
-          onPress={complete}
-        />
-      )}
-    </View>
-  );
-}
-
-/** The time since the start, on its own so only it redraws each second. */
-function Elapsed({ startedAt }: { startedAt: number | null }) {
-  const time = useElapsed(startedAt);
-  return (
-    <Txt variant="timerValue" tnum accessibilityLabel={`Elapsed ${time}`}>
-      {time}
-    </Txt>
-  );
-}
-
-/** Page 06's rounded Skip button. */
+/** The accent action across the top: Start, then Finish. */
 function TopAction({ label, onPress }: { label: string; onPress: () => void }) {
   const { c } = useTheme();
   const { height, paddingHorizontal } = tokens.session.action;
@@ -401,16 +171,293 @@ function TopAction({ label, onPress }: { label: string; onPress: () => void }) {
         height,
         paddingHorizontal,
         borderRadius: tokens.radius.rung,
-        borderWidth: 1,
-        borderColor: c.border,
-        backgroundColor: pressed ? c.surface : 'transparent',
+        backgroundColor: c.accent,
+        opacity: pressed ? 0.8 : 1,
         alignItems: 'center',
         justifyContent: 'center',
       })}
     >
-      <Txt variant="captionTight" weight={500} color={c.text}>
+      <Txt variant="label" weight={600} color={c.onAccent}>
         {label}
       </Txt>
     </Pressable>
   );
 }
+
+/**
+ * The session's numbers, as Home's week draws its own: a micro-caps label
+ * over a numeral with its unit set small beside it. Started, the duration
+ * counts up in the accent, and the sets done stand on a rung against the sets
+ * planned. Before the start, only what is planned.
+ */
+function Numbers({ exercises, startedAt, unit }: { exercises: SessionExercise[]; startedAt: number | null; unit: string }) {
+  const { done, planned, volume } = totals(exercises);
+  return (
+    <Card>
+      {startedAt == null ? (
+        <View style={{ flexDirection: 'row', gap: tokens.space[16] }}>
+          <Stat label="Exercises" value={String(exercises.length)} />
+          <Stat label="Sets" value={String(planned)} />
+        </View>
+      ) : (
+        <>
+          <View style={{ flexDirection: 'row', gap: tokens.space[16] }}>
+            <Duration startedAt={startedAt} />
+            <Stat label="Volume" value={String(Math.round(volume))} suffix={unit} />
+            <Stat label="Sets" value={String(done)} suffix={`of ${planned}`} />
+          </View>
+          <View style={{ marginTop: tokens.space[16] }}>
+            <Rung value={done} target={Math.max(planned, 1)} />
+          </View>
+        </>
+      )}
+    </Card>
+  );
+}
+
+function Stat({ label, value, suffix, accent = false }: { label: string; value: string; suffix?: string; accent?: boolean }) {
+  const { c } = useTheme();
+  return (
+    <View style={{ flexGrow: 1, flexBasis: 0 }}>
+      <MicroCaps>{label}</MicroCaps>
+      <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: tokens.space[8] }}>
+        <Txt variant="numeralM" weight={600} tnum color={accent ? c.accent : c.text}>
+          {value}
+        </Txt>
+        {suffix ? (
+          <Txt variant="unitSmall" color={c.textSecondary} tnum style={{ marginLeft: 3 }}>
+            {suffix}
+          </Txt>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+/** The duration on its own, so only it redraws each second. */
+function Duration({ startedAt }: { startedAt: number }) {
+  const time = useElapsed(startedAt);
+  return <Stat label="Duration" value={time} accent />;
+}
+
+/**
+ * An exercise, its own card led by its icon. Closed, its sets sit under its
+ * name, one line each; open, they are a table to fill in.
+ */
+function ExerciseCard({
+  exercise,
+  unit,
+  open,
+  onToggle,
+}: {
+  exercise: SessionExercise;
+  unit: string;
+  open: boolean;
+  onToggle?: () => void;
+}) {
+  const { c } = useTheme();
+  const { addSet } = useSession();
+  const info = exercise.info;
+  if (!info) return null;
+  return (
+    <Card padding={tokens.space[16]}>
+      <Pressable
+        accessibilityRole={onToggle ? 'button' : undefined}
+        accessibilityLabel={info.name}
+        accessibilityState={onToggle ? { expanded: open } : undefined}
+        disabled={!onToggle}
+        onPress={onToggle}
+        style={{ flexDirection: 'row', alignItems: 'flex-start', gap: tokens.space[12] }}
+      >
+        {info.icon ? (
+          <ExerciseIcon icon={info.icon} main={info.main} secondary={info.secondary} size={tokens.iconTile.size.listRow} seamAll />
+        ) : null}
+        <View style={{ flexGrow: 1, flexShrink: 1 }}>
+          <Txt variant="rowTitle" color={c.text} numberOfLines={2}>
+            {info.name}
+          </Txt>
+          {open ? (
+            <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: tokens.space[4] }}>
+              {[exercise.group, info.type].filter(Boolean).join(' · ')}
+            </Txt>
+          ) : (
+            <View style={{ marginTop: tokens.space[4], gap: tokens.space[4] }}>
+              {exercise.rows.map((r, i) => (
+                <SetLine key={i} n={i + 1} row={r} unit={unit} />
+              ))}
+            </View>
+          )}
+        </View>
+        {onToggle ? (
+          <Icon name={open ? 'chevronUp' : 'chevronDown'} size={20} color={c.textSecondary} />
+        ) : null}
+      </Pressable>
+      {open ? (
+        <View style={{ marginTop: tokens.space[16] }}>
+          <SetTable exercise={exercise} unit={unit} />
+          <SecondaryButton
+            label="Add set"
+            icon="plus"
+            dashed
+            height={tokens.sizing.tapTarget.ios}
+            onPress={() => addSet(exercise.key)}
+            style={{ marginTop: tokens.space[12] }}
+          />
+        </View>
+      ) : null}
+    </Card>
+  );
+}
+
+/** A set under a closed exercise: its number, then its load × reps, or a dash. */
+function SetLine({ n, row, unit }: { n: number; row: SessionSet; unit: string }) {
+  const { c } = useTheme();
+  const load = amount(row.load);
+  const reps = amount(row.reps);
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: tokens.space[12] }}>
+      <Txt variant="label" weight={600} tnum color={row.done ? c.accent : c.textSecondary} style={{ minWidth: tokens.session.table.setColumn / 2 }}>
+        {n}
+      </Txt>
+      {load != null || reps != null ? (
+        <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+          <Txt variant="rowLabel" tnum color={c.text}>
+            {load ?? '—'}
+          </Txt>
+          <Txt variant="unitSmall" color={c.textSecondary} style={{ marginLeft: 3 }}>
+            {unit}
+          </Txt>
+          <Txt variant="captionTight" color={c.textSecondary} style={{ marginHorizontal: tokens.space[8] }}>
+            ×
+          </Txt>
+          <Txt variant="rowLabel" tnum color={c.text}>
+            {reps ?? '—'}
+          </Txt>
+        </View>
+      ) : (
+        <Txt variant="rowLabel" color={c.textSecondary}>
+          —
+        </Txt>
+      )}
+    </View>
+  );
+}
+
+/** An open exercise's sets: set, previous, load, reps, and the check. */
+function SetTable({ exercise, unit }: { exercise: SessionExercise; unit: string }) {
+  const { c } = useTheme();
+  const { setRow } = useSession();
+  const t = tokens.session.table;
+  return (
+    <View style={{ gap: tokens.space[8] }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[8], paddingHorizontal: tokens.space[4] }}>
+        <MicroCaps style={{ width: t.setColumn }}>Set</MicroCaps>
+        <MicroCaps style={{ flexGrow: 1, flexBasis: 0 }}>Previous</MicroCaps>
+        <MicroCaps style={{ width: t.input.width, textAlign: 'center' }}>{unit}</MicroCaps>
+        <MicroCaps style={{ width: t.input.width, textAlign: 'center' }}>Reps</MicroCaps>
+        <View style={{ width: t.check }} />
+      </View>
+      {exercise.rows.map((r, i) => (
+        <View
+          key={i}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: tokens.space[8],
+            padding: tokens.space[4],
+            borderRadius: tokens.radius.row,
+            // A done set takes the accent's soft tone: the person's own work.
+            backgroundColor: r.done ? c.accentSoft : 'transparent',
+          }}
+        >
+          <Txt variant="label" weight={600} tnum color={c.accent} style={{ width: t.setColumn }}>
+            {i + 1}
+          </Txt>
+          <Txt variant="captionTight" color={c.textSecondary} style={{ flexGrow: 1, flexBasis: 0 }}>
+            —
+          </Txt>
+          <SetInput
+            label={`Set ${i + 1} ${unit}`}
+            value={r.load}
+            decimal
+            onChange={(load) => setRow(exercise.key, i, { load })}
+          />
+          <SetInput label={`Set ${i + 1} reps`} value={r.reps} onChange={(reps) => setRow(exercise.key, i, { reps })} />
+          <Pressable
+            accessibilityRole="checkbox"
+            accessibilityLabel={`Set ${i + 1} done`}
+            accessibilityState={{ checked: r.done }}
+            onPress={() => setRow(exercise.key, i, { done: !r.done })}
+            style={({ pressed }) => ({
+              width: t.check,
+              height: t.check,
+              borderRadius: tokens.radius.button,
+              backgroundColor: r.done ? c.accent : c.surfaceRaised,
+              opacity: pressed ? 0.8 : 1,
+              alignItems: 'center',
+              justifyContent: 'center',
+            })}
+          >
+            <Icon name="check" size={20} color={r.done ? c.onAccent : c.textSecondary} width={2} />
+          </Pressable>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/**
+ * A number to type: the design's input — raised, with a 2pt accent edge while
+ * it is being typed in — holding a tabular numeral.
+ */
+function SetInput({
+  label,
+  value,
+  decimal = false,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  decimal?: boolean;
+  onChange: (text: string) => void;
+}) {
+  const { c } = useTheme();
+  const [focused, setFocused] = useState(false);
+  const t = tokens.session.table.input;
+  return (
+    <TextInput
+      accessibilityLabel={label}
+      value={value}
+      onChangeText={(text) => onChange(decimal ? decimalOnly(text) : text.replace(/[^0-9]/g, ''))}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      keyboardType={decimal ? 'decimal-pad' : 'number-pad'}
+      maxLength={decimal ? 6 : 3}
+      placeholder="—"
+      placeholderTextColor={c.textSecondary}
+      selectTextOnFocus
+      style={{
+        width: t.width,
+        height: t.height,
+        borderRadius: tokens.radius.button,
+        backgroundColor: c.surfaceRaised,
+        borderWidth: 2,
+        borderColor: focused ? c.accent : 'transparent',
+        color: c.text,
+        fontFamily: tokens.fontFamily.sansSemiBold,
+        fontSize: tokens.type.numeralS.size,
+        fontVariant: ['tabular-nums'],
+        textAlign: 'center',
+        padding: 0,
+      }}
+    />
+  );
+}
+
+/** Digits and one decimal point; a comma is taken as the point. */
+function decimalOnly(text: string): string {
+  const cleaned = text.replace(',', '.').replace(/[^0-9.]/g, '');
+  const dot = cleaned.indexOf('.');
+  return dot < 0 ? cleaned : cleaned.slice(0, dot + 1) + cleaned.slice(dot + 1).replace(/\./g, '');
+}
+
