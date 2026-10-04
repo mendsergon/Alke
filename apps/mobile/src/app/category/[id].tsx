@@ -19,6 +19,7 @@ import { Stack, useLocalSearchParams, useNavigation, type NativeStackNavigationP
 import { useBack } from '../../navigation/use-back';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '../../components/surfaces';
+import { Fade } from '../../components/favorite-exercises';
 import { SearchBar } from '../../components/search-bar';
 import { ExerciseIcon } from '../../figure/figure';
 import { Star } from '../../components/exercise-star';
@@ -406,27 +407,26 @@ export default function CategoryScreen() {
         pointerEvents="none"
         style={{ position: 'absolute', top: 0, left: 0, right: 0, height: padTop, backgroundColor: c.bg }}
       />
-      {/* The title and search stay put while the exercises scroll under them. */}
+      {/* The title and search stay put while the exercises scroll under them,
+          and the cards fade in under the search, as the favorites do under
+          their pinned row. The band is the block's last 16pt, so at rest it
+          covers nothing and the cards sit where they always did. */}
       <View
-        style={{
-          position: 'absolute',
-          top: padTop,
-          left: 0,
-          right: 0,
-          paddingHorizontal: tokens.space[24],
-          gap: tokens.space[16],
-          paddingBottom: tokens.space[16],
-          backgroundColor: c.bg,
-        }}
+        style={{ position: 'absolute', top: padTop, left: 0, right: 0 }}
         onLayout={(e) => setHeaderLength(e.nativeEvent.layout.height)}
       >
-        <Txt variant="screenTitle" family="serif" weight={500}>
-          {name ?? ''}
-        </Txt>
-        {/* Laid out from the first frame, so the list arriving pushes nothing. */}
-        {exercises === null || exercises.length > 0 ? (
-          <SearchBar value={query} onChange={setQuery} label="Search exercises" />
-        ) : null}
+        <View style={{ paddingHorizontal: tokens.space[24], gap: tokens.space[16], backgroundColor: c.bg }}>
+          <Txt variant="screenTitle" family="serif" weight={500}>
+            {name ?? ''}
+          </Txt>
+          {/* Laid out from the first frame, so the list arriving pushes nothing. */}
+          {exercises === null || exercises.length > 0 ? (
+            <SearchBar value={query} onChange={setQuery} label="Search exercises" />
+          ) : null}
+        </View>
+        <View pointerEvents="none" style={{ height: tokens.space[16] }}>
+          <Fade direction="down" />
+        </View>
       </View>
 
       <Stack.Toolbar placement="left">

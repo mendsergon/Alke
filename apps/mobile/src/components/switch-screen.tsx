@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens, useTheme } from '../theme/theme';
 import { Arriving } from './arrival';
 import { flatten } from './screen';
+import { Fade } from './favorite-exercises';
 
 /** How long the switch's slide takes. */
 const SLIDE_MS = 180;
@@ -42,6 +43,7 @@ export function SwitchScreen({
   gap = tokens.space[16],
   headerGap = gap,
   pinFirst = [false, false],
+  fadeTop = [false, false],
 }: {
   /** Given the pager's progress, 0 to 1, for a switch that moves with it. */
   header: (progress: SharedValue<number>) => ReactNode;
@@ -53,6 +55,8 @@ export function SwitchScreen({
   headerGap?: number;
   /** Per side: its first block stays pinned at the top while the rest scrolls under it. */
   pinFirst?: readonly [boolean, boolean];
+  /** Per side: what scrolls fades in under the header, as the favorites do under their pinned row. */
+  fadeTop?: readonly [boolean, boolean];
 }) {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
@@ -101,7 +105,9 @@ export function SwitchScreen({
         style={{
           paddingTop: insets.top + tokens.space[24],
           paddingHorizontal: tokens.space[24],
-          paddingBottom: headerGap,
+          // A side that fades takes the band out of this gap and starts its
+          // content under it, so at rest the band covers nothing.
+          paddingBottom: fadeTop.some(Boolean) ? headerGap - tokens.space[16] : headerGap,
           gap,
         }}
       >
@@ -128,11 +134,15 @@ export function SwitchScreen({
         style={{ flex: 1 }}
       >
         {pages.map((page, p) => (
+          <View key={p} style={{ width }}>
           <ScrollView
-            key={p}
             stickyHeaderIndices={pinFirst[p] ? [0] : undefined}
+            // A pinned block is pinned: pulling down past the top does not
+            // drag it with the rest.
+            bounces={!pinFirst[p]}
             style={{ width }}
             contentContainerStyle={{
+              paddingTop: fadeTop.some(Boolean) ? tokens.space[16] : 0,
               paddingHorizontal: tokens.space[24],
               paddingBottom: tokens.space[20],
               gap,
@@ -145,6 +155,12 @@ export function SwitchScreen({
               </Arriving>
             ))}
           </ScrollView>
+          {fadeTop[p] ? (
+            <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: tokens.space[16] }}>
+              <Fade direction="down" />
+            </View>
+          ) : null}
+          </View>
         ))}
       </Animated.ScrollView>
     </View>

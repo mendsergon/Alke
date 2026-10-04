@@ -263,8 +263,8 @@ function GroupTile({ category, on, onPress }: { category: MuscleCategory; on: bo
 }
 
 // The page's background fading in over an edge: over the row's ends, across
-// its margins, and down from under the pinned row.
-function Fade({ direction }: { direction: 'left' | 'right' | 'down' }) {
+// its margins, and down from under the pinned row (or any pinned block).
+export function Fade({ direction }: { direction: 'left' | 'right' | 'down' }) {
   const { c } = useTheme();
   const across = direction !== 'down';
   const id = `fade-${direction}`;

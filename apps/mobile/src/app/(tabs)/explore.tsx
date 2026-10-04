@@ -190,6 +190,8 @@ export default function Explore() {
     <SwitchScreen
       gap={14}
       headerGap={tokens.space[20] + 14}
+      // Both sides fade in under the header, as the favorites do under their row.
+      fadeTop={[true, true]}
       index={SIDES.indexOf(side)}
       onIndexChange={(i) => setSide(SIDES[i] ?? 'Programs')}
       header={(progress) =>
