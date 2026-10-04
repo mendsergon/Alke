@@ -31,7 +31,7 @@ export default function ProgramScreen() {
   const back = useBack('/explore');
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
-  const { save } = useLibrary();
+  const { programs, save } = useLibrary();
   const { open } = useSession();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [program, setProgram] = useState<ProgramRecord | null>(null);
@@ -210,6 +210,19 @@ export default function ProgramScreen() {
           with a link that opens this program. */}
       {program ? (
         <Stack.Toolbar placement="right">
+          {/* Save, beside Share: filled once the program is in Library. */}
+          <Stack.Toolbar.Button
+            icon={programs.some((p) => p.copied_from === program.id) ? 'bookmark.fill' : 'bookmark'}
+            tintColor={c.text}
+            accessibilityLabel={
+              programs.some((p) => p.copied_from === program.id) ? `${program.name} is saved` : `Save ${program.name}`
+            }
+            onPress={() => {
+              if (saving || programs.some((p) => p.copied_from === program.id)) return;
+              setSaving(true);
+              void save(program).finally(() => setSaving(false));
+            }}
+          />
           <Stack.Toolbar.Button
             icon="square.and.arrow.up"
             tintColor={c.text}
