@@ -26,6 +26,8 @@ export type ProgramRecord = {
   schedule: ('training' | 'rest')[];
   days: ProgramDay[];
   active: boolean;
+  /** Published: readable by everyone signed in, and theirs to duplicate. */
+  published?: boolean;
 };
 
 type ListPage = { items: ProgramRecord[] };
@@ -54,6 +56,52 @@ async function list(filter: string, token: string | null): Promise<ProgramRecord
 export async function listTemplates(token: string | null): Promise<ProgramRecord[] | null> {
   const items = await list('owner = ""', token);
   return items ? [...items].sort((a, b) => trainingDays(a) - trainingDays(b)) : null;
+}
+
+/** Changes one of the caller's own programs; the saved program, or null. */
+export async function updateProgram(
+  token: string,
+  id: string,
+  patch: Partial<Pick<ProgramRecord, 'name' | 'published' | 'schedule' | 'days'>>,
+): Promise<ProgramRecord | null> {
+  try {
+    const response = await fetch(`${POCKETBASE_URL}/api/collections/programs/records/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: token },
+      body: JSON.stringify(patch),
+    });
+    if (!response.ok) return null;
+    return (await response.json()) as ProgramRecord;
+  } catch {
+    return null;
+  }
+}
+
+/** Deletes one of the caller's own programs; whether it went. The delete rule refuses anyone else's. */
+export async function deleteProgram(token: string, id: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${POCKETBASE_URL}/api/collections/programs/records/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: { Authorization: token },
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+/** Programs other people published, newest first. */
+export async function listPublished(token: string, ownerId: string): Promise<ProgramRecord[] | null> {
+  try {
+    const filter = encodeURIComponent(`published = true && owner != "${ownerId}"`);
+    const response = await fetch(`${POCKETBASE_URL}/api/collections/programs/records?perPage=50&sort=-updated&filter=${filter}`, {
+      headers: { Authorization: token },
+    });
+    if (!response.ok) return null;
+    return ((await response.json()) as ListPage).items;
+  } catch {
+    return null;
+  }
 }
 
 /** One program by id: a template, or one of the caller's own. */

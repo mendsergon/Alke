@@ -12,6 +12,8 @@ type LibraryState = {
   save: (template: ProgramRecord) => Promise<boolean>;
   /** Puts a program the person changed back in place. */
   replace: (program: ProgramRecord) => void;
+  /** Takes a deleted program out of Library. */
+  remove: (id: string) => void;
 };
 
 const Ctx = createContext<LibraryState | null>(null);
@@ -50,7 +52,11 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     setPrograms((current) => current.map((p) => (p.id === program.id ? program : p)));
   }, []);
 
-  const value = useMemo<LibraryState>(() => ({ programs, save, replace }), [programs, save, replace]);
+  const remove = useCallback((id: string) => {
+    setPrograms((current) => current.filter((p) => p.id !== id));
+  }, []);
+
+  const value = useMemo<LibraryState>(() => ({ programs, save, replace, remove }), [programs, save, replace, remove]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
