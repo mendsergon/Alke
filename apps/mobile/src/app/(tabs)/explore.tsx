@@ -14,9 +14,9 @@ import { useAuth } from '../../auth/auth';
 import { useGym } from '../../gym/gym';
 import { useLibrary } from '../../library/library';
 import { askDuplicate } from '../../library/duplicate';
-import { listTemplates, trainingDays, type ProgramRecord } from '../../backend/programs';
+import { listPublished, listTemplates, trainingDays, type ProgramRecord } from '../../backend/programs';
 import { DayDots, ProgramCard, weekLine } from '../../components/program-card';
-import { GYM_PROGRAMS, SHARED_PROGRAMS } from '../../mock/mock-data';
+import { GYM_PROGRAMS } from '../../mock/mock-data';
 
 /** A template matches when its name or one of its workouts contains the query. */
 function matches(template: ProgramRecord, query: string): boolean {
@@ -47,7 +47,7 @@ function MetaChip({ label }: { label: string }) {
   );
 }
 
-function TemplateCard({ template }: { template: ProgramRecord }) {
+function TemplateCard({ template, pill = 'Featured' }: { template: ProgramRecord; pill?: string }) {
   const { c } = useTheme();
   const router = useRouter();
   const { save } = useLibrary();
@@ -71,7 +71,7 @@ function TemplateCard({ template }: { template: ProgramRecord }) {
             {weekLine(template)}
           </Txt>
         </View>
-        <Pill label="Featured" size="regular" />
+        <Pill label={pill} size="regular" />
       </View>
 
       <View
@@ -169,11 +169,27 @@ export default function Explore() {
   const { c } = useTheme();
   const router = useRouter();
   const { gym } = useGym();
-  const { token } = useAuth();
+  const { token, account } = useAuth();
   const [templates, setTemplates] = useState<ProgramRecord[]>([]);
+  // Programs other lifters published (Stavros, 4 October 2026).
+  const [shared, setShared] = useState<ProgramRecord[]>([]);
   const [query, setQuery] = useState('');
   const [side, setSide] = useState<(typeof SIDES)[number]>('Programs');
   const shown = templates.filter((t) => matches(t, query));
+
+  useEffect(() => {
+    if (!token || !account) {
+      setShared([]);
+      return;
+    }
+    let live = true;
+    void listPublished(token, account.id).then((items) => {
+      if (live && items) setShared(items);
+    });
+    return () => {
+      live = false;
+    };
+  }, [token, account]);
 
   useEffect(() => {
     let live = true;
@@ -220,7 +236,15 @@ export default function Explore() {
 
       <View style={{ height: 4 }} />
       <MicroCaps>Shared by other lifters</MicroCaps>
-      {SHARED_PROGRAMS.length > 0 ? null : <EmptyState line="No shared programs yet." />}
+      {shared.length > 0 ? (
+        <View style={{ gap: tokens.space[32] }}>
+          {shared.map((p) => (
+            <TemplateCard key={p.id} template={p} pill="Shared" />
+          ))}
+        </View>
+      ) : (
+        <EmptyState line="No shared programs yet." />
+      )}
 
       <View style={{ height: 4 }} />
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
