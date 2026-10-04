@@ -59,7 +59,7 @@ function TemplateCard({ template }: { template: ProgramRecord }) {
   const chips = [...new Set(template.days.flatMap((d) => d.workouts.map((w) => w.name)))];
 
   return (
-    // The card opens the program's workout, as an overview before it starts.
+    // The card opens the template's workout to look at; from here it can only be saved.
     <ProgramCard
       label={template.name}
       onPress={() => {

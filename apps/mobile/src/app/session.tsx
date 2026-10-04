@@ -6,6 +6,7 @@ import { Icon } from '../components/icon';
 import { Rung } from '../components/rung';
 import { Card, EmptyState, SecondaryButton } from '../components/surfaces';
 import { GlassButton } from '../components/glass-button';
+import { WorkoutBody } from '../components/workout-body';
 import { ExerciseIcon } from '../figure/figure';
 import { useAuth } from '../auth/auth';
 import { MicroCaps, Txt } from '../theme/text';
@@ -60,6 +61,7 @@ export default function SessionScreen() {
   if (!session) return <View style={{ flex: 1, backgroundColor: c.bg }} />;
 
   const unit = account?.units === 'lb' ? 'lb' : 'kg';
+  const template = session.program.owner === '';
   const workout = session.program.days[session.day]?.workouts[session.workout];
   const toggle = (key: string) =>
     setOpen((now) => {
@@ -72,24 +74,32 @@ export default function SessionScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <TopRow>
-        <GlassButton
-          icon={editing ? 'check' : 'pencil'}
-          label={editing ? 'Done editing' : 'Edit workout'}
-          onPress={() => setEditing((now) => !now)}
-        />
-        {started ? (
-          <GlassButton
-            icon="check"
-            label="Finish"
-            title="Finish"
-            accent
-            onPress={() => {
-              finish();
-              router.back();
-            }}
-          />
+        {template ? (
+          // A template is everyone's: from Explore it is only looked at
+          // (Stavros, 4 October 2026). It is saved from its card.
+          null
         ) : (
-          <GlassButton icon="play" label="Start" title="Start" accent onPress={start} />
+          <>
+            <GlassButton
+              icon={editing ? 'check' : 'pencil'}
+              label={editing ? 'Done editing' : 'Edit workout'}
+              onPress={() => setEditing((now) => !now)}
+            />
+            {started ? (
+              <GlassButton
+                icon="check"
+                label="Finish"
+                title="Finish"
+                accent
+                onPress={() => {
+                  finish();
+                  router.back();
+                }}
+              />
+            ) : (
+              <GlassButton icon="play" label="Start" title="Start" accent onPress={start} />
+            )}
+          </>
         )}
       </TopRow>
       <ScrollView
@@ -123,6 +133,7 @@ export default function SessionScreen() {
             exercise={x}
             unit={unit}
             editing={editing}
+            preview={!started}
             open={started && !editing && open.has(x.key)}
             onToggle={started && !editing ? () => toggle(x.key) : undefined}
           />
@@ -176,7 +187,14 @@ function Numbers({ exercises, startedAt, unit }: { exercises: SessionExercise[];
         <View style={{ flexDirection: 'row', gap: tokens.space[16] }}>
           <Stat label="Exercises" value={String(exercises.length)} />
           <Stat label="Sets" value={String(planned)} />
-          <View style={{ flexGrow: 1, flexBasis: 0 }} />
+          {/* What the workout trains, in the space beside its numbers, as
+              tall as they are so nothing around it moves. */}
+          <View style={{ flexGrow: 1, flexBasis: 0, alignItems: 'flex-end' }}>
+            <WorkoutBody
+              exercises={exercises.flatMap((x) => (x.info ? [x.info] : []))}
+              height={tokens.type.microCaps.lineHeight + tokens.space[8] + tokens.type.numeralM.lineHeight}
+            />
+          </View>
         </View>
       ) : (
         <>
@@ -227,12 +245,15 @@ function ExerciseCard({
   exercise,
   unit,
   editing,
+  preview,
   open,
   onToggle,
 }: {
   exercise: SessionExercise;
   unit: string;
   editing: boolean;
+  /** Before the start: what is planned, as a Library row says it. */
+  preview: boolean;
   open: boolean;
   onToggle?: () => void;
 }) {
@@ -263,6 +284,12 @@ function ExerciseCard({
               name={info.name}
               onChange={(n) => setSets(exercise.key, n)}
             />
+          ) : preview ? (
+            <Txt variant="captionTight" color={c.textSecondary} tnum style={{ marginTop: tokens.space[4] }}>
+              {[exercise.group, info.type, `${exercise.rows.length} ${exercise.rows.length === 1 ? 'set' : 'sets'}`]
+                .filter(Boolean)
+                .join(' · ')}
+            </Txt>
           ) : open ? (
             <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: tokens.space[4] }}>
               {[exercise.group, info.type].filter(Boolean).join(' · ')}
