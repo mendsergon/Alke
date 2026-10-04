@@ -1,115 +1,91 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/icon';
-import { Rung } from '../components/rung';
-import { Card, EmptyState, SecondaryButton } from '../components/surfaces';
+import { Card, EmptyState } from '../components/surfaces';
+import { ReorderList } from '../components/reorder-list';
 import { WorkoutBody } from '../components/workout-body';
 import { ExerciseIcon } from '../figure/figure';
-import { useAuth } from '../auth/auth';
 import { MicroCaps, Txt } from '../theme/text';
 import { tokens, useTheme } from '../theme/theme';
-import { amount, totals, useElapsed, useSession, type SessionExercise, type SessionSet } from '../session/session';
+import { totals, useSession, type SessionExercise } from '../session/session';
 
 /**
- * A workout, full screen over the tabs (PLAN.md §2), laid out as Stavros
- * showed it (4 October 2026) and drawn in Alke's design: across the top the
- * app's glass buttons — minimise, edit, and Start (then Finish); the workout's
- * name as the screen's title; the session's numbers on the page, as Home's
- * week draws its own — duration, volume and sets, over a rung of the sets done
- * against the sets planned; then every exercise in order, each its own card
- * led by its icon, with its sets under its name. Started, an exercise opens to
- * its sets as a table — set, previous, load, reps and the check that marks it
- * done — with Add set under it. Editing, each exercise takes a set fewer or
- * more, or comes out, and exercises can be added.
+ * A workout before it starts (PLAN.md §2; Stavros, 4 October 2026): what is
+ * planned, and nothing else. Across the top the app's native glass buttons —
+ * minimise, and on the person's own program Edit and Start; the workout's
+ * name as the screen's title; its exercises and sets as Home's week draws its
+ * numbers, with what it trains beside them; then every exercise in order, its
+ * own card led by its icon. Editing, each exercise takes a set fewer or more,
+ * comes out, or is pressed until it lifts and dragged to a new place, and
+ * exercises can be added; Start cannot be pressed while editing.
  *
- * Before it starts it shows only what is planned: the exercises, their sets,
- * and Start. The duration starts counting at Start and stops at Finish.
- *
- * OPEN: nothing is stored when the session is finished, so Previous has
- * nothing to show yet.
+ * Start opens the workout itself (app/workout.tsx), a page of its own.
  */
 export default function SessionScreen() {
   const { c } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { account } = useAuth();
-  const { session, categories, start, finish, added } = useSession();
-  const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
+  const { session, categories, start, move, added } = useSession();
   const [editing, setEditing] = useState(false);
   const scroller = useRef<ScrollView>(null);
   const started = session?.startedAt != null;
   const ready = categories.length > 0;
   const shown = session && ready ? session.exercises.filter((x) => x.info) : [];
-  const first = shown[0]?.key;
 
-  // Started, the first exercise is open, as the work begins with it.
+  // A workout already under way is the workout page, not its preview.
   useEffect(() => {
-    if (started && first) setOpen((now) => (now.size === 0 ? new Set([first]) : now));
-  }, [started, first]);
+    if (started) router.replace('/workout');
+  }, [started, router]);
 
-  // An exercise just added opens, at the end of the list.
+  // An exercise just added shows, at the end of the list.
   useEffect(() => {
     if (!added) return;
-    setOpen((now) => new Set(now).add(added));
     const t = setTimeout(() => scroller.current?.scrollToEnd({ animated: true }), 0);
     return () => clearTimeout(t);
   }, [added]);
 
-  if (!session) return <View style={{ flex: 1, backgroundColor: c.bg }} />;
+  if (!session || started) return <View style={{ flex: 1, backgroundColor: c.bg }} />;
 
-  const unit = account?.units === 'lb' ? 'lb' : 'kg';
   const template = session.program.owner === '';
   const workout = session.program.days[session.day]?.workouts[session.workout];
-  const toggle = (key: string) =>
-    setOpen((now) => {
-      const next = new Set(now);
-      if (!next.delete(key)) next.add(key);
-      return next;
-    });
+  const padTop = insets.top + tokens.sizing.tapTarget.ios + tokens.space[16];
+  const { planned } = totals(shown);
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <ScrollView
         ref={scroller}
         style={{ flex: 1 }}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-        automaticallyAdjustKeyboardInsets
         contentContainerStyle={{
           // Under the native header, as the category screen sits: content
           // scrolls up beneath its glass buttons and blurs at the top edge.
-          paddingTop: insets.top + tokens.sizing.tapTarget.ios + tokens.space[16],
+          paddingTop: padTop,
           paddingHorizontal: tokens.space[20],
           paddingBottom: insets.bottom + tokens.space[24],
           gap: tokens.space[12],
         }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Before the start, what the workout trains sits in the empty space
-            beside its title and numbers, laid over it so nothing moves. */}
-        {!started ? (
-          <View
-            pointerEvents="none"
-            style={{ position: 'absolute', top: insets.top + tokens.sizing.tapTarget.ios + tokens.space[16], right: tokens.space[20] + tokens.space[4] }}
-          >
-            <WorkoutBody
-              exercises={shown.flatMap((x) => (x.info ? [x.info] : []))}
-              // As tall as the title, its line, the gap and the numbers together.
-              height={
-                tokens.type.screenTitle.lineHeight +
-                2 +
-                tokens.type.captionTight.lineHeight +
-                tokens.space[12] +
-                2 * tokens.space[8] +
-                tokens.type.microCaps.lineHeight +
-                tokens.space[8] +
-                tokens.type.numeralM.lineHeight
-              }
-            />
-          </View>
-        ) : null}
+        {/* What the workout trains sits in the empty space beside its title
+            and numbers, laid over it so nothing moves. */}
+        <View pointerEvents="none" style={{ position: 'absolute', top: padTop, right: tokens.space[20] + tokens.space[4] }}>
+          <WorkoutBody
+            exercises={shown.flatMap((x) => (x.info ? [x.info] : []))}
+            // As tall as the title, its line, the gap and the numbers together.
+            height={
+              tokens.type.screenTitle.lineHeight +
+              2 +
+              tokens.type.captionTight.lineHeight +
+              tokens.space[12] +
+              2 * tokens.space[8] +
+              tokens.type.microCaps.lineHeight +
+              tokens.space[8] +
+              tokens.type.numeralM.lineHeight
+            }
+          />
+        </View>
         {/* The workout's name is the screen's title, as every tab's is. */}
         <View style={{ paddingHorizontal: tokens.space[4] }}>
           <Txt variant="screenTitle" family="serif" weight={500}>
@@ -119,28 +95,29 @@ export default function SessionScreen() {
             {session.program.name}
           </Txt>
         </View>
-        <Numbers exercises={shown} startedAt={session.startedAt} unit={unit} />
+        {/* What is planned, as Home's week draws its numbers. */}
+        <View style={{ paddingHorizontal: tokens.space[4], paddingVertical: tokens.space[8], flexDirection: 'row', gap: tokens.space[16] }}>
+          <Stat label="Exercises" value={String(shown.length)} />
+          <Stat label="Sets" value={String(planned)} />
+          <View style={{ flexGrow: 1, flexBasis: 0 }} />
+        </View>
         {ready && shown.length === 0 ? <EmptyState line="No exercises planned yet." /> : null}
-        {shown.map((x) => (
-          <ExerciseCard
-            key={x.key}
-            exercise={x}
-            unit={unit}
-            editing={editing}
-            preview={!started}
-            open={started && !editing && open.has(x.key)}
-            onToggle={started && !editing ? () => toggle(x.key) : undefined}
+        {editing ? (
+          <ReorderList
+            items={shown}
+            keyOf={(x) => x.key}
+            gap={tokens.space[12]}
+            onReorder={(from, to) => {
+              const a = session.exercises.findIndex((x) => x.key === shown[from]?.key);
+              const b = session.exercises.findIndex((x) => x.key === shown[to]?.key);
+              move(a, b);
+            }}
+            renderItem={(x) => <ExerciseCard exercise={x} editing />}
           />
-        ))}
-        {started || editing ? (
-          <SecondaryButton
-            label="Add exercise"
-            icon="plus"
-            dashed
-            onPress={() => router.push('/add-exercise')}
-            style={{ marginTop: tokens.space[4] }}
-          />
-        ) : null}
+        ) : (
+          shown.map((x) => <ExerciseCard key={x.key} exercise={x} editing={false} />)
+        )}
+        {editing ? <AddExerciseRow onPress={() => router.push('/add-exercise')} /> : null}
       </ScrollView>
 
       {/* The app's native header buttons, as the category screen has them:
@@ -154,7 +131,7 @@ export default function SessionScreen() {
         />
       </Stack.Toolbar>
       {/* A template is everyone's: its workout is only looked at, and the
-          program is saved from its page (Stavros, 4 October 2026). */}
+          program is duplicated from its page (Stavros, 4 October 2026). */}
       {template ? null : (
         <Stack.Toolbar placement="right">
           <Stack.Toolbar.Button
@@ -163,21 +140,17 @@ export default function SessionScreen() {
             accessibilityLabel={editing ? 'Done editing' : 'Edit workout'}
             onPress={() => setEditing((now) => !now)}
           />
-          {/* One button, its label and action following the session: the
-              toolbar takes buttons as its direct children, never a fragment. */}
+          {/* Not while editing: the workout is changed first, then started. */}
           <Stack.Toolbar.Button
             tintColor={c.accent}
-            accessibilityLabel={started ? 'Finish' : 'Start'}
+            accessibilityLabel="Start"
+            disabled={editing}
             onPress={() => {
-              if (!started) {
-                start();
-                return;
-              }
-              finish();
-              router.back();
+              start();
+              router.replace('/workout');
             }}
           >
-            {started ? 'Finish' : 'Start'}
+            Start
           </Stack.Toolbar.Button>
         </Stack.Toolbar>
       )}
@@ -185,98 +158,73 @@ export default function SessionScreen() {
   );
 }
 
-/**
- * The session's numbers, as Home's week draws its own: on the page, not in a
- * card — they are not an exercise — a micro-caps label over a numeral with
- * its unit set small beside it. Started, the duration counts up in the
- * accent, and the sets done stand on a rung against the sets planned. Before
- * the start, only what is planned.
- */
-function Numbers({ exercises, startedAt, unit }: { exercises: SessionExercise[]; startedAt: number | null; unit: string }) {
-  const { done, planned, volume } = totals(exercises);
-  return (
-    <View style={{ paddingHorizontal: tokens.space[4], paddingVertical: tokens.space[8] }}>
-      {startedAt == null ? (
-        <View style={{ flexDirection: 'row', gap: tokens.space[16] }}>
-          <Stat label="Exercises" value={String(exercises.length)} />
-          <Stat label="Sets" value={String(planned)} />
-          <View style={{ flexGrow: 1, flexBasis: 0 }} />
-        </View>
-      ) : (
-        <>
-          <View style={{ flexDirection: 'row', gap: tokens.space[16] }}>
-            <Duration startedAt={startedAt} />
-            <Stat label="Volume" value={String(Math.round(volume))} suffix={unit} />
-            <Stat label="Sets" value={String(done)} suffix={`of ${planned}`} />
-          </View>
-          <View style={{ marginTop: tokens.space[12] }}>
-            <Rung value={done} target={Math.max(planned, 1)} />
-          </View>
-        </>
-      )}
-    </View>
-  );
-}
-
-function Stat({ label, value, suffix, accent = false }: { label: string; value: string; suffix?: string; accent?: boolean }) {
-  const { c } = useTheme();
+function Stat({ label, value }: { label: string; value: string }) {
   return (
     <View style={{ flexGrow: 1, flexBasis: 0 }}>
       <MicroCaps>{label}</MicroCaps>
       <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: tokens.space[8] }}>
-        <Txt variant="numeralM" weight={600} tnum color={accent ? c.accent : c.text}>
+        <Txt variant="numeralM" weight={600} tnum>
           {value}
         </Txt>
-        {suffix ? (
-          <Txt variant="unitSmall" color={c.textSecondary} tnum style={{ marginLeft: 3 }}>
-            {suffix}
-          </Txt>
-        ) : null}
       </View>
     </View>
   );
 }
 
-/** The duration on its own, so only it redraws each second. */
-function Duration({ startedAt }: { startedAt: number }) {
-  const time = useElapsed(startedAt);
-  return <Stat label="Duration" value={time} accent />;
+/**
+ * Add exercise, as the program page's "Add workout to program" row: a raised
+ * 56pt tile with a plus, and the label beside it.
+ */
+function AddExerciseRow({ onPress }: { onPress: () => void }) {
+  const { c } = useTheme();
+  const size = tokens.iconTile.size.sessionHeader;
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel="Add exercise" onPress={onPress}>
+      {({ pressed }) => (
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: tokens.space[16],
+            opacity: pressed ? 0.6 : 1,
+            paddingHorizontal: tokens.space[4],
+            marginTop: tokens.space[4],
+          }}
+        >
+          <View
+            style={{
+              width: size,
+              height: size,
+              borderRadius: tokens.iconTile.radius,
+              backgroundColor: c.surfaceRaised,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Icon name="plus" size={24} color={c.text} />
+          </View>
+          <Txt variant="rowTitle" color={c.text} style={{ flexGrow: 1, flexShrink: 1 }}>
+            Add exercise
+          </Txt>
+        </View>
+      )}
+    </Pressable>
+  );
 }
 
 /**
- * An exercise, its own card led by its icon. Closed, its sets sit under its
- * name, one line each; open, they are a table to fill in.
+ * An exercise planned, its own card led by its icon: its group, type and
+ * sets, as a Library row says them. Editing, its sets go one fewer or one
+ * more, and it can come out.
  */
-function ExerciseCard({
-  exercise,
-  unit,
-  editing,
-  preview,
-  open,
-  onToggle,
-}: {
-  exercise: SessionExercise;
-  unit: string;
-  editing: boolean;
-  /** Before the start: what is planned, as a Library row says it. */
-  preview: boolean;
-  open: boolean;
-  onToggle?: () => void;
-}) {
+function ExerciseCard({ exercise, editing }: { exercise: SessionExercise; editing: boolean }) {
   const { c } = useTheme();
-  const { addSet, setSets, remove } = useSession();
+  const { setSets, remove } = useSession();
   const info = exercise.info;
   if (!info) return null;
   return (
     <Card padding={tokens.space[16]}>
-      <Pressable
-        accessibilityRole={onToggle ? 'button' : undefined}
-        accessibilityLabel={info.name}
-        accessibilityState={onToggle ? { expanded: open } : undefined}
-        disabled={!onToggle}
-        onPress={onToggle}
-        style={{ flexDirection: 'row', alignItems: 'flex-start', gap: tokens.space[12] }}
-      >
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: tokens.space[12] }}>
         {info.icon ? (
           <ExerciseIcon icon={info.icon} main={info.main} secondary={info.secondary} size={tokens.iconTile.size.listRow} seamAll />
         ) : null}
@@ -285,27 +233,13 @@ function ExerciseCard({
             {info.name}
           </Txt>
           {editing ? (
-            <Stepper
-              sets={exercise.rows.length}
-              name={info.name}
-              onChange={(n) => setSets(exercise.key, n)}
-            />
-          ) : preview ? (
+            <Stepper sets={exercise.rows.length} name={info.name} onChange={(n) => setSets(exercise.key, n)} />
+          ) : (
             <Txt variant="captionTight" color={c.textSecondary} tnum style={{ marginTop: tokens.space[4] }}>
               {[exercise.group, info.type, `${exercise.rows.length} ${exercise.rows.length === 1 ? 'set' : 'sets'}`]
                 .filter(Boolean)
                 .join(' · ')}
             </Txt>
-          ) : open ? (
-            <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: tokens.space[4] }}>
-              {[exercise.group, info.type].filter(Boolean).join(' · ')}
-            </Txt>
-          ) : (
-            <View style={{ marginTop: tokens.space[4], gap: tokens.space[4] }}>
-              {exercise.rows.map((r, i) => (
-                <SetLine key={i} n={i + 1} row={r} unit={unit} />
-              ))}
-            </View>
           )}
         </View>
         {editing ? (
@@ -317,23 +251,8 @@ function ExerciseCard({
           >
             <Icon name="close" size={20} color={c.destructive} />
           </Pressable>
-        ) : onToggle ? (
-          <Icon name={open ? 'chevronUp' : 'chevronDown'} size={20} color={c.textSecondary} />
         ) : null}
-      </Pressable>
-      {open ? (
-        <View style={{ marginTop: tokens.space[16] }}>
-          <SetTable exercise={exercise} unit={unit} />
-          <SecondaryButton
-            label="Add set"
-            icon="plus"
-            dashed
-            height={tokens.sizing.tapTarget.ios}
-            onPress={() => addSet(exercise.key)}
-            style={{ marginTop: tokens.space[12] }}
-          />
-        </View>
-      ) : null}
+      </View>
     </Card>
   );
 }
@@ -377,156 +296,3 @@ function Stepper({ sets, name, onChange }: { sets: number; name: string; onChang
     </View>
   );
 }
-
-/** A set under a closed exercise: its number, then its load × reps, or a dash. */
-function SetLine({ n, row, unit }: { n: number; row: SessionSet; unit: string }) {
-  const { c } = useTheme();
-  const load = amount(row.load);
-  const reps = amount(row.reps);
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: tokens.space[12] }}>
-      <Txt variant="label" weight={600} tnum color={row.done ? c.accent : c.textSecondary} style={{ minWidth: tokens.session.table.setColumn / 2 }}>
-        {n}
-      </Txt>
-      {load != null || reps != null ? (
-        <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-          <Txt variant="rowLabel" tnum color={c.text}>
-            {load ?? '—'}
-          </Txt>
-          <Txt variant="unitSmall" color={c.textSecondary} style={{ marginLeft: 3 }}>
-            {unit}
-          </Txt>
-          <Txt variant="captionTight" color={c.textSecondary} style={{ marginHorizontal: tokens.space[8] }}>
-            ×
-          </Txt>
-          <Txt variant="rowLabel" tnum color={c.text}>
-            {reps ?? '—'}
-          </Txt>
-        </View>
-      ) : (
-        <Txt variant="rowLabel" color={c.textSecondary}>
-          —
-        </Txt>
-      )}
-    </View>
-  );
-}
-
-/** An open exercise's sets: set, previous, load, reps, and the check. */
-function SetTable({ exercise, unit }: { exercise: SessionExercise; unit: string }) {
-  const { c } = useTheme();
-  const { setRow } = useSession();
-  const t = tokens.session.table;
-  return (
-    <View style={{ gap: tokens.space[8] }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[8], paddingHorizontal: tokens.space[4] }}>
-        <MicroCaps style={{ width: t.setColumn }}>Set</MicroCaps>
-        <MicroCaps style={{ flexGrow: 1, flexBasis: 0 }}>Previous</MicroCaps>
-        <MicroCaps style={{ width: t.input.width, textAlign: 'center' }}>{unit}</MicroCaps>
-        <MicroCaps style={{ width: t.input.width, textAlign: 'center' }}>Reps</MicroCaps>
-        <View style={{ width: t.check }} />
-      </View>
-      {exercise.rows.map((r, i) => (
-        <View
-          key={i}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: tokens.space[8],
-            padding: tokens.space[4],
-            borderRadius: tokens.radius.row,
-            // A done set takes the accent's soft tone: the person's own work.
-            backgroundColor: r.done ? c.accentSoft : 'transparent',
-          }}
-        >
-          <Txt variant="label" weight={600} tnum color={c.accent} style={{ width: t.setColumn }}>
-            {i + 1}
-          </Txt>
-          <Txt variant="captionTight" color={c.textSecondary} style={{ flexGrow: 1, flexBasis: 0 }}>
-            —
-          </Txt>
-          <SetInput
-            label={`Set ${i + 1} ${unit}`}
-            value={r.load}
-            decimal
-            onChange={(load) => setRow(exercise.key, i, { load })}
-          />
-          <SetInput label={`Set ${i + 1} reps`} value={r.reps} onChange={(reps) => setRow(exercise.key, i, { reps })} />
-          <Pressable
-            accessibilityRole="checkbox"
-            accessibilityLabel={`Set ${i + 1} done`}
-            accessibilityState={{ checked: r.done }}
-            onPress={() => setRow(exercise.key, i, { done: !r.done })}
-            style={({ pressed }) => ({
-              width: t.check,
-              height: t.check,
-              borderRadius: tokens.radius.button,
-              backgroundColor: r.done ? c.accent : c.surfaceRaised,
-              opacity: pressed ? 0.8 : 1,
-              alignItems: 'center',
-              justifyContent: 'center',
-            })}
-          >
-            <Icon name="check" size={20} color={r.done ? c.onAccent : c.textSecondary} width={2} />
-          </Pressable>
-        </View>
-      ))}
-    </View>
-  );
-}
-
-/**
- * A number to type: the design's input — raised, with a 2pt accent edge while
- * it is being typed in — holding a tabular numeral.
- */
-function SetInput({
-  label,
-  value,
-  decimal = false,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  decimal?: boolean;
-  onChange: (text: string) => void;
-}) {
-  const { c } = useTheme();
-  const [focused, setFocused] = useState(false);
-  const t = tokens.session.table.input;
-  return (
-    <TextInput
-      accessibilityLabel={label}
-      value={value}
-      onChangeText={(text) => onChange(decimal ? decimalOnly(text) : text.replace(/[^0-9]/g, ''))}
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
-      keyboardType={decimal ? 'decimal-pad' : 'number-pad'}
-      maxLength={decimal ? 6 : 3}
-      placeholder="—"
-      placeholderTextColor={c.textSecondary}
-      selectTextOnFocus
-      style={{
-        width: t.width,
-        height: t.height,
-        borderRadius: tokens.radius.button,
-        backgroundColor: c.surfaceRaised,
-        borderWidth: 2,
-        borderColor: focused ? c.accent : 'transparent',
-        color: c.text,
-        fontFamily: tokens.fontFamily.sansSemiBold,
-        fontSize: tokens.type.numeralS.size,
-        fontVariant: ['tabular-nums'],
-        textAlign: 'center',
-        padding: 0,
-      }}
-    />
-  );
-}
-
-/** Digits and one decimal point; a comma is taken as the point. */
-function decimalOnly(text: string): string {
-  const cleaned = text.replace(',', '.').replace(/[^0-9.]/g, '');
-  const dot = cleaned.indexOf('.');
-  return dot < 0 ? cleaned : cleaned.slice(0, dot + 1) + cleaned.slice(dot + 1).replace(/\./g, '');
-}
-
