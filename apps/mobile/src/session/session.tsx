@@ -5,12 +5,16 @@ import { listMuscleCategories, type MuscleCategory } from '../backend/muscles';
 import { cachedExercisesIn, listExercisesIn, weightsCollection, type Exercise } from '../backend/exercises';
 import { updateProgramDays, type PlannedExercise, type ProgramDay, type ProgramRecord } from '../backend/programs';
 
+/** A set as it is filled in: the load and reps typed, and whether it is done. */
+export type SessionSet = { load: string; reps: string; done: boolean };
+
 /** An exercise in the session, with what a row draws once it is known. */
-export type SessionExercise = PlannedExercise & {
+export type SessionExercise = {
   /** Unique in the session: the same exercise can be in it twice. */
   key: string;
-  /** Sets completed in this session. */
-  done: number;
+  collection: string;
+  exercise: string;
+  rows: SessionSet[];
   info?: Exercise;
   /** The muscle group it is filed under. */
   group?: string;
@@ -27,8 +31,6 @@ export type Session = {
   workout: number;
   exercises: SessionExercise[];
   startedAt: number | null;
-  /** The exercise being done, by position. */
-  current: number;
 };
 
 type SessionState = {
@@ -41,10 +43,11 @@ type SessionState = {
   start: () => void;
   finish: () => void;
   add: (exercise: Exercise, category: MuscleCategory) => void;
-  /** Completes the current exercise's next set; done with it, on to the next one not done. */
-  complete: () => void;
-  /** Makes an exercise the current one. */
-  go: (index: number) => void;
+  addSet: (key: string) => void;
+  /** Changes a set's load, reps or whether it is done. */
+  setRow: (key: string, index: number, change: Partial<SessionSet>) => void;
+  /** The exercise most recently added, so the screen can open it. */
+  added: string | null;
 };
 
 const Ctx = createContext<SessionState | null>(null);
@@ -63,14 +66,26 @@ function dayFor(program: ProgramRecord, now: Date): number {
   return 0;
 }
 
+const EMPTY: SessionSet = { load: '', reps: '', done: false };
+
 let made = 0;
-const keyed = (x: PlannedExercise): SessionExercise => ({ ...x, key: `${x.collection}/${x.exercise}/${made++}`, done: 0 });
+const keyed = (x: PlannedExercise): SessionExercise => ({
+  key: `${x.collection}/${x.exercise}/${made++}`,
+  collection: x.collection,
+  exercise: x.exercise,
+  rows: Array.from({ length: x.sets }, () => EMPTY),
+});
+
+/** What the program keeps of the session's exercises: each one and its number of sets. */
+const planOf = (exercises: SessionExercise[]): PlannedExercise[] =>
+  exercises.map((x) => ({ collection: x.collection, exercise: x.exercise, sets: x.rows.length }));
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const { token, account } = useAuth();
   const { replace } = useLibrary();
   const [session, setSession] = useState<Session | null>(null);
   const [categories, setCategories] = useState<MuscleCategory[]>([]);
+  const [added, setAdded] = useState<string | null>(null);
   // Bumped when a group's exercises arrive, so what reads them draws again.
   const [loaded, setLoaded] = useState(0);
 
@@ -107,11 +122,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [session, byCollection, loaded]);
 
   const open = useCallback((program: ProgramRecord) => {
+    setAdded(null);
     setSession((now) => {
       if (now?.startedAt != null) return now;
       const day = dayFor(program, new Date());
       const planned = program.days[day]?.workouts[0]?.exercises ?? [];
-      return { program, day, workout: 0, exercises: planned.map(keyed), startedAt: null, current: 0 };
+      return { program, day, workout: 0, exercises: planned.map(keyed), startedAt: null };
     });
   }, []);
 
@@ -121,61 +137,62 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const finish = useCallback(() => setSession(null), []);
 
-  const complete = useCallback(() => {
-    setSession((now) => {
-      if (!now || now.startedAt == null) return now;
-      const at = now.exercises[now.current];
-      if (!at || at.done >= at.sets) return now;
-      const exercises = now.exercises.map((x, i) => (i === now.current ? { ...x, done: x.done + 1 } : x));
-      let current = now.current;
-      if (exercises[current]!.done >= exercises[current]!.sets) {
-        const next = exercises.findIndex((x, i) => i > current && x.done < x.sets);
-        const any = next >= 0 ? next : exercises.findIndex((x) => x.done < x.sets);
-        if (any >= 0) current = any;
-      }
-      return { ...now, exercises, current };
-    });
-  }, []);
-
-  const go = useCallback((index: number) => {
-    setSession((now) => (now && index >= 0 && index < now.exercises.length ? { ...now, current: index } : now));
-  }, []);
-
-  const add = useCallback(
-    (exercise: Exercise, category: MuscleCategory) => {
-      if (!session) return;
-      const planned: PlannedExercise = { collection: weightsCollection(category.name), exercise: exercise.id, sets: 1 };
-      const exercises = [...session.exercises, keyed(planned)];
-      // The added exercise is the one shown next.
-      setSession({ ...session, exercises, current: exercises.length - 1 });
-
-      // The person's own program takes the exercise too: this is how they
-      // edit it. A template is everyone's and never changes; there it stays
-      // in this session only.
-      const { program, day, workout } = session;
+  // The person's own program takes what they add: this is how they edit it.
+  // A template is everyone's and never changes; there it stays in the session.
+  const keep = useCallback(
+    (now: Session, exercises: SessionExercise[]) => {
+      const { program, day, workout } = now;
       if (!token || !account || program.owner !== account.id) return;
       const days: ProgramDay[] = program.days.map((d, i) =>
-        i !== day
-          ? d
-          : {
-              ...d,
-              workouts: d.workouts.map((w, j) =>
-                j !== workout ? w : { ...w, exercises: exercises.map(({ collection, exercise: id, sets }) => ({ collection, exercise: id, sets })) },
-              ),
-            },
+        i !== day ? d : { ...d, workouts: d.workouts.map((w, j) => (j !== workout ? w : { ...w, exercises: planOf(exercises) })) },
       );
       void updateProgramDays(token, program, days).then((saved) => {
         if (!saved) return;
         replace(saved);
-        setSession((now) => (now && now.program.id === saved.id ? { ...now, program: saved } : now));
+        setSession((s) => (s && s.program.id === saved.id ? { ...s, program: saved } : s));
       });
     },
-    [session, token, account, replace],
+    [token, account, replace],
   );
 
+  const add = useCallback(
+    (exercise: Exercise, category: MuscleCategory) => {
+      if (!session) return;
+      const x = keyed({ collection: weightsCollection(category.name), exercise: exercise.id, sets: 1 });
+      const exercises = [...session.exercises, x];
+      setSession({ ...session, exercises });
+      setAdded(x.key);
+      keep(session, exercises);
+    },
+    [session, keep],
+  );
+
+  const addSet = useCallback(
+    (key: string) => {
+      if (!session) return;
+      const exercises = session.exercises.map((x) => (x.key === key ? { ...x, rows: [...x.rows, EMPTY] } : x));
+      setSession({ ...session, exercises });
+      keep(session, exercises);
+    },
+    [session, keep],
+  );
+
+  const setRow = useCallback((key: string, index: number, change: Partial<SessionSet>) => {
+    setSession((now) =>
+      now
+        ? {
+            ...now,
+            exercises: now.exercises.map((x) =>
+              x.key !== key ? x : { ...x, rows: x.rows.map((r, i) => (i === index ? { ...r, ...change } : r)) },
+            ),
+          }
+        : now,
+    );
+  }, []);
+
   const value = useMemo<SessionState>(
-    () => ({ session: resolved, categories, exercisesIn, open, start, finish, add, complete, go }),
-    [resolved, categories, exercisesIn, open, start, finish, add, complete, go],
+    () => ({ session: resolved, categories, exercisesIn, open, start, finish, add, addSet, setRow, added }),
+    [resolved, categories, exercisesIn, open, start, finish, add, addSet, setRow, added],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
@@ -184,6 +201,28 @@ export function useSession(): SessionState {
   const v = useContext(Ctx);
   if (!v) throw new Error('useSession used outside SessionProvider');
   return v;
+}
+
+/** A typed number, or nothing when it is not one. Commas count as points. */
+export function amount(text: string): number | null {
+  const n = Number(text.replace(',', '.'));
+  return text.trim() === '' || !Number.isFinite(n) ? null : n;
+}
+
+/** The sets done and planned, and the load moved by the done ones (load × reps). */
+export function totals(exercises: SessionExercise[]): { done: number; planned: number; volume: number } {
+  let done = 0;
+  let planned = 0;
+  let volume = 0;
+  for (const x of exercises) {
+    for (const r of x.rows) {
+      planned += 1;
+      if (!r.done) continue;
+      done += 1;
+      volume += (amount(r.load) ?? 0) * (amount(r.reps) ?? 0);
+    }
+  }
+  return { done, planned, volume };
 }
 
 /** "12:04", or "1:02:09" past an hour: the time since the session started. */
