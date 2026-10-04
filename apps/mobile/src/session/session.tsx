@@ -51,6 +51,10 @@ type SessionState = {
   setSets: (key: string, sets: number) => void;
   /** Takes an exercise out. */
   remove: (key: string) => void;
+  /** Puts the exercise at `from` (its place in the session) at `to`. */
+  move: (from: number, to: number) => void;
+  /** Ends the session without keeping it. */
+  discard: () => void;
   /** Changes a set's load, reps or whether it is done. */
   setRow: (key: string, index: number, change: Partial<SessionSet>) => void;
   /** The exercise most recently added, so the screen can open it. */
@@ -208,6 +212,22 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [session, keep],
   );
 
+  const move = useCallback(
+    (from: number, to: number) => {
+      if (!session || from === to || from < 0 || to < 0) return;
+      if (from >= session.exercises.length || to >= session.exercises.length) return;
+      const exercises = [...session.exercises];
+      const [moved] = exercises.splice(from, 1);
+      if (!moved) return;
+      exercises.splice(to, 0, moved);
+      setSession({ ...session, exercises });
+      keep(session, exercises);
+    },
+    [session, keep],
+  );
+
+  const discard = useCallback(() => setSession(null), []);
+
   const setRow = useCallback((key: string, index: number, change: Partial<SessionSet>) => {
     setSession((now) =>
       now
@@ -222,8 +242,23 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<SessionState>(
-    () => ({ session: resolved, categories, exercisesIn, open, start, finish, add, addSet, setSets, remove, setRow, added }),
-    [resolved, categories, exercisesIn, open, start, finish, add, addSet, setSets, remove, setRow, added],
+    () => ({
+      session: resolved,
+      categories,
+      exercisesIn,
+      open,
+      start,
+      finish,
+      add,
+      addSet,
+      setSets,
+      remove,
+      move,
+      discard,
+      setRow,
+      added,
+    }),
+    [resolved, categories, exercisesIn, open, start, finish, add, addSet, setSets, remove, move, discard, setRow, added],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
