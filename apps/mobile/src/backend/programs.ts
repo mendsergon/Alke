@@ -56,6 +56,19 @@ export async function listTemplates(token: string | null): Promise<ProgramRecord
   return items ? [...items].sort((a, b) => trainingDays(a) - trainingDays(b)) : null;
 }
 
+/** One program by id: a template, or one of the caller's own. */
+export async function getProgram(id: string, token: string | null): Promise<ProgramRecord | null> {
+  try {
+    const response = await fetch(`${POCKETBASE_URL}/api/collections/programs/records/${encodeURIComponent(id)}`, {
+      headers: token ? { Authorization: token } : {},
+    });
+    if (!response.ok) return null;
+    return (await response.json()) as ProgramRecord;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * The person's own programs. A client filter cannot name `@request.auth.id`
  * (PocketBase keeps that for superusers), so it asks by id; the collection's

@@ -38,8 +38,11 @@ type SessionState = {
   /** Every muscle group, and each group's exercises, for the session to add from. */
   categories: MuscleCategory[];
   exercisesIn: (category: string) => Exercise[];
-  /** Opens a program's workout for today, or the next day it trains. A started session is kept. */
-  open: (program: ProgramRecord) => void;
+  /**
+   * Opens a program's workout: the given day's, or today's, or the next day it
+   * trains. A started session is kept.
+   */
+  open: (program: ProgramRecord, day?: number) => void;
   start: () => void;
   finish: () => void;
   add: (exercise: Exercise, category: MuscleCategory) => void;
@@ -125,11 +128,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     // `loaded` changing is what makes the cached lists worth reading again.
   }, [session, byCollection, loaded]);
 
-  const open = useCallback((program: ProgramRecord) => {
+  const open = useCallback((program: ProgramRecord, at?: number) => {
     setAdded(null);
     setSession((now) => {
       if (now?.startedAt != null) return now;
-      const day = dayFor(program, new Date());
+      const day = at ?? dayFor(program, new Date());
       const planned = program.days[day]?.workouts[0]?.exercises ?? [];
       return { program, day, workout: 0, exercises: planned.map(keyed), startedAt: null };
     });
