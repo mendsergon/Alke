@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, Share, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBack } from '../../navigation/use-back';
 import { useAuth } from '../../auth/auth';
 import { useLibrary } from '../../library/library';
 import { useSession } from '../../session/session';
-import { getProgram, trainingDays, type ProgramRecord } from '../../backend/programs';
+import { getProgram, trainingDays, type ProgramRecord, type ProgramWorkout } from '../../backend/programs';
 import { listMuscleCategories } from '../../backend/muscles';
 import { cachedExercisesIn, listExercisesIn, weightsCollection, type Exercise } from '../../backend/exercises';
 import { Card, PrimaryButton, Row } from '../../components/surfaces';
@@ -117,17 +117,18 @@ export default function ProgramScreen() {
               Workouts in program
             </Txt>
             <Card>
-              {program.days.map((d, i) => {
-                const w = d.workouts[0];
-                const xs = w?.exercises ?? [];
+              {/* A workout that repeats is one row, with the days it falls on. */}
+              {repeats(program).map((r, i) => {
+                const w = r.workout;
+                const xs = w.exercises ?? [];
                 const n = xs.reduce((s, x) => s + x.sets, 0);
                 return (
                   <Pressable
-                    key={d.weekday}
+                    key={r.days.join()}
                     accessibilityRole="button"
-                    accessibilityLabel={`${w?.name ?? 'Workout'}, ${d.weekday}`}
+                    accessibilityLabel={`${w.name}, ${r.days.join(', ')}`}
                     onPress={() => {
-                      open(program, i);
+                      open(program, r.first);
                       router.push('/session');
                     }}
                   >
@@ -144,16 +145,21 @@ export default function ProgramScreen() {
                               justifyContent: 'center',
                             }}
                           >
-                            <MicroCaps color={c.accent}>{d.weekday.slice(0, 3)}</MicroCaps>
+                            <Txt variant="label" weight={600} tnum color={c.accent}>
+                              {`${r.days.length}×`}
+                            </Txt>
                           </View>
                           <View style={{ flexGrow: 1, flexShrink: 1 }}>
                             <Txt variant="rowLabel" color={c.text}>
-                              {w?.name ?? 'Workout'}
+                              {w.name}
                             </Txt>
                             <Txt variant="captionTight" color={c.textSecondary} tnum style={{ marginTop: 1 }}>
                               {xs.length > 0
                                 ? `${xs.length} ${xs.length === 1 ? 'exercise' : 'exercises'} · ${n} ${n === 1 ? 'set' : 'sets'}`
                                 : 'No exercises yet'}
+                            </Txt>
+                            <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: 1 }}>
+                              {r.days.map((d) => d.charAt(0).toUpperCase() + d.slice(1, 3)).join(' · ')}
                             </Txt>
                           </View>
                           <Icon name="chevronRight" size={20} color={c.textSecondary} />
@@ -200,8 +206,39 @@ export default function ProgramScreen() {
           onPress={back}
         />
       </Stack.Toolbar>
+      {/* Share, top right, as the reference has it: the system's share sheet
+          with a link that opens this program. */}
+      {program ? (
+        <Stack.Toolbar placement="right">
+          <Stack.Toolbar.Button
+            icon="square.and.arrow.up"
+            tintColor={c.text}
+            accessibilityLabel={`Share ${program.name}`}
+            onPress={() => {
+              void Share.share({ message: `${program.name} on Alke: alke://program/${program.id}` });
+            }}
+          />
+        </Stack.Toolbar>
+      ) : null}
     </View>
   );
+}
+
+/**
+ * The program's workouts, each once: the same workout on several days is one
+ * entry with those days, in week order, and the first of them to open.
+ */
+function repeats(program: ProgramRecord): { workout: ProgramWorkout; days: string[]; first: number }[] {
+  const out: { key: string; workout: ProgramWorkout; days: string[]; first: number }[] = [];
+  program.days.forEach((d, i) => {
+    const workout = d.workouts[0];
+    if (!workout) return;
+    const key = JSON.stringify(workout);
+    const same = out.find((o) => o.key === key);
+    if (same) same.days.push(d.weekday);
+    else out.push({ key, workout, days: [d.weekday], first: i });
+  });
+  return out;
 }
 
 function Stat({ label, value, suffix }: { label: string; value: string; suffix?: string }) {
