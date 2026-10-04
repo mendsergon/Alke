@@ -14,7 +14,7 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 import { BlurView } from 'expo-blur';
 import { GlassView, isGlassEffectAPIAvailable } from 'expo-glass-effect';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider as NavigationTheme } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider as NavigationTheme, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -33,6 +33,7 @@ import { SignIn } from '../auth/sign-in';
 import { ArrivalProvider } from '../components/arrival';
 import { LibraryProvider } from '../library/library';
 import { SessionProvider } from '../session/session';
+import { SessionMiniBar } from '../session/mini-bar';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -273,6 +274,7 @@ function Gate() {
         <ArrivalProvider progress={arrival}>
           <Navigator />
         </ArrivalProvider>
+        <WorkoutBar />
       </Animated.View>
       {gateMounted ? (
         <>
@@ -315,6 +317,25 @@ function Gate() {
           </Animated.View>
         </>
       ) : null}
+    </View>
+  );
+}
+
+/** Screens that are the workout itself, or a step of it: no bar over them. */
+const WORKOUT_SCREENS = new Set(['workout', 'session', 'add-exercise']);
+
+/**
+ * "Workout in progress" at the foot of every screen that is not a tab (the
+ * tab bar carries its own) and not the workout itself, while one runs
+ * (Stavros, 4 October 2026). Tapping it opens the workout again.
+ */
+function WorkoutBar() {
+  const segments = useSegments() as string[];
+  const first = segments[0] ?? '';
+  if (first === '(tabs)' || WORKOUT_SCREENS.has(first)) return null;
+  return (
+    <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}>
+      <SessionMiniBar floating />
     </View>
   );
 }
@@ -369,6 +390,9 @@ function Navigator() {
             from the bottom, its native header — glass buttons, scroll blur —
             travelling with it. */}
         <Stack.Screen name="session" options={{ presentation: 'fullScreenModal' }} dangerouslySingular />
+        {/* The workout once started: its own screen, over everything, as the
+            session's overview is. */}
+        <Stack.Screen name="workout" options={{ presentation: 'fullScreenModal' }} dangerouslySingular />
         <Stack.Screen name="add-exercise" dangerouslySingular />
       </Stack>
     </NavigationTheme>
