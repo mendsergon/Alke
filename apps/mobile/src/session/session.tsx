@@ -44,6 +44,10 @@ type SessionState = {
   finish: () => void;
   add: (exercise: Exercise, category: MuscleCategory) => void;
   addSet: (key: string) => void;
+  /** Sets an exercise's number of sets, one at least: a set taken off goes from the end. */
+  setSets: (key: string, sets: number) => void;
+  /** Takes an exercise out. */
+  remove: (key: string) => void;
   /** Changes a set's load, reps or whether it is done. */
   setRow: (key: string, index: number, change: Partial<SessionSet>) => void;
   /** The exercise most recently added, so the screen can open it. */
@@ -177,6 +181,30 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [session, keep],
   );
 
+  const setSets = useCallback(
+    (key: string, sets: number) => {
+      if (!session || sets < 1) return;
+      const exercises = session.exercises.map((x) =>
+        x.key !== key
+          ? x
+          : { ...x, rows: sets > x.rows.length ? [...x.rows, ...Array.from({ length: sets - x.rows.length }, () => EMPTY)] : x.rows.slice(0, sets) },
+      );
+      setSession({ ...session, exercises });
+      keep(session, exercises);
+    },
+    [session, keep],
+  );
+
+  const remove = useCallback(
+    (key: string) => {
+      if (!session) return;
+      const exercises = session.exercises.filter((x) => x.key !== key);
+      setSession({ ...session, exercises });
+      keep(session, exercises);
+    },
+    [session, keep],
+  );
+
   const setRow = useCallback((key: string, index: number, change: Partial<SessionSet>) => {
     setSession((now) =>
       now
@@ -191,8 +219,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<SessionState>(
-    () => ({ session: resolved, categories, exercisesIn, open, start, finish, add, addSet, setRow, added }),
-    [resolved, categories, exercisesIn, open, start, finish, add, addSet, setRow, added],
+    () => ({ session: resolved, categories, exercisesIn, open, start, finish, add, addSet, setSets, remove, setRow, added }),
+    [resolved, categories, exercisesIn, open, start, finish, add, addSet, setSets, remove, setRow, added],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
