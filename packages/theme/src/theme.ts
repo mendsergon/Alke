@@ -224,13 +224,12 @@ const templateCard = {
   chipGap: 6,
 } as const;
 
-// The session screen. The action is design page 06's rounded Skip button and
-// the bar is page 07's "Session minimised", read out of their markup in
-// `design/rungs-ui.html`; the set table holds a tap target's height.
+// The session screen. The bar is page 07's "Session minimised", read out of
+// its markup in `design/rungs-ui.html`; the set table holds a tap target's
+// height.
 const session = {
-  action: { height: 36, paddingHorizontal: 14 },
   miniBar: { height: 60, paddingHorizontal: 16, tile: 34, tileRadius: 10 },
-  table: { setColumn: 28, input: { width: 64, height: 44 }, check: 44 },
+  table: { setColumn: 28, input: { width: 64, height: 44 }, check: 44, stepper: 32 },
 } as const;
 
 const fontFamily = {
