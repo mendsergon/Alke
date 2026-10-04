@@ -8,7 +8,6 @@ import { Card, EmptyState, SecondaryButton } from '../components/surfaces';
 import { WorkoutBody } from '../components/workout-body';
 import { ExerciseIcon } from '../figure/figure';
 import { useAuth } from '../auth/auth';
-import { useLibrary } from '../library/library';
 import { MicroCaps, Txt } from '../theme/text';
 import { tokens, useTheme } from '../theme/theme';
 import { amount, totals, useElapsed, useSession, type SessionExercise, type SessionSet } from '../session/session';
@@ -39,8 +38,6 @@ export default function SessionScreen() {
   const { session, categories, start, finish, added } = useSession();
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
   const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const { save } = useLibrary();
   const scroller = useRef<ScrollView>(null);
   const started = session?.startedAt != null;
   const ready = categories.length > 0;
@@ -72,7 +69,6 @@ export default function SessionScreen() {
       return next;
     });
 
-  const day = session.program.days[session.day]?.weekday ?? '';
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <ScrollView
@@ -120,7 +116,7 @@ export default function SessionScreen() {
             {workout?.name ?? session.program.name}
           </Txt>
           <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: 2 }}>
-            {[session.program.name, day.charAt(0).toUpperCase() + day.slice(1)].filter(Boolean).join(' · ')}
+            {session.program.name}
           </Txt>
         </View>
         <Numbers exercises={shown} startedAt={session.startedAt} unit={unit} />
@@ -157,23 +153,10 @@ export default function SessionScreen() {
           onPress={() => router.back()}
         />
       </Stack.Toolbar>
-      <Stack.Toolbar placement="right">
-        {template ? (
-          // A template is everyone's: from Explore it is looked at and saved,
-          // never edited or started (Stavros, 4 October 2026). Saving makes
-          // the person's own copy in Library.
-          <Stack.Toolbar.Button
-            tintColor={c.accent}
-            accessibilityLabel={`Save ${session.program.name}`}
-            onPress={() => {
-              if (saving) return;
-              setSaving(true);
-              void save(session.program).finally(() => setSaving(false));
-            }}
-          >
-            Save
-          </Stack.Toolbar.Button>
-        ) : (
+      {/* A template is everyone's: its workout is only looked at, and the
+          program is saved from its page (Stavros, 4 October 2026). */}
+      {template ? null : (
+        <Stack.Toolbar placement="right">
           <>
             <Stack.Toolbar.Button
               icon={editing ? 'checkmark' : 'pencil'}
@@ -198,8 +181,8 @@ export default function SessionScreen() {
               </Stack.Toolbar.Button>
             )}
           </>
-        )}
-      </Stack.Toolbar>
+        </Stack.Toolbar>
+      )}
     </View>
   );
 }
