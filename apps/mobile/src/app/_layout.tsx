@@ -364,8 +364,8 @@ function Navigator() {
         <Stack.Screen name="sign-in" options={{ presentation: 'modal' }} />
         {/* A session is full screen over the tabs (PLAN.md §2); adding an
             exercise to it is a sheet over the session. */}
-        <Stack.Screen name="session" options={{ presentation: 'fullScreenModal', headerShown: false }} dangerouslySingular />
-        <Stack.Screen name="add-exercise" options={{ presentation: 'modal', headerShown: false }} dangerouslySingular />
+        <Stack.Screen name="session" dangerouslySingular />
+        <Stack.Screen name="add-exercise" dangerouslySingular />
       </Stack>
     </NavigationTheme>
   );

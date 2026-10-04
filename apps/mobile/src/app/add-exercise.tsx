@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { FlatList, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import backIcon from '../../assets/images/back.png';
 import { ScreenHeader } from '../components/screen';
 import { EmptyState } from '../components/surfaces';
 import { ExerciseCard, GroupRow, type Favorite } from '../components/favorite-exercises';
@@ -21,6 +23,7 @@ import { starExercise, unstarExercise } from '../backend/exercises';
 export default function AddExercise() {
   const { c } = useTheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { token } = useAuth();
   const { categories, exercisesIn, add } = useSession();
   const [picked, setPicked] = useState<string | null>(null);
@@ -67,7 +70,14 @@ export default function AddExercise() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <View style={{ paddingTop: tokens.space[24], paddingHorizontal: tokens.space[24], paddingBottom: tokens.space[16] }}>
+      {/* Clear of the native header, as the category screen sits under its own. */}
+      <View
+        style={{
+          paddingTop: insets.top + tokens.sizing.tapTarget.ios + tokens.space[16],
+          paddingHorizontal: tokens.space[24],
+          paddingBottom: tokens.space[16],
+        }}
+      >
         <ScreenHeader title="Add exercise" />
       </View>
       {/* Only the cards near the screen are built: every exercise at once
@@ -108,6 +118,15 @@ export default function AddExercise() {
           />
         )}
       />
+      <Stack.Toolbar placement="left">
+        <Stack.Toolbar.Button
+          icon={backIcon}
+          iconRenderingMode="template"
+          tintColor={c.text}
+          accessibilityLabel="Back"
+          onPress={() => router.back()}
+        />
+      </Stack.Toolbar>
     </View>
   );
 }

@@ -1,14 +1,14 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/icon';
 import { Rung } from '../components/rung';
 import { Card, EmptyState, SecondaryButton } from '../components/surfaces';
-import { GlassButton } from '../components/glass-button';
 import { WorkoutBody } from '../components/workout-body';
 import { ExerciseIcon } from '../figure/figure';
 import { useAuth } from '../auth/auth';
+import { useLibrary } from '../library/library';
 import { MicroCaps, Txt } from '../theme/text';
 import { tokens, useTheme } from '../theme/theme';
 import { amount, totals, useElapsed, useSession, type SessionExercise, type SessionSet } from '../session/session';
@@ -39,6 +39,8 @@ export default function SessionScreen() {
   const { session, categories, start, finish, added } = useSession();
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
   const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const { save } = useLibrary();
   const scroller = useRef<ScrollView>(null);
   const started = session?.startedAt != null;
   const ready = categories.length > 0;
@@ -73,35 +75,6 @@ export default function SessionScreen() {
   const day = session.program.days[session.day]?.weekday ?? '';
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <TopRow>
-        {template ? (
-          // A template is everyone's: from Explore it is only looked at
-          // (Stavros, 4 October 2026). It is saved from its card.
-          null
-        ) : (
-          <>
-            <GlassButton
-              icon={editing ? 'check' : 'pencil'}
-              label={editing ? 'Done editing' : 'Edit workout'}
-              onPress={() => setEditing((now) => !now)}
-            />
-            {started ? (
-              <GlassButton
-                icon="check"
-                label="Finish"
-                title="Finish"
-                accent
-                onPress={() => {
-                  finish();
-                  router.back();
-                }}
-              />
-            ) : (
-              <GlassButton icon="play" label="Start" title="Start" accent onPress={start} />
-            )}
-          </>
-        )}
-      </TopRow>
       <ScrollView
         ref={scroller}
         style={{ flex: 1 }}
@@ -109,7 +82,9 @@ export default function SessionScreen() {
         keyboardDismissMode="on-drag"
         automaticallyAdjustKeyboardInsets
         contentContainerStyle={{
-          paddingTop: tokens.space[16],
+          // Under the native header, as the category screen sits: content
+          // scrolls up beneath its glass buttons and blurs at the top edge.
+          paddingTop: insets.top + tokens.sizing.tapTarget.ios + tokens.space[16],
           paddingHorizontal: tokens.space[20],
           paddingBottom: insets.bottom + tokens.space[24],
           gap: tokens.space[12],
@@ -148,26 +123,60 @@ export default function SessionScreen() {
           />
         ) : null}
       </ScrollView>
-    </View>
-  );
-}
 
-/** Glass across the top, as the app's other screens have it: minimise, then the actions. */
-function TopRow({ children }: { children: ReactNode }) {
-  const router = useRouter();
-  const insets = useSafeAreaInsets();
-  return (
-    <View
-      style={{
-        paddingTop: insets.top + tokens.space[16],
-        paddingHorizontal: tokens.space[20],
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-      }}
-    >
-      <GlassButton icon="chevronDown" label="Minimise session" onPress={() => router.back()} />
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[8] }}>{children}</View>
+      {/* The app's native header buttons, as the category screen has them:
+          glass on iOS 26, and the scroll edge blurs under them. */}
+      <Stack.Toolbar placement="left">
+        <Stack.Toolbar.Button
+          icon="chevron.down"
+          tintColor={c.text}
+          accessibilityLabel="Minimise session"
+          onPress={() => router.back()}
+        />
+      </Stack.Toolbar>
+      <Stack.Toolbar placement="right">
+        {template ? (
+          // A template is everyone's: from Explore it is looked at and saved,
+          // never edited or started (Stavros, 4 October 2026). Saving makes
+          // the person's own copy in Library.
+          <Stack.Toolbar.Button
+            tintColor={c.accent}
+            accessibilityLabel={`Save ${session.program.name}`}
+            onPress={() => {
+              if (saving) return;
+              setSaving(true);
+              void save(session.program).finally(() => setSaving(false));
+            }}
+          >
+            Save
+          </Stack.Toolbar.Button>
+        ) : (
+          <>
+            <Stack.Toolbar.Button
+              icon={editing ? 'checkmark' : 'pencil'}
+              tintColor={c.text}
+              accessibilityLabel={editing ? 'Done editing' : 'Edit workout'}
+              onPress={() => setEditing((now) => !now)}
+            />
+            {started ? (
+              <Stack.Toolbar.Button
+                tintColor={c.accent}
+                accessibilityLabel="Finish"
+                onPress={() => {
+                  finish();
+                  router.back();
+                }}
+              >
+                Finish
+              </Stack.Toolbar.Button>
+            ) : (
+              <Stack.Toolbar.Button tintColor={c.accent} accessibilityLabel="Start" onPress={start}>
+                Start
+              </Stack.Toolbar.Button>
+            )}
+          </>
+        )}
+      </Stack.Toolbar>
     </View>
   );
 }
@@ -187,12 +196,12 @@ function Numbers({ exercises, startedAt, unit }: { exercises: SessionExercise[];
         <View style={{ flexDirection: 'row', gap: tokens.space[16] }}>
           <Stat label="Exercises" value={String(exercises.length)} />
           <Stat label="Sets" value={String(planned)} />
-          {/* What the workout trains, in the space beside its numbers, as
-              tall as they are so nothing around it moves. */}
+          {/* What the workout trains, filling the space beside its numbers;
+              the numbers stay at the top. */}
           <View style={{ flexGrow: 1, flexBasis: 0, alignItems: 'flex-end' }}>
             <WorkoutBody
               exercises={exercises.flatMap((x) => (x.info ? [x.info] : []))}
-              height={tokens.type.microCaps.lineHeight + tokens.space[8] + tokens.type.numeralM.lineHeight}
+              height={tokens.session.bodyHeight}
             />
           </View>
         </View>
