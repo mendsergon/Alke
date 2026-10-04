@@ -1,6 +1,7 @@
 import { Pressable } from 'react-native';
 import { GlassView } from 'expo-glass-effect';
 import { Icon, type IconName } from './icon';
+import { Txt } from '../theme/text';
 import { tokens, useTheme } from '../theme/theme';
 
 /**
@@ -14,14 +15,21 @@ import { tokens, useTheme } from '../theme/theme';
 export function GlassButton({
   icon,
   label,
+  title,
+  accent = false,
   onPress,
 }: {
   icon: IconName;
   label: string;
+  /** Written beside the glyph: the bubble becomes a capsule. */
+  title?: string;
+  /** The glyph and title in the accent, for the screen's main action. */
+  accent?: boolean;
   onPress?: () => void;
 }) {
   const { c, scheme } = useTheme();
   const size = tokens.sizing.tapTarget.ios;
+  const tone = accent ? c.accent : c.text;
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress}>
       <GlassView
@@ -29,14 +37,23 @@ export function GlassButton({
         isInteractive
         colorScheme={scheme}
         style={{
-          width: size,
+          width: title ? undefined : size,
           height: size,
           borderRadius: size / 2,
+          paddingLeft: title ? tokens.space[12] : 0,
+          paddingRight: title ? tokens.space[16] : 0,
+          flexDirection: 'row',
+          gap: tokens.space[8],
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-        <Icon name={icon} size={22} color={c.text} width={1.75} />
+        <Icon name={icon} size={title ? 20 : 22} color={tone} width={1.75} />
+        {title ? (
+          <Txt variant="label" weight={600} color={tone}>
+            {title}
+          </Txt>
+        ) : null}
       </GlassView>
     </Pressable>
   );
