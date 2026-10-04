@@ -157,6 +157,21 @@ const PATHS: Record<string, (p: { s: string; w: number }) => ReactNode> = {
       <Path d="M12 4.5v15" stroke={s} strokeWidth={w} />
     </>
   ),
+  // Not on the sheet either: editing a session's workout, a set fewer, and
+  // taking an exercise out. Drawn to the same rule.
+  pencil: ({ s, w }) => (
+    <>
+      <Path d="M15.5 4.5 19.5 8.5 9 19H5v-4z" stroke={s} strokeWidth={w} />
+      <Path d="M13 7l4 4" stroke={s} strokeWidth={w} />
+    </>
+  ),
+  minus: ({ s, w }) => <Path d="M5.5 12h13" stroke={s} strokeWidth={w} />,
+  close: ({ s, w }) => (
+    <>
+      <Path d="M6.5 6.5l11 11" stroke={s} strokeWidth={w} />
+      <Path d="M17.5 6.5l-11 11" stroke={s} strokeWidth={w} />
+    </>
+  ),
   signOut: ({ s, w }) => (
     <>
       <Path d="M12 4.5H6.5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2H12" stroke={s} strokeWidth={w} />
