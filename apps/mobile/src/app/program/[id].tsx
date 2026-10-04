@@ -18,7 +18,7 @@ import {
 } from '../../backend/programs';
 import { listMuscleCategories } from '../../backend/muscles';
 import { cachedExercisesIn, listExercisesIn, weightsCollection, type Exercise } from '../../backend/exercises';
-import { Card, PrimaryButton, Row } from '../../components/surfaces';
+import { EmptyState, PrimaryButton } from '../../components/surfaces';
 import { Icon } from '../../components/icon';
 import { DayDots, weekLine } from '../../components/program-card';
 import { WorkoutBody } from '../../components/workout-body';
@@ -51,6 +51,8 @@ export default function ProgramScreen() {
   const { open, start } = useSession();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [program, setProgram] = useState<ProgramRecord | null>(null);
+  // Asked for and not there: deleted, unpublished, or never one the person can see.
+  const [missing, setMissing] = useState(false);
   const [byKey, setByKey] = useState<ReadonlyMap<string, Exercise>>(new Map());
   const [busy, setBusy] = useState(false);
   const own = program !== null && account !== null && program.owner === account.id;
@@ -58,7 +60,9 @@ export default function ProgramScreen() {
   useEffect(() => {
     let live = true;
     void getProgram(id, token).then((p) => {
-      if (live && p) setProgram(p);
+      if (!live) return;
+      if (p) setProgram(p);
+      else setMissing(true);
     });
     return () => {
       live = false;
@@ -300,25 +304,24 @@ export default function ProgramScreen() {
             <Txt variant="section" family="serif" weight={500} style={{ marginTop: tokens.space[8] }}>
               Workouts in program
             </Txt>
-            <Card>
+            {/* Each workout its own row on the page, as the reference lists them:
+                its tile, its name, what it holds and the days it falls on. */}
+            <View style={{ gap: tokens.space[16] }}>
               {own ? (
                 <Pressable accessibilityRole="button" accessibilityLabel="Add workout to program" onPress={addWorkout}>
                   {({ pressed }) => (
-                    <View style={{ opacity: pressed ? 0.6 : 1 }}>
-                      <Row first>
-                        <Tile>
-                          <Icon name="plus" size={20} color={c.accent} />
-                        </Tile>
-                        <Txt variant="rowLabel" color={c.text} style={{ flexGrow: 1, flexShrink: 1 }}>
-                          Add workout to program
-                        </Txt>
-                      </Row>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[16], opacity: pressed ? 0.6 : 1 }}>
+                      <Tile>
+                        <Icon name="plus" size={24} color={c.text} />
+                      </Tile>
+                      <Txt variant="rowTitle" color={c.text} style={{ flexGrow: 1, flexShrink: 1 }}>
+                        Add workout to program
+                      </Txt>
                     </View>
                   )}
                 </Pressable>
               ) : null}
-              {/* A workout that repeats is one row, with the days it falls on. */}
-              {rows.map((r, i) => {
+              {rows.map((r) => {
                 const w = r.workout;
                 const xs = w.exercises ?? [];
                 const n = xs.reduce((s, x) => s + x.sets, 0);
@@ -333,69 +336,69 @@ export default function ProgramScreen() {
                     }}
                   >
                     {({ pressed }) => (
-                      <View style={{ opacity: pressed ? 0.6 : 1 }}>
-                        <Row first={!own && i === 0}>
-                          <Tile>
-                            <Txt variant="label" weight={600} tnum color={c.accent}>
-                              {`${r.days.length}×`}
-                            </Txt>
-                          </Tile>
-                          <View style={{ flexGrow: 1, flexShrink: 1 }}>
-                            <Txt variant="rowLabel" color={c.text}>
-                              {w.name}
-                            </Txt>
-                            <Txt variant="captionTight" color={c.textSecondary} tnum style={{ marginTop: 1 }}>
-                              {xs.length > 0
-                                ? `${xs.length} ${xs.length === 1 ? 'exercise' : 'exercises'} · ${n} ${n === 1 ? 'set' : 'sets'}`
-                                : 'No exercises yet'}
-                            </Txt>
-                            <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: 1 }}>
-                              {r.days.map((d) => cap(d).slice(0, 3)).join(' · ')}
-                            </Txt>
-                          </View>
-                          {own ? (
-                            <>
-                              <Pressable
-                                accessibilityRole="button"
-                                accessibilityLabel={`Start ${w.name}`}
-                                hitSlop={tokens.space[4]}
-                                onPress={() => startWorkout(r.first)}
-                                style={({ pressed: p }) => ({
-                                  width: tokens.programPage.play,
-                                  height: tokens.programPage.play,
-                                  borderRadius: tokens.radius.rung,
-                                  borderWidth: 1.5,
-                                  borderColor: c.accent,
-                                  opacity: p ? 0.6 : 1,
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                })}
-                              >
-                                <Icon name="play" size={16} color={c.accent} width={1.8} />
-                              </Pressable>
-                              <Pressable
-                                accessibilityRole="button"
-                                accessibilityLabel={`${w.name} options`}
-                                hitSlop={tokens.space[8]}
-                                onPress={() => workoutOptions(r)}
-                              >
-                                {/* Lying flat, as the "…" at the top of the screen does. */}
-                                <View style={{ transform: [{ rotate: '90deg' }] }}>
-                                  <Icon name="dots" size={20} color={c.textSecondary} width={1.8} />
-                                </View>
-                              </Pressable>
-                            </>
-                          ) : (
-                            <Icon name="chevronRight" size={20} color={c.textSecondary} />
-                          )}
-                        </Row>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[16], opacity: pressed ? 0.6 : 1 }}>
+                        <Tile tone="accent">
+                          <Txt variant="serifCardTitle" family="serif" weight={500} color={c.accent}>
+                            {initials(w.name)}
+                          </Txt>
+                        </Tile>
+                        <View style={{ flexGrow: 1, flexShrink: 1 }}>
+                          <Txt variant="rowTitle" color={c.text} numberOfLines={1}>
+                            {w.name}
+                          </Txt>
+                          <Txt variant="captionTight" color={c.textSecondary} tnum style={{ marginTop: 2 }}>
+                            {xs.length > 0
+                              ? `${xs.length} ${xs.length === 1 ? 'exercise' : 'exercises'} · ${n} ${n === 1 ? 'set' : 'sets'}`
+                              : 'No exercises yet'}
+                          </Txt>
+                          <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: 1 }}>
+                            {r.days.map((d) => cap(d).slice(0, 3)).join(' · ')}
+                          </Txt>
+                        </View>
+                        {own ? (
+                          <>
+                            <Pressable
+                              accessibilityRole="button"
+                              accessibilityLabel={`Start ${w.name}`}
+                              hitSlop={tokens.space[4]}
+                              onPress={() => startWorkout(r.first)}
+                              style={({ pressed: p }) => ({
+                                width: tokens.programPage.play,
+                                height: tokens.programPage.play,
+                                borderRadius: tokens.radius.rung,
+                                borderWidth: 1.5,
+                                borderColor: c.text,
+                                opacity: p ? 0.6 : 1,
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              })}
+                            >
+                              <Icon name="play" size={16} color={c.text} width={1.8} />
+                            </Pressable>
+                            <Pressable
+                              accessibilityRole="button"
+                              accessibilityLabel={`${w.name} options`}
+                              hitSlop={tokens.space[8]}
+                              onPress={() => workoutOptions(r)}
+                            >
+                              {/* Lying flat, as the "…" at the top of the screen does. */}
+                              <View style={{ transform: [{ rotate: '90deg' }] }}>
+                                <Icon name="dots" size={22} color={c.text} width={1.8} />
+                              </View>
+                            </Pressable>
+                          </>
+                        ) : (
+                          <Icon name="chevronRight" size={20} color={c.textSecondary} />
+                        )}
                       </View>
                     )}
                   </Pressable>
                 );
               })}
-            </Card>
+            </View>
           </>
+        ) : missing ? (
+          <EmptyState line="This program is no longer here." />
         ) : null}
       </ScrollView>
 
@@ -460,16 +463,17 @@ export default function ProgramScreen() {
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-/** A row's leading tile, on the raised surface every lead element sits on. */
-function Tile({ children }: { children: ReactNode }) {
+/** A workout's tile: its initials on the accent's soft tone, or the raised surface for Add. */
+function Tile({ tone = 'raised', children }: { tone?: 'raised' | 'accent'; children: ReactNode }) {
   const { c } = useTheme();
+  const size = tokens.iconTile.size.sessionHeader;
   return (
     <View
       style={{
-        width: tokens.iconTile.size.listRow,
-        height: tokens.iconTile.size.listRow,
+        width: size,
+        height: size,
         borderRadius: tokens.iconTile.radius,
-        backgroundColor: c.surfaceRaised,
+        backgroundColor: tone === 'accent' ? c.accentSoft : c.surfaceRaised,
         alignItems: 'center',
         justifyContent: 'center',
       }}
@@ -477,6 +481,14 @@ function Tile({ children }: { children: ReactNode }) {
       {children}
     </View>
   );
+}
+
+/** "Full body" → "Fb", "Pull" → "Pu": what a workout's tile carries. */
+function initials(name: string): string {
+  const words = name.trim().split(/\s+/);
+  const first = words[0] ?? '';
+  const two = words.length > 1 ? first.charAt(0) + (words[1] ?? '').charAt(0) : first.slice(0, 2);
+  return two.charAt(0).toUpperCase() + two.slice(1).toLowerCase();
 }
 
 type Repeat = { workout: ProgramWorkout; days: string[]; first: number };

@@ -237,7 +237,7 @@ const session = {
 const programPage = {
   bodyHeight: 240,
   // A workout's play button, round, on the person's own program.
-  play: 36,
+  play: 40,
 } as const;
 
 const fontFamily = {
