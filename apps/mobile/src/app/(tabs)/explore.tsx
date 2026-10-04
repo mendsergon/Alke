@@ -13,6 +13,7 @@ import { tokens, useTheme } from '../../theme/theme';
 import { useAuth } from '../../auth/auth';
 import { useGym } from '../../gym/gym';
 import { useLibrary } from '../../library/library';
+import { askDuplicate } from '../../library/duplicate';
 import { listTemplates, trainingDays, type ProgramRecord } from '../../backend/programs';
 import { DayDots, ProgramCard, weekLine } from '../../components/program-card';
 import { GYM_PROGRAMS, SHARED_PROGRAMS } from '../../mock/mock-data';
@@ -115,13 +116,15 @@ function TemplateCard({ template }: { template: ProgramRecord }) {
         </Txt>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={saved ? `${template.name} is saved` : `Save ${template.name}`}
+          accessibilityLabel={saved ? `${template.name} is duplicated` : `Duplicate ${template.name}`}
           accessibilityState={{ disabled: saved || saving }}
           disabled={saved || saving}
-          onPress={() => {
-            setSaving(true);
-            void save(template).finally(() => setSaving(false));
-          }}
+          onPress={() =>
+            askDuplicate(template.name, () => {
+              setSaving(true);
+              void save(template).finally(() => setSaving(false));
+            })
+          }
           style={({ pressed }) => ({
             flexDirection: 'row',
             alignItems: 'center',
@@ -132,13 +135,13 @@ function TemplateCard({ template }: { template: ProgramRecord }) {
             borderRadius: tokens.radius.rung,
             borderWidth: saved ? 0 : 1,
             borderColor: c.border,
-            // The accent is the person's own data, and a saved template is theirs.
+            // The accent is the person's own data, and a duplicated template is theirs.
             backgroundColor: saved ? c.accentSoft : pressed ? c.bg : 'transparent',
           })}
         >
-          {saved ? <Icon name="check" size={15} color={c.accent} /> : null}
+          <Icon name={saved ? 'check' : 'duplicate'} size={15} color={saved ? c.accent : c.text} />
           <Txt variant="label" weight={600} color={saved ? c.accent : c.text}>
-            {saved ? 'Saved' : 'Save'}
+            {saved ? 'Duplicated' : 'Duplicate'}
           </Txt>
         </Pressable>
       </View>

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, Share, View } from 'react-native';
+import { Pressable, ScrollView, Share, View } from 'react-native';
+import { askDuplicate, askRemoveCopy } from '../../library/duplicate';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBack } from '../../navigation/use-back';
@@ -22,7 +23,7 @@ import backIcon from '../../../assets/images/back.png';
  * programs in Lyfta): what it trains as the whole figure, front and back, its
  * muscles lit — the emphasis design page 04 gives a program; its name, its
  * week, and its numbers as Home's week draws them; then its workouts, one row
- * a training day, each opening that workout to look at. Save sits at the
+ * a training day, each opening that workout to look at. Duplicate sits at the
  * foot of the screen and makes the person's own copy in Library.
  */
 export default function ProgramScreen() {
@@ -39,36 +40,19 @@ export default function ProgramScreen() {
   const [saving, setSaving] = useState(false);
   const saved = program !== null && programs.some((p) => p.copied_from === program.id);
 
-  // Saving and unsaving each ask first, in the system's own alert — Liquid
-  // Glass on iOS 26.
   const askSave = () => {
     if (!program || saving) return;
-    Alert.alert(`Save ${program.name}?`, 'It goes into your Library as your own copy, yours to change.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Save',
-        style: 'default',
-        isPreferred: true,
-        onPress: () => {
-          setSaving(true);
-          void save(program).finally(() => setSaving(false));
-        },
-      },
-    ]);
+    askDuplicate(program.name, () => {
+      setSaving(true);
+      void save(program).finally(() => setSaving(false));
+    });
   };
   const askUnsave = () => {
     if (!program || saving) return;
-    Alert.alert(`Remove ${program.name} from Library?`, 'Your copy, and any changes you made to it, are deleted.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: () => {
-          setSaving(true);
-          void unsave(program).finally(() => setSaving(false));
-        },
-      },
-    ]);
+    askRemoveCopy(program.name, () => {
+      setSaving(true);
+      void unsave(program).finally(() => setSaving(false));
+    });
   };
 
   useEffect(() => {
@@ -207,7 +191,7 @@ export default function ProgramScreen() {
         ) : null}
       </ScrollView>
 
-      {/* Save, at the foot of the screen, as the program's one action. */}
+      {/* Duplicate, at the foot of the screen, as the program's one action. */}
       <View
         style={{
           paddingTop: tokens.space[16],
@@ -223,7 +207,7 @@ export default function ProgramScreen() {
           // button on Explore reads. Pressed, it asks to remove it.
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`${program.name} is saved. Remove from Library`}
+            accessibilityLabel={`${program.name} is duplicated. Remove your copy`}
             onPress={askUnsave}
             style={({ pressed }) => ({
               height: tokens.sizing.primaryButtonHeight.min,
@@ -238,11 +222,11 @@ export default function ProgramScreen() {
           >
             <Icon name="check" size={20} color={c.accent} width={1.8} />
             <Txt variant="buttonLabel" weight={600} color={c.accent}>
-              Saved
+              Duplicated
             </Txt>
           </Pressable>
         ) : (
-          <PrimaryButton label="Save" icon="bookmark" disabled={!program || saving} onPress={askSave} />
+          <PrimaryButton label="Duplicate" icon="duplicate" disabled={!program || saving} onPress={askSave} />
         )}
       </View>
 
@@ -259,11 +243,11 @@ export default function ProgramScreen() {
           with a link that opens this program. */}
       {program ? (
         <Stack.Toolbar placement="right">
-          {/* Save, beside Share: filled once the program is in Library. */}
+          {/* Duplicate, beside Share: filled once the copy is in Library. */}
           <Stack.Toolbar.Button
-            icon={saved ? 'bookmark.fill' : 'bookmark'}
+            icon={saved ? 'plus.square.fill.on.square.fill' : 'plus.square.on.square'}
             tintColor={c.text}
-            accessibilityLabel={saved ? `${program.name} is saved. Remove from Library` : `Save ${program.name}`}
+            accessibilityLabel={saved ? `${program.name} is duplicated. Remove your copy` : `Duplicate ${program.name}`}
             onPress={saved ? askUnsave : askSave}
           />
           <Stack.Toolbar.Button
