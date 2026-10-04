@@ -3,7 +3,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/icon';
-import { Card, EmptyState } from '../components/surfaces';
+import { Card, EmptyState, PrimaryButton } from '../components/surfaces';
 import { ReorderList } from '../components/reorder-list';
 import { WorkoutBody } from '../components/workout-body';
 import { ExerciseIcon } from '../figure/figure';
@@ -172,43 +172,14 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 /**
- * Add exercise, as the program page's "Add workout to program" row: a raised
- * 56pt tile with a plus, and the label beside it.
+ * Add exercise: the screen's one action at the end of the list, as the
+ * reference has it — the design's accent primary button, full width.
  */
 function AddExerciseRow({ onPress }: { onPress: () => void }) {
-  const { c } = useTheme();
-  const size = tokens.iconTile.size.sessionHeader;
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel="Add exercise" onPress={onPress}>
-      {({ pressed }) => (
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: tokens.space[16],
-            opacity: pressed ? 0.6 : 1,
-            paddingHorizontal: tokens.space[4],
-            marginTop: tokens.space[4],
-          }}
-        >
-          <View
-            style={{
-              width: size,
-              height: size,
-              borderRadius: tokens.iconTile.radius,
-              backgroundColor: c.surfaceRaised,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Icon name="plus" size={24} color={c.text} />
-          </View>
-          <Txt variant="rowTitle" color={c.text} style={{ flexGrow: 1, flexShrink: 1 }}>
-            Add exercise
-          </Txt>
-        </View>
-      )}
-    </Pressable>
+    <View style={{ marginTop: tokens.space[8] }}>
+      <PrimaryButton label="Add exercise" icon="plus" onPress={onPress} />
+    </View>
   );
 }
 
