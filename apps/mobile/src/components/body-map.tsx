@@ -6,8 +6,8 @@ import { Txt } from '../theme/text';
 import { heatColor } from './heat';
 import type { MuscleScore } from '../mock/mock-data';
 
-const BODY_VIEW_BOX = '-5.0 -5.0 393.5 727.8';
-const BODY_STROKE = 1.8;
+export const BODY_VIEW_BOX = '-5.0 -5.0 393.5 727.8';
+export const BODY_STROKE = 1.8;
 
 function fillsFor(view: FigureView, scores: MuscleScore[], stops: readonly string[]) {
   const byRegion = new Map<number, string>();
