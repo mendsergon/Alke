@@ -91,6 +91,29 @@ export default function SessionScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
+        {/* Before the start, what the workout trains sits in the empty space
+            beside its title and numbers, laid over it so nothing moves. */}
+        {!started ? (
+          <View
+            pointerEvents="none"
+            style={{ position: 'absolute', top: insets.top + tokens.sizing.tapTarget.ios + tokens.space[16], right: tokens.space[20] + tokens.space[4] }}
+          >
+            <WorkoutBody
+              exercises={shown.flatMap((x) => (x.info ? [x.info] : []))}
+              // As tall as the title, its line, the gap and the numbers together.
+              height={
+                tokens.type.screenTitle.lineHeight +
+                2 +
+                tokens.type.captionTight.lineHeight +
+                tokens.space[12] +
+                2 * tokens.space[8] +
+                tokens.type.microCaps.lineHeight +
+                tokens.space[8] +
+                tokens.type.numeralM.lineHeight
+              }
+            />
+          </View>
+        ) : null}
         {/* The workout's name is the screen's title, as every tab's is. */}
         <View style={{ paddingHorizontal: tokens.space[4] }}>
           <Txt variant="screenTitle" family="serif" weight={500}>
@@ -196,14 +219,7 @@ function Numbers({ exercises, startedAt, unit }: { exercises: SessionExercise[];
         <View style={{ flexDirection: 'row', gap: tokens.space[16] }}>
           <Stat label="Exercises" value={String(exercises.length)} />
           <Stat label="Sets" value={String(planned)} />
-          {/* What the workout trains, filling the space beside its numbers;
-              the numbers stay at the top. */}
-          <View style={{ flexGrow: 1, flexBasis: 0, alignItems: 'flex-end' }}>
-            <WorkoutBody
-              exercises={exercises.flatMap((x) => (x.info ? [x.info] : []))}
-              height={tokens.session.bodyHeight}
-            />
-          </View>
+          <View style={{ flexGrow: 1, flexBasis: 0 }} />
         </View>
       ) : (
         <>

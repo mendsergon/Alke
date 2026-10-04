@@ -230,9 +230,6 @@ const templateCard = {
 const session = {
   miniBar: { height: 60, paddingHorizontal: 16, tile: 34, tileRadius: 10 },
   table: { setColumn: 28, input: { width: 64, height: 44 }, check: 44, stepper: 32 },
-  // What the workout trains, front and back, beside its numbers before the
-  // start (Stavros, 4 October 2026): this tall.
-  bodyHeight: 160,
 } as const;
 
 const fontFamily = {
