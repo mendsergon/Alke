@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Share, View } from 'react-native';
-import { askDuplicate, askRemoveCopy } from '../../library/duplicate';
+import { askDuplicate } from '../../library/duplicate';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBack } from '../../navigation/use-back';
@@ -32,26 +32,18 @@ export default function ProgramScreen() {
   const back = useBack('/explore');
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
-  const { programs, save, unsave } = useLibrary();
+  const { save } = useLibrary();
   const { open } = useSession();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [program, setProgram] = useState<ProgramRecord | null>(null);
   const [byKey, setByKey] = useState<ReadonlyMap<string, Exercise>>(new Map());
   const [saving, setSaving] = useState(false);
-  const saved = program !== null && programs.some((p) => p.copied_from === program.id);
 
   const askSave = () => {
     if (!program || saving) return;
     askDuplicate(program.name, () => {
       setSaving(true);
       void save(program).finally(() => setSaving(false));
-    });
-  };
-  const askUnsave = () => {
-    if (!program || saving) return;
-    askRemoveCopy(program.name, () => {
-      setSaving(true);
-      void unsave(program).finally(() => setSaving(false));
     });
   };
 
@@ -202,32 +194,8 @@ export default function ProgramScreen() {
           borderTopColor: c.border,
         }}
       >
-        {saved ? (
-          // Saved: the accent's soft tone with a check, as a saved template's
-          // button on Explore reads. Pressed, it asks to remove it.
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`${program.name} is duplicated. Remove your copy`}
-            onPress={askUnsave}
-            style={({ pressed }) => ({
-              height: tokens.sizing.primaryButtonHeight.min,
-              borderRadius: tokens.radius.button,
-              backgroundColor: c.accentSoft,
-              opacity: pressed ? 0.8 : 1,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: tokens.space[8],
-            })}
-          >
-            <Icon name="check" size={20} color={c.accent} width={1.8} />
-            <Txt variant="buttonLabel" weight={600} color={c.accent}>
-              Duplicated
-            </Txt>
-          </Pressable>
-        ) : (
-          <PrimaryButton label="Duplicate" icon="duplicate" disabled={!program || saving} onPress={askSave} />
-        )}
+        {/* Every press makes another copy in Library. */}
+        <PrimaryButton label="Duplicate" icon="duplicate" disabled={!program || saving} onPress={askSave} />
       </View>
 
       <Stack.Toolbar placement="left">
@@ -243,12 +211,12 @@ export default function ProgramScreen() {
           with a link that opens this program. */}
       {program ? (
         <Stack.Toolbar placement="right">
-          {/* Duplicate, beside Share: filled once the copy is in Library. */}
+          {/* Duplicate, beside Share. */}
           <Stack.Toolbar.Button
-            icon={saved ? 'plus.square.fill.on.square.fill' : 'plus.square.on.square'}
+            icon="plus.square.on.square"
             tintColor={c.text}
-            accessibilityLabel={saved ? `${program.name} is duplicated. Remove your copy` : `Duplicate ${program.name}`}
-            onPress={saved ? askUnsave : askSave}
+            accessibilityLabel={`Duplicate ${program.name}`}
+            onPress={askSave}
           />
           <Stack.Toolbar.Button
             icon="square.and.arrow.up"

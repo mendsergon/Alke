@@ -50,11 +50,10 @@ function MetaChip({ label }: { label: string }) {
 function TemplateCard({ template }: { template: ProgramRecord }) {
   const { c } = useTheme();
   const router = useRouter();
-  const { programs, save } = useLibrary();
+  const { save } = useLibrary();
   const [saving, setSaving] = useState(false);
   const days = trainingDays(template);
   const restDays = template.schedule.length - days;
-  const saved = programs.some((p) => p.copied_from === template.id);
   const chips = [...new Set(template.days.flatMap((d) => d.workouts.map((w) => w.name)))];
 
   return (
@@ -116,9 +115,9 @@ function TemplateCard({ template }: { template: ProgramRecord }) {
         </Txt>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={saved ? `${template.name} is duplicated` : `Duplicate ${template.name}`}
-          accessibilityState={{ disabled: saved || saving }}
-          disabled={saved || saving}
+          accessibilityLabel={`Duplicate ${template.name}`}
+          accessibilityState={{ disabled: saving }}
+          disabled={saving}
           onPress={() =>
             askDuplicate(template.name, () => {
               setSaving(true);
@@ -133,15 +132,14 @@ function TemplateCard({ template }: { template: ProgramRecord }) {
             minHeight: tokens.sizing.tapTarget.ios,
             paddingHorizontal: tokens.space[20],
             borderRadius: tokens.radius.rung,
-            borderWidth: saved ? 0 : 1,
+            borderWidth: 1,
             borderColor: c.border,
-            // The accent is the person's own data, and a duplicated template is theirs.
-            backgroundColor: saved ? c.accentSoft : pressed ? c.bg : 'transparent',
+            backgroundColor: pressed ? c.bg : 'transparent',
           })}
         >
-          <Icon name={saved ? 'check' : 'duplicate'} size={15} color={saved ? c.accent : c.text} />
-          <Txt variant="label" weight={600} color={saved ? c.accent : c.text}>
-            {saved ? 'Duplicated' : 'Duplicate'}
+          <Icon name="duplicate" size={15} color={c.text} />
+          <Txt variant="label" weight={600} color={c.text}>
+            Duplicate
           </Txt>
         </Pressable>
       </View>

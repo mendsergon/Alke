@@ -56,19 +56,6 @@ export async function listTemplates(token: string | null): Promise<ProgramRecord
   return items ? [...items].sort((a, b) => trainingDays(a) - trainingDays(b)) : null;
 }
 
-/** Deletes one of the caller's own programs; whether it went. The delete rule refuses anyone else's. */
-export async function deleteProgram(token: string, id: string): Promise<boolean> {
-  try {
-    const response = await fetch(`${POCKETBASE_URL}/api/collections/programs/records/${encodeURIComponent(id)}`, {
-      method: 'DELETE',
-      headers: { Authorization: token },
-    });
-    return response.ok;
-  } catch {
-    return false;
-  }
-}
-
 /** One program by id: a template, or one of the caller's own. */
 export async function getProgram(id: string, token: string | null): Promise<ProgramRecord | null> {
   try {
