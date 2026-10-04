@@ -132,8 +132,14 @@ export default function CategoryScreen() {
     [content, card, step.list, step.grid],
   );
   const padTop = insets.top + tokens.sizing.tapTarget.ios + tokens.space[16];
-  // The title and search, measured; the cards start under them.
-  const [headerLength, setHeaderLength] = useState(0);
+  // The title and search, pinned over the cards (Stavros, 4 October 2026),
+  // measured; the cards start under them. Started at what they measure —
+  // the title's line, the gap, the search bar's 46pt (components/search-bar)
+  // and the space under it — so the first frame lays the cards out where
+  // they stay and the measurement changes nothing.
+  const [headerLength, setHeaderLength] = useState(
+    () => tokens.type.screenTitle.lineHeight + tokens.space[16] + 46 + tokens.space[16],
+  );
   const cardsTop = padTop + headerLength;
 
   // Both views are kept drawn, the one not shown faded out, so a switch
@@ -228,7 +234,9 @@ export default function CategoryScreen() {
   const switchView = (next: View_) => {
     if (next === view) return;
     let landing = scrollY.value;
-    const under = scrollY.value + insets.top + tokens.sizing.tapTarget.ios - cardsTop;
+    // The cards show from under the pinned title and search, so the one at
+    // the top of what is seen is the one the page has scrolled to.
+    const under = scrollY.value;
     if (headerLength > 0 && under > 0 && shown.length > 0) {
       const row = Math.min(Math.floor(under / step[view]), Math.ceil(shown.length / perRow[view]) - 1);
       // A grid row holds two, so coming back to the list returns to the one it
@@ -345,26 +353,13 @@ export default function CategoryScreen() {
         style={{ flexGrow: 1 }}
         contentContainerStyle={{
           // Clears the native bar's buttons, which sit in the 44pt under the
-          // status bar.
-          paddingTop: padTop,
+          // status bar, and the pinned title and search under them.
+          paddingTop: cardsTop,
           paddingHorizontal: tokens.space[24],
           paddingBottom: Math.max(tokens.space[24], insets.bottom),
         }}
         showsVerticalScrollIndicator={false}
       >
-        <View
-          style={{ gap: tokens.space[16], paddingBottom: tokens.space[16] }}
-          onLayout={(e) => setHeaderLength(e.nativeEvent.layout.height)}
-        >
-          <Txt variant="screenTitle" family="serif" weight={500}>
-            {name ?? ''}
-          </Txt>
-          {/* Laid out from the first frame, so the list arriving pushes nothing. */}
-          {exercises === null || exercises.length > 0 ? (
-            <SearchBar value={query} onChange={setQuery} label="Search exercises" />
-          ) : null}
-        </View>
-
         {exercises === null ? null : shown.length === 0 ? (
           <EmptyState line={exercises.length === 0 ? 'No exercises yet.' : 'No exercises match.'} />
         ) : (
@@ -405,6 +400,34 @@ export default function CategoryScreen() {
           </View>
         )}
       </Animated.ScrollView>
+
+      {/* The page above the title, so no card shows between the header and it. */}
+      <View
+        pointerEvents="none"
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: padTop, backgroundColor: c.bg }}
+      />
+      {/* The title and search stay put while the exercises scroll under them. */}
+      <View
+        style={{
+          position: 'absolute',
+          top: padTop,
+          left: 0,
+          right: 0,
+          paddingHorizontal: tokens.space[24],
+          gap: tokens.space[16],
+          paddingBottom: tokens.space[16],
+          backgroundColor: c.bg,
+        }}
+        onLayout={(e) => setHeaderLength(e.nativeEvent.layout.height)}
+      >
+        <Txt variant="screenTitle" family="serif" weight={500}>
+          {name ?? ''}
+        </Txt>
+        {/* Laid out from the first frame, so the list arriving pushes nothing. */}
+        {exercises === null || exercises.length > 0 ? (
+          <SearchBar value={query} onChange={setQuery} label="Search exercises" />
+        ) : null}
+      </View>
 
       <Stack.Toolbar placement="left">
         <Stack.Toolbar.Button
