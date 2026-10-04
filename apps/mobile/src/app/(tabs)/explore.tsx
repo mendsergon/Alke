@@ -13,7 +13,6 @@ import { tokens, useTheme } from '../../theme/theme';
 import { useAuth } from '../../auth/auth';
 import { useGym } from '../../gym/gym';
 import { useLibrary } from '../../library/library';
-import { useSession } from '../../session/session';
 import { listTemplates, trainingDays, type ProgramRecord } from '../../backend/programs';
 import { DayDots, ProgramCard, weekLine } from '../../components/program-card';
 import { GYM_PROGRAMS, SHARED_PROGRAMS } from '../../mock/mock-data';
@@ -51,7 +50,6 @@ function TemplateCard({ template }: { template: ProgramRecord }) {
   const { c } = useTheme();
   const router = useRouter();
   const { programs, save } = useLibrary();
-  const { open } = useSession();
   const [saving, setSaving] = useState(false);
   const days = trainingDays(template);
   const restDays = template.schedule.length - days;
@@ -59,13 +57,10 @@ function TemplateCard({ template }: { template: ProgramRecord }) {
   const chips = [...new Set(template.days.flatMap((d) => d.workouts.map((w) => w.name)))];
 
   return (
-    // The card opens the template's workout to look at; from here it can only be saved.
+    // The card opens the program: its workouts, and Save.
     <ProgramCard
       label={template.name}
-      onPress={() => {
-        open(template);
-        router.push('/session');
-      }}
+      onPress={() => router.push({ pathname: '/program/[id]', params: { id: template.id } })}
     >
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: tokens.space[12] }}>
         <View style={{ flexGrow: 1, flexShrink: 1 }}>

@@ -361,6 +361,7 @@ function Navigator() {
             instead of opening it twice. */}
         <Stack.Screen name="account" dangerouslySingular />
         <Stack.Screen name="category/[id]" dangerouslySingular />
+        <Stack.Screen name="program/[id]" dangerouslySingular />
         <Stack.Screen name="sign-in" options={{ presentation: 'modal' }} />
         {/* A session is full screen over the tabs (PLAN.md §2); adding an
             exercise to it is a sheet over the session. */}

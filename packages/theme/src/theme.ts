@@ -232,6 +232,12 @@ const session = {
   table: { setColumn: 28, input: { width: 64, height: 44 }, check: 44, stepper: 32 },
 } as const;
 
+// A program's page: what it trains, front and back, at its head
+// (Stavros, 4 October 2026).
+const programPage = {
+  bodyHeight: 240,
+} as const;
+
 const fontFamily = {
   serifMedium: 'Newsreader_500Medium',
   sansRegular: 'Geist_400Regular',
@@ -255,6 +261,7 @@ export const theme = {
   templateCard,
   pill,
   session,
+  programPage,
 } as const;
 
 export type Theme = typeof theme;
