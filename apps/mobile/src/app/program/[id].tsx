@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, Share, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Share, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBack } from '../../navigation/use-back';
@@ -31,12 +31,45 @@ export default function ProgramScreen() {
   const back = useBack('/explore');
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
-  const { programs, save } = useLibrary();
+  const { programs, save, unsave } = useLibrary();
   const { open } = useSession();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [program, setProgram] = useState<ProgramRecord | null>(null);
   const [byKey, setByKey] = useState<ReadonlyMap<string, Exercise>>(new Map());
   const [saving, setSaving] = useState(false);
+  const saved = program !== null && programs.some((p) => p.copied_from === program.id);
+
+  // Saving and unsaving each ask first, in the system's own alert — Liquid
+  // Glass on iOS 26.
+  const askSave = () => {
+    if (!program || saving) return;
+    Alert.alert(`Save ${program.name}?`, 'It goes into your Library as your own copy, yours to change.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Save',
+        style: 'default',
+        isPreferred: true,
+        onPress: () => {
+          setSaving(true);
+          void save(program).finally(() => setSaving(false));
+        },
+      },
+    ]);
+  };
+  const askUnsave = () => {
+    if (!program || saving) return;
+    Alert.alert(`Remove ${program.name} from Library?`, 'Your copy, and any changes you made to it, are deleted.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: () => {
+          setSaving(true);
+          void unsave(program).finally(() => setSaving(false));
+        },
+      },
+    ]);
+  };
 
   useEffect(() => {
     let live = true;
@@ -185,39 +218,31 @@ export default function ProgramScreen() {
           borderTopColor: c.border,
         }}
       >
-        {program && programs.some((p) => p.copied_from === program.id) ? (
+        {saved ? (
           // Saved: the accent's soft tone with a check, as a saved template's
-          // button on Explore reads.
-          <View
+          // button on Explore reads. Pressed, it asks to remove it.
+          <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`${program.name} is saved`}
-            accessibilityState={{ disabled: true }}
-            style={{
+            accessibilityLabel={`${program.name} is saved. Remove from Library`}
+            onPress={askUnsave}
+            style={({ pressed }) => ({
               height: tokens.sizing.primaryButtonHeight.min,
               borderRadius: tokens.radius.button,
               backgroundColor: c.accentSoft,
+              opacity: pressed ? 0.8 : 1,
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',
               gap: tokens.space[8],
-            }}
+            })}
           >
             <Icon name="check" size={20} color={c.accent} width={1.8} />
             <Txt variant="buttonLabel" weight={600} color={c.accent}>
               Saved
             </Txt>
-          </View>
+          </Pressable>
         ) : (
-          <PrimaryButton
-            label="Save"
-            icon="bookmark"
-            disabled={!program || saving}
-            onPress={() => {
-              if (!program) return;
-              setSaving(true);
-              void save(program).finally(() => setSaving(false));
-            }}
-          />
+          <PrimaryButton label="Save" icon="bookmark" disabled={!program || saving} onPress={askSave} />
         )}
       </View>
 
@@ -236,16 +261,10 @@ export default function ProgramScreen() {
         <Stack.Toolbar placement="right">
           {/* Save, beside Share: filled once the program is in Library. */}
           <Stack.Toolbar.Button
-            icon={programs.some((p) => p.copied_from === program.id) ? 'bookmark.fill' : 'bookmark'}
+            icon={saved ? 'bookmark.fill' : 'bookmark'}
             tintColor={c.text}
-            accessibilityLabel={
-              programs.some((p) => p.copied_from === program.id) ? `${program.name} is saved` : `Save ${program.name}`
-            }
-            onPress={() => {
-              if (saving || programs.some((p) => p.copied_from === program.id)) return;
-              setSaving(true);
-              void save(program).finally(() => setSaving(false));
-            }}
+            accessibilityLabel={saved ? `${program.name} is saved. Remove from Library` : `Save ${program.name}`}
+            onPress={saved ? askUnsave : askSave}
           />
           <Stack.Toolbar.Button
             icon="square.and.arrow.up"
