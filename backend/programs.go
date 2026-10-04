@@ -73,6 +73,11 @@ func bindPrograms(app core.App) {
 		if e.Record.GetBool("active") && e.Record.GetString("owner") == "" {
 			errs["active"] = validation.NewError("validation_template_active", "A template cannot be active.")
 		}
+		// A template is everyone's already; only a person's own program is
+		// published.
+		if e.Record.GetBool("published") && e.Record.GetString("owner") == "" {
+			errs["published"] = validation.NewError("validation_template_published", "A template cannot be published.")
+		}
 
 		if len(errs) > 0 {
 			return errs
