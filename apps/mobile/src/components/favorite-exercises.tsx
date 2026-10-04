@@ -189,24 +189,8 @@ export function ExerciseCard({
   const card = (content - tokens.space[12]) / 2;
   const tile = card - 2 * tokens.space[12] - 2;
 
-  return (
-    <Pressable
-      accessibilityRole={onPress ? 'button' : undefined}
-      accessibilityLabel={f.exercise.name}
-      disabled={!onPress}
-      onPress={onPress ? () => onPress(f) : undefined}
-      style={({ pressed }) => ({
-        width: card,
-        padding: tokens.space[12],
-        gap: tokens.space[12],
-        borderRadius: tokens.radius.card,
-        // Light mode carries a card border; dark does not (PLAN.md §3).
-        borderWidth: cardBorderWidth,
-        borderColor: c.border,
-        // Pressed, the card sinks to the page tone, as a program card does.
-        backgroundColor: pressed && onPress ? c.bg : c.surface,
-      })}
-    >
+  const body = (
+    <>
       {f.exercise.icon ? (
         <ExerciseIcon icon={f.exercise.icon} main={f.exercise.main} secondary={f.exercise.secondary} size={tile} seamAll />
       ) : null}
@@ -221,6 +205,30 @@ export function ExerciseCard({
           {onStar ? <Star on={f.exercise.favorite !== undefined} onPress={() => onStar(f)} push /> : null}
         </View>
       </View>
+    </>
+  );
+  const frame = {
+    width: card,
+    padding: tokens.space[12],
+    gap: tokens.space[12],
+    borderRadius: tokens.radius.card,
+    // Light mode carries a card border; dark does not (PLAN.md §3).
+    borderWidth: cardBorderWidth,
+    borderColor: c.border,
+  };
+
+  // With nothing to do on a press (the Library's favorites) it is a plain
+  // card, as it always was, so nothing stands between a finger and its star.
+  if (!onPress) return <View style={[frame, { backgroundColor: c.surface }]}>{body}</View>;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={f.exercise.name}
+      onPress={() => onPress(f)}
+      // Pressed, the card sinks to the page tone, as a program card does.
+      style={({ pressed }) => [frame, { backgroundColor: pressed ? c.bg : c.surface }]}
+    >
+      {body}
     </Pressable>
   );
 }
