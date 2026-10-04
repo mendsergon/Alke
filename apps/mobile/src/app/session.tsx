@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/icon';
 import { Rung } from '../components/rung';
 import { Card, EmptyState, SecondaryButton } from '../components/surfaces';
+import { GlassButton } from '../components/glass-button';
 import { ExerciseIcon } from '../figure/figure';
 import { useAuth } from '../auth/auth';
 import { MicroCaps, Txt } from '../theme/text';
@@ -14,12 +15,14 @@ import { amount, totals, useElapsed, useSession, type SessionExercise, type Sess
 /**
  * A workout, full screen over the tabs (PLAN.md §2), laid out as Stavros
  * showed it (4 October 2026) and drawn in Alke's design: across the top the
- * minimise chevron, the workout and the action; then the session's numbers
- * in a card — duration, volume and sets, over a rung of the sets done against
- * the sets planned; then every exercise in order, each its own card led by its
- * icon, with its sets under its name. An exercise opens to its sets as a
- * table — set, previous, load, reps and the check that marks it done — with
- * Add set under it. Add exercise closes the list.
+ * app's glass buttons — minimise, edit, and Start (then Finish); the workout's
+ * name as the screen's title; the session's numbers on the page, as Home's
+ * week draws its own — duration, volume and sets, over a rung of the sets done
+ * against the sets planned; then every exercise in order, each its own card
+ * led by its icon, with its sets under its name. Started, an exercise opens to
+ * its sets as a table — set, previous, load, reps and the check that marks it
+ * done — with Add set under it. Editing, each exercise takes a set fewer or
+ * more, or comes out, and exercises can be added.
  *
  * Before it starts it shows only what is planned: the exercises, their sets,
  * and Start. The duration starts counting at Start and stops at Finish.
@@ -34,6 +37,7 @@ export default function SessionScreen() {
   const { account } = useAuth();
   const { session, categories, start, finish, added } = useSession();
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
+  const [editing, setEditing] = useState(false);
   const scroller = useRef<ScrollView>(null);
   const started = session?.startedAt != null;
   const ready = categories.length > 0;
@@ -64,24 +68,30 @@ export default function SessionScreen() {
       return next;
     });
 
+  const day = session.program.days[session.day]?.weekday ?? '';
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <TopRow
-        title={workout?.name ?? session.program.name}
-        action={
-          started ? (
-            <TopAction
-              label="Finish"
-              onPress={() => {
-                finish();
-                router.back();
-              }}
-            />
-          ) : (
-            <TopAction label="Start" onPress={start} />
-          )
-        }
-      />
+      <TopRow>
+        <GlassButton
+          icon={editing ? 'check' : 'pencil'}
+          label={editing ? 'Done editing' : 'Edit workout'}
+          onPress={() => setEditing((now) => !now)}
+        />
+        {started ? (
+          <GlassButton
+            icon="check"
+            label="Finish"
+            title="Finish"
+            accent
+            onPress={() => {
+              finish();
+              router.back();
+            }}
+          />
+        ) : (
+          <GlassButton icon="play" label="Start" title="Start" accent onPress={start} />
+        )}
+      </TopRow>
       <ScrollView
         ref={scroller}
         style={{ flex: 1 }}
@@ -96,6 +106,15 @@ export default function SessionScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
+        {/* The workout's name is the screen's title, as every tab's is. */}
+        <View style={{ paddingHorizontal: tokens.space[4] }}>
+          <Txt variant="screenTitle" family="serif" weight={500}>
+            {workout?.name ?? session.program.name}
+          </Txt>
+          <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: 2 }}>
+            {[session.program.name, day.charAt(0).toUpperCase() + day.slice(1)].filter(Boolean).join(' · ')}
+          </Txt>
+        </View>
         <Numbers exercises={shown} startedAt={session.startedAt} unit={unit} />
         {ready && shown.length === 0 ? <EmptyState line="No exercises planned yet." /> : null}
         {shown.map((x) => (
@@ -103,11 +122,12 @@ export default function SessionScreen() {
             key={x.key}
             exercise={x}
             unit={unit}
-            open={started && open.has(x.key)}
-            onToggle={started ? () => toggle(x.key) : undefined}
+            editing={editing}
+            open={started && !editing && open.has(x.key)}
+            onToggle={started && !editing ? () => toggle(x.key) : undefined}
           />
         ))}
-        {started ? (
+        {started || editing ? (
           <SecondaryButton
             label="Add exercise"
             icon="plus"
@@ -121,83 +141,42 @@ export default function SessionScreen() {
   );
 }
 
-/** The minimise chevron, the workout's name, and the action. */
-function TopRow({ title, action }: { title: string; action: ReactNode }) {
-  const { c } = useTheme();
+/** Glass across the top, as the app's other screens have it: minimise, then the actions. */
+function TopRow({ children }: { children: ReactNode }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const tap = tokens.sizing.tapTarget.ios;
   return (
     <View
       style={{
-        paddingTop: insets.top + tokens.space[20],
+        paddingTop: insets.top + tokens.space[16],
         paddingHorizontal: tokens.space[20],
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
       }}
     >
-      {/* Centred on the screen, whatever the widths either side of it. */}
-      <View
-        pointerEvents="none"
-        style={{ position: 'absolute', left: tap * 2, right: tap * 2, bottom: 0, height: tap, alignItems: 'center', justifyContent: 'center' }}
-      >
-        <MicroCaps numberOfLines={1}>{title}</MicroCaps>
-      </View>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Minimise session"
-        onPress={() => router.back()}
-        style={{ width: tap, height: tap, justifyContent: 'center' }}
-      >
-        <Icon name="chevronDown" size={24} color={c.textSecondary} width={1.7} />
-      </Pressable>
-      {action}
+      <GlassButton icon="chevronDown" label="Minimise session" onPress={() => router.back()} />
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[8] }}>{children}</View>
     </View>
   );
 }
 
-/** The accent action across the top: Start, then Finish. */
-function TopAction({ label, onPress }: { label: string; onPress: () => void }) {
-  const { c } = useTheme();
-  const { height, paddingHorizontal } = tokens.session.action;
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      hitSlop={(tokens.sizing.tapTarget.ios - height) / 2}
-      onPress={onPress}
-      style={({ pressed }) => ({
-        height,
-        paddingHorizontal,
-        borderRadius: tokens.radius.rung,
-        backgroundColor: c.accent,
-        opacity: pressed ? 0.8 : 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-      })}
-    >
-      <Txt variant="label" weight={600} color={c.onAccent}>
-        {label}
-      </Txt>
-    </Pressable>
-  );
-}
-
 /**
- * The session's numbers, as Home's week draws its own: a micro-caps label
- * over a numeral with its unit set small beside it. Started, the duration
- * counts up in the accent, and the sets done stand on a rung against the sets
- * planned. Before the start, only what is planned.
+ * The session's numbers, as Home's week draws its own: on the page, not in a
+ * card — they are not an exercise — a micro-caps label over a numeral with
+ * its unit set small beside it. Started, the duration counts up in the
+ * accent, and the sets done stand on a rung against the sets planned. Before
+ * the start, only what is planned.
  */
 function Numbers({ exercises, startedAt, unit }: { exercises: SessionExercise[]; startedAt: number | null; unit: string }) {
   const { done, planned, volume } = totals(exercises);
   return (
-    <Card>
+    <View style={{ paddingHorizontal: tokens.space[4], paddingVertical: tokens.space[8] }}>
       {startedAt == null ? (
         <View style={{ flexDirection: 'row', gap: tokens.space[16] }}>
           <Stat label="Exercises" value={String(exercises.length)} />
           <Stat label="Sets" value={String(planned)} />
+          <View style={{ flexGrow: 1, flexBasis: 0 }} />
         </View>
       ) : (
         <>
@@ -206,12 +185,12 @@ function Numbers({ exercises, startedAt, unit }: { exercises: SessionExercise[];
             <Stat label="Volume" value={String(Math.round(volume))} suffix={unit} />
             <Stat label="Sets" value={String(done)} suffix={`of ${planned}`} />
           </View>
-          <View style={{ marginTop: tokens.space[16] }}>
+          <View style={{ marginTop: tokens.space[12] }}>
             <Rung value={done} target={Math.max(planned, 1)} />
           </View>
         </>
       )}
-    </Card>
+    </View>
   );
 }
 
@@ -247,16 +226,18 @@ function Duration({ startedAt }: { startedAt: number }) {
 function ExerciseCard({
   exercise,
   unit,
+  editing,
   open,
   onToggle,
 }: {
   exercise: SessionExercise;
   unit: string;
+  editing: boolean;
   open: boolean;
   onToggle?: () => void;
 }) {
   const { c } = useTheme();
-  const { addSet } = useSession();
+  const { addSet, setSets, remove } = useSession();
   const info = exercise.info;
   if (!info) return null;
   return (
@@ -276,7 +257,13 @@ function ExerciseCard({
           <Txt variant="rowTitle" color={c.text} numberOfLines={2}>
             {info.name}
           </Txt>
-          {open ? (
+          {editing ? (
+            <Stepper
+              sets={exercise.rows.length}
+              name={info.name}
+              onChange={(n) => setSets(exercise.key, n)}
+            />
+          ) : open ? (
             <Txt variant="captionTight" color={c.textSecondary} style={{ marginTop: tokens.space[4] }}>
               {[exercise.group, info.type].filter(Boolean).join(' · ')}
             </Txt>
@@ -288,7 +275,16 @@ function ExerciseCard({
             </View>
           )}
         </View>
-        {onToggle ? (
+        {editing ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Remove ${info.name}`}
+            hitSlop={tokens.space[12]}
+            onPress={() => remove(exercise.key)}
+          >
+            <Icon name="close" size={20} color={c.destructive} />
+          </Pressable>
+        ) : onToggle ? (
           <Icon name={open ? 'chevronUp' : 'chevronDown'} size={20} color={c.textSecondary} />
         ) : null}
       </Pressable>
@@ -306,6 +302,46 @@ function ExerciseCard({
         </View>
       ) : null}
     </Card>
+  );
+}
+
+/** Editing: the exercise's number of sets, one fewer or one more. */
+function Stepper({ sets, name, onChange }: { sets: number; name: string; onChange: (n: number) => void }) {
+  const { c } = useTheme();
+  const step = (icon: 'minus' | 'plus', label: string, n: number, disabled: boolean) => (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      hitSlop={tokens.space[8]}
+      onPress={() => onChange(n)}
+      style={({ pressed }) => ({
+        width: tokens.session.table.stepper,
+        height: tokens.session.table.stepper,
+        borderRadius: tokens.radius.rung,
+        backgroundColor: c.surfaceRaised,
+        opacity: disabled ? 0.45 : pressed ? 0.8 : 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+      })}
+    >
+      <Icon name={icon} size={16} color={c.text} width={1.8} />
+    </Pressable>
+  );
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space[12], marginTop: tokens.space[8] }}>
+      {step('minus', `One set fewer of ${name}`, sets - 1, sets <= 1)}
+      <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+        <Txt variant="numeralS" weight={600} tnum>
+          {sets}
+        </Txt>
+        <Txt variant="unitSmall" color={c.textSecondary} style={{ marginLeft: 3 }}>
+          {sets === 1 ? 'set' : 'sets'}
+        </Txt>
+      </View>
+      {step('plus', `One set more of ${name}`, sets + 1, false)}
+    </View>
   );
 }
 
