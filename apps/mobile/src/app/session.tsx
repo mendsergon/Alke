@@ -157,30 +157,28 @@ export default function SessionScreen() {
           program is saved from its page (Stavros, 4 October 2026). */}
       {template ? null : (
         <Stack.Toolbar placement="right">
-          <>
-            <Stack.Toolbar.Button
-              icon={editing ? 'checkmark' : 'pencil'}
-              tintColor={c.text}
-              accessibilityLabel={editing ? 'Done editing' : 'Edit workout'}
-              onPress={() => setEditing((now) => !now)}
-            />
-            {started ? (
-              <Stack.Toolbar.Button
-                tintColor={c.accent}
-                accessibilityLabel="Finish"
-                onPress={() => {
-                  finish();
-                  router.back();
-                }}
-              >
-                Finish
-              </Stack.Toolbar.Button>
-            ) : (
-              <Stack.Toolbar.Button tintColor={c.accent} accessibilityLabel="Start" onPress={start}>
-                Start
-              </Stack.Toolbar.Button>
-            )}
-          </>
+          <Stack.Toolbar.Button
+            icon={editing ? 'checkmark' : 'pencil'}
+            tintColor={c.text}
+            accessibilityLabel={editing ? 'Done editing' : 'Edit workout'}
+            onPress={() => setEditing((now) => !now)}
+          />
+          {/* One button, its label and action following the session: the
+              toolbar takes buttons as its direct children, never a fragment. */}
+          <Stack.Toolbar.Button
+            tintColor={c.accent}
+            accessibilityLabel={started ? 'Finish' : 'Start'}
+            onPress={() => {
+              if (!started) {
+                start();
+                return;
+              }
+              finish();
+              router.back();
+            }}
+          >
+            {started ? 'Finish' : 'Start'}
+          </Stack.Toolbar.Button>
         </Stack.Toolbar>
       )}
     </View>
