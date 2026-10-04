@@ -389,7 +389,7 @@ export const MUSCLE_REGIONS: Record<string, { view: FigureView; regions: readonl
 /** Regions a muscle also covers in the view its icon does not use. */
 export const MUSCLE_ALSO: Record<string, { view: FigureView; regions: readonly number[] }> = {
   "Adductors": { view: "back", regions: [35, 36] },
-  "Calves": { view: "front", regions: [47, 48, 49, 50, 51, 52, 53, 54] },
+  "Calves": { view: "front", regions: [49, 50, 53, 54] },
   "Brachialis": { view: "back", regions: [25, 26] },
   "Neck": { view: "back", regions: [14, 49, 50, 51] },
   "Obliques": { view: "back", regions: [41, 42] },

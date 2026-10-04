@@ -302,6 +302,13 @@ for (const [muscle, i] of byMuscle) {
   const extra = views[other].regions
     .map((_, r) => r)
     .filter((r) => !owned[other].has(r) && colourAt(other, r) === colourOf(i));
+  // From the front, the calf shows only as the chunks on the lower leg's inner
+  // edge; the long strips down its front and outside are the shin, which the
+  // body map colours with it (Stavros, 4 October 2026).
+  if (muscle === 'Calves' && other === 'front') {
+    const mid = extra.reduce((sum, r) => sum + Math.abs(centreX(views[other].regions[r]!)), 0) / extra.length;
+    extra.splice(0, extra.length, ...extra.filter((r) => Math.abs(centreX(views[other].regions[r]!)) < mid));
+  }
   if (extra.length > 0) lines.push(`  ${q(muscle)}: { view: ${q(other)}, regions: [${extra.join(', ')}] },`);
   // From the back, the brachioradialis is the forearm's outer strip.
   if (muscle === 'Forearms' && extra.length > 0) {
