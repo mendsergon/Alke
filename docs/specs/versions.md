@@ -40,6 +40,7 @@ Notes.
 | Package | Version | Licence | Source |
 |---|---|---|---|
 | `expo-glass-effect` | 57.0.3 | MIT | chosen by `npx expo install expo-glass-effect` for Expo SDK 57 — https://www.npmjs.com/package/expo-glass-effect |
+| `@expo/ui` | 57.0.21 | MIT | chosen by `npx expo install @expo/ui` for Expo SDK 57 (dist-tag `sdk-57`); its SwiftUI `Menu` opens on a single tap — https://www.npmjs.com/package/@expo/ui, https://docs.expo.dev/versions/latest/sdk/ui/swift-ui/ |
 
 Notes.
 
