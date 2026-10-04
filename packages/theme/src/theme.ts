@@ -224,27 +224,13 @@ const templateCard = {
   chipGap: 6,
 } as const;
 
-// The session screen, read out of design page 06's markup in
-// `design/rungs-ui.html` ("Session · full screen").
+// The session screen. The action is design page 06's rounded Skip button and
+// the bar is page 07's "Session minimised", read out of their markup in
+// `design/rungs-ui.html`; the set table holds a tap target's height.
 const session = {
-  // Space between the top row and the title.
-  titleTop: 6,
-  // The top-right action: page 06's rounded Skip button.
   action: { height: 36, paddingHorizontal: 14 },
-  // A set: its card's padding, the gap between its line and its rung, and
-  // the round mark holding its number.
-  set: { paddingTop: 12, paddingHorizontal: 14, paddingBottom: 14, gap: 10, mark: 30, rirMinWidth: 52 },
-  // Between an exercise's icon and its name, and a set's mark and its numbers.
-  rowGap: 14,
-  // The minimised session's bar over the tabs (page 07 "Session minimised").
   miniBar: { height: 60, paddingHorizontal: 16, tile: 34, tileRadius: 10 },
-  // The footer: the timer's row over its rung, then the primary button.
-  footer: { paddingTop: 16, paddingHorizontal: 20, paddingBottom: 24, rowBottom: 14 },
-  // A set being done: its number in a ring this thick.
-  currentRing: 2,
-  // Home's "Next session" card (page 01), the workout before it starts: the
-  // eyebrow to the name, and the chips' space above and below.
-  next: { titleTop: 8, subtitleTop: 2, chipsTop: 14, chipsBottom: 16 },
+  table: { setColumn: 28, input: { width: 64, height: 44 }, check: 44 },
 } as const;
 
 const fontFamily = {
