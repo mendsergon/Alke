@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { Icon } from '../components/icon';
 import { Txt } from '../theme/text';
 import { tokens, useTheme } from '../theme/theme';
-import { useElapsed, useSession } from './session';
+import { totals, useElapsed, useSession } from './session';
 
 /**
  * A started session, minimised: the bar over the tabs that design page 07
@@ -13,17 +13,14 @@ import { useElapsed, useSession } from './session';
 export function SessionMiniBar() {
   const { session } = useSession();
   if (!session || session.startedAt == null) return null;
-  // As page 07 has it: the exercise being done, and where the session is.
-  const shown = session.exercises.filter((x) => x.info);
-  const at = session.exercises[session.current];
-  const index = shown.findIndex((x) => x.key === at?.key);
+  const { done, planned } = totals(session.exercises.filter((x) => x.info));
   const workout = session.program.days[session.day]?.workouts[session.workout];
-  const line =
-    at && index >= 0
-      ? `Set ${Math.min(at.done + 1, at.sets)} of ${at.sets} · exercise ${index + 1} of ${shown.length}`
-      : session.program.name;
   return (
-    <Bar title={at?.info?.name ?? workout?.name ?? session.program.name} line={line} startedAt={session.startedAt} />
+    <Bar
+      title={workout?.name ?? session.program.name}
+      line={`${done} of ${planned} ${planned === 1 ? 'set' : 'sets'} · ${session.program.name}`}
+      startedAt={session.startedAt}
+    />
   );
 }
 
