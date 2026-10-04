@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { ActionSheetIOS, Alert, Pressable, ScrollView, Share, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Share, View } from 'react-native';
+// The native menu that opens on a single tap where it is pressed — `Menu`,
+// `Button`, `Host` and `RNHostView` as @expo/ui 57.0.21 types them in
+// build/swift-ui/{Menu,Button,Host}/index.d.ts and build/swift-ui/RNHostView.d.ts.
+import { Button, Host, Menu, RNHostView } from '@expo/ui/swift-ui';
 import { askDuplicate } from '../../library/duplicate';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -42,7 +46,7 @@ const WEEK = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'
  * own "…" (Rename, Remove).
  */
 export default function ProgramScreen() {
-  const { c } = useTheme();
+  const { c, scheme } = useTheme();
   const router = useRouter();
   const back = useBack('/explore');
   const insets = useSafeAreaInsets();
@@ -223,44 +227,40 @@ export default function ProgramScreen() {
   };
 
   // A workout's "…": rename it, or take it off the days it falls on.
-  const workoutOptions = (r: Repeat) => {
+  const renameWorkout = (r: Repeat) => {
     if (!program) return;
-    ActionSheetIOS.showActionSheetWithOptions(
-      { title: r.workout.name, options: ['Rename', 'Remove', 'Cancel'], destructiveButtonIndex: 1, cancelButtonIndex: 2 },
-      (i) => {
-        if (i === 0) {
-          Alert.prompt('Rename workout', undefined, [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Save',
-              isPreferred: true,
-              onPress: (name?: string) => {
-                const n = name?.trim();
-                if (!n) return;
-                change({
-                  days: program.days.map((d) =>
-                    r.days.includes(d.weekday) ? { ...d, workouts: d.workouts.map((w, j) => (j === 0 ? { ...w, name: n } : w)) } : d,
-                  ),
-                });
-              },
-            },
-          ], 'plain-text', r.workout.name);
-        } else if (i === 1) {
-          Alert.alert(`Remove ${r.workout.name}?`, `${r.days.map(cap).join(', ')} become rest days.`, [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Remove',
-              style: 'destructive',
-              onPress: () =>
-                change({
-                  schedule: program.schedule.map((d, k) => (r.days.includes(WEEK[k]!) ? 'rest' : d)) as ProgramRecord['schedule'],
-                  days: program.days.filter((d) => !r.days.includes(d.weekday)),
-                }),
-            },
-          ]);
-        }
+    Alert.prompt('Rename workout', undefined, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Save',
+        isPreferred: true,
+        onPress: (name?: string) => {
+          const n = name?.trim();
+          if (!n) return;
+          change({
+            days: program.days.map((d) =>
+              r.days.includes(d.weekday) ? { ...d, workouts: d.workouts.map((w, j) => (j === 0 ? { ...w, name: n } : w)) } : d,
+            ),
+          });
+        },
       },
-    );
+    ], 'plain-text', r.workout.name);
+  };
+
+  const removeWorkout = (r: Repeat) => {
+    if (!program) return;
+    Alert.alert(`Remove ${r.workout.name}?`, `${r.days.map(cap).join(', ')} become rest days.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: () =>
+          change({
+            schedule: program.schedule.map((d, k) => (r.days.includes(WEEK[k]!) ? 'rest' : d)) as ProgramRecord['schedule'],
+            days: program.days.filter((d) => !r.days.includes(d.weekday)),
+          }),
+      },
+    ]);
   };
 
   const padTop = insets.top + tokens.sizing.tapTarget.ios + tokens.space[16];
@@ -375,17 +375,32 @@ export default function ProgramScreen() {
                             >
                               <Icon name="play" size={16} color={c.text} width={1.8} />
                             </Pressable>
-                            <Pressable
-                              accessibilityRole="button"
-                              accessibilityLabel={`${w.name} options`}
-                              hitSlop={tokens.space[8]}
-                              onPress={() => workoutOptions(r)}
-                            >
-                              {/* Lying flat, as the "…" at the top of the screen does. */}
-                              <View style={{ transform: [{ rotate: '90deg' }] }}>
-                                <Icon name="dots" size={22} color={c.text} width={1.8} />
-                              </View>
-                            </Pressable>
+                            {/* The native menu, opening on a tap right at the dots, as
+                                every other menu in the app does. */}
+                            <Host matchContents colorScheme={scheme}>
+                              <Menu
+                                label={
+                                  <RNHostView matchContents>
+                                    {/* Lying flat, as the "…" at the top of the screen does. */}
+                                    <View
+                                      accessibilityLabel={`${w.name} options`}
+                                      style={{
+                                        width: tokens.sizing.tapTarget.ios,
+                                        height: tokens.sizing.tapTarget.ios,
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        transform: [{ rotate: '90deg' }],
+                                      }}
+                                    >
+                                      <Icon name="dots" size={22} color={c.text} width={1.8} />
+                                    </View>
+                                  </RNHostView>
+                                }
+                              >
+                                <Button label="Rename" systemImage="pencil" onPress={() => renameWorkout(r)} />
+                                <Button label="Remove" systemImage="trash" role="destructive" onPress={() => removeWorkout(r)} />
+                              </Menu>
+                            </Host>
                           </>
                         ) : (
                           <Icon name="chevronRight" size={20} color={c.textSecondary} />
