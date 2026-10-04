@@ -236,6 +236,8 @@ const session = {
 // (Stavros, 4 October 2026).
 const programPage = {
   bodyHeight: 240,
+  // A workout's play button, round, on the person's own program.
+  play: 36,
 } as const;
 
 const fontFamily = {
