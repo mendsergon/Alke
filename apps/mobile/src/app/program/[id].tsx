@@ -185,16 +185,40 @@ export default function ProgramScreen() {
           borderTopColor: c.border,
         }}
       >
-        <PrimaryButton
-          label="Save"
-          icon="bookmark"
-          disabled={!program || saving}
-          onPress={() => {
-            if (!program) return;
-            setSaving(true);
-            void save(program).finally(() => setSaving(false));
-          }}
-        />
+        {program && programs.some((p) => p.copied_from === program.id) ? (
+          // Saved: the accent's soft tone with a check, as a saved template's
+          // button on Explore reads.
+          <View
+            accessibilityRole="button"
+            accessibilityLabel={`${program.name} is saved`}
+            accessibilityState={{ disabled: true }}
+            style={{
+              height: tokens.sizing.primaryButtonHeight.min,
+              borderRadius: tokens.radius.button,
+              backgroundColor: c.accentSoft,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: tokens.space[8],
+            }}
+          >
+            <Icon name="check" size={20} color={c.accent} width={1.8} />
+            <Txt variant="buttonLabel" weight={600} color={c.accent}>
+              Saved
+            </Txt>
+          </View>
+        ) : (
+          <PrimaryButton
+            label="Save"
+            icon="bookmark"
+            disabled={!program || saving}
+            onPress={() => {
+              if (!program) return;
+              setSaving(true);
+              void save(program).finally(() => setSaving(false));
+            }}
+          />
+        )}
       </View>
 
       <Stack.Toolbar placement="left">
