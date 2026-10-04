@@ -187,7 +187,7 @@ export default function ProgramScreen() {
       >
         <PrimaryButton
           label="Save"
-          icon="plus"
+          icon="bookmark"
           disabled={!program || saving}
           onPress={() => {
             if (!program) return;

@@ -165,6 +165,8 @@ const PATHS: Record<string, (p: { s: string; w: number }) => ReactNode> = {
       <Path d="M13 7l4 4" stroke={s} strokeWidth={w} />
     </>
   ),
+  // Saving a program to Library, as the reference's save mark.
+  bookmark: ({ s, w }) => <Path d="M7 4.5h10v15.5l-5-3.8-5 3.8z" stroke={s} strokeWidth={w} />,
   minus: ({ s, w }) => <Path d="M5.5 12h13" stroke={s} strokeWidth={w} />,
   close: ({ s, w }) => (
     <>
